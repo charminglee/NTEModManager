@@ -5,6 +5,7 @@
 #include <functional>
 #include <QMainWindow>
 #include <QString>
+#include <QStringList>
 
 class QLabel;
 class QDragEnterEvent;
@@ -13,6 +14,9 @@ class QDropEvent;
 class QEvent;
 class QMimeData;
 class QObject;
+class QListWidget;
+class QListWidgetItem;
+class QStackedWidget;
 class QVBoxLayout;
 class QWidget;
 
@@ -40,7 +44,11 @@ private:
     };
 
     void buildUi();
+    void refreshCategories();
     void refreshMods();
+    void showCategoryOverview();
+    void showCategory(const QString& category);
+    void updateCategoryOrderFromList();
     void refreshModsWithFeedback();
     void addModRow(const ModInfo& mod);
     void importArchives(const QStringList& archivePaths);
@@ -55,13 +63,20 @@ private:
 
     [[nodiscard]] static QStringList archivePathsFromDrop(const QMimeData* mimeData);
     [[nodiscard]] static QString formatFileSize(qint64 byteCount);
+    [[nodiscard]] QString categoryForMod(const ModInfo& mod) const;
 
     ModRepository repository_;
     QString backgroundImagePath_;
+    QStackedWidget* contentStack_ = nullptr;
+    QListWidget* categoryList_ = nullptr;
     QVBoxLayout* modListLayout_ = nullptr;
+    QLabel* modCategoryLabel_ = nullptr;
     QLabel* modCountLabel_ = nullptr;
     QLabel* activityLabel_ = nullptr;
     QWidget* activitySpinner_ = nullptr;
     bool operationInProgress_ = false;
     ModSortOrder sortOrder_ = ModSortOrder::InstalledFirst;
+    QStringList categories_;
+    QStringList categoryOrder_;
+    QString currentCategory_;
 };

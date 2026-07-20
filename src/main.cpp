@@ -7,6 +7,7 @@
 
 #include <windows.h>
 
+#include "AppConfig.h"
 #include "MainWindow.h"
 
 namespace
@@ -38,7 +39,7 @@ bool isSupportedBackgroundImage(const QString& fileName)
 
 QString selectStartupBackground()
 {
-    const QDir picturesRoot(QStringLiteral("F:/pictures/\u771f\u4eba"));
+    const QDir picturesRoot(AppConfig::backgroundImagesDirectory());
     QList<QPair<QString, QStringList>> foldersWithImages;
 
     const QFileInfoList directories = picturesRoot.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
@@ -116,37 +117,57 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
         #glassPanel { background: transparent; border: none; }
         #title { color: #ffffff; font-size: 35px; font-weight: 700; }
         #subtitle { color: #ffffff; font-size: 20px; }
-        #count, #activity { color: #ffffff; }
-        #metadata, #dropHint { color: #606060; font-size: 14px; }
+        #activity { color: #ffffff; }
+
+        #dropZone { background: rgba(226, 242, 255, 145); border: 1px dashed #4f91c9; border-radius: 16px; }
+        #dropTitle { color: #000000; font-weight: 600; font-size: 18px; }
+        #dropHint { color: #606060; font-size: 14px; }
+
+        #sectionTitle { color: #ffffff; font-weight: 600; font-size: 20px; }
+        #count { color: #ffffff; font-size: 14px; }
+
+        #modName { color: #000000; font-weight: 600; font-size: 18px; }
+        #metadata { color: #606060; font-size: 14px; }
+
+        #categoryList { background: transparent; }
+        #categoryList::item {
+            background: rgba(255, 255, 255, 155); border: 1px solid rgba(255, 255, 255, 145);
+            border-radius: 14px; color: #102a43; padding: 0px;
+        }
+        #categoryList::item:hover { background: rgba(240, 247, 255, 225); }
+        #categoryList::item:selected { background: #d9ecff; border: 1px solid #8bc0e8; color: #003b6f; }
+        #categoryCard { background: transparent; }
+        #categoryName { color: #102a43; font-size: 17px; font-weight: 600; }
+        #categoryCount { color: #60758a; font-size: 13px; }
+
         #modListActionButton {
             background: rgba(236, 247, 255, 95); border: 1px solid rgba(255, 255, 255, 175); border-radius: 18px;
             color: #003b6f; min-height: 32px; padding: 3px 16px;
         }
         #modListActionButton:hover { background: #bdddff; }
         #modListActionButton:pressed { background: #0067b1; color: #ffffff; }
-        #dropZone { background: rgba(226, 242, 255, 145); border: 1px dashed #4f91c9; border-radius: 16px; }
-        #dropTitle { color: #000000; font-weight: 600; font-size: 18px; }
-        #sectionTitle { color: #ffffff; font-weight: 600; }
-        #modName { color: #000000; font-weight: 600; font-size: 18px; }
-        #sectionTitle { font-size: 16px; }
+        #modRow { background: rgba(255, 255, 255, 155); border: 1px solid rgba(255, 255, 255, 145); border-radius: 16px; }
+        #modRow:hover { background: rgba(240, 247, 255, 225); }
+
+        #stateInstalled, #stateUninstalled { border-radius: 12px; font-size: 12px; padding: 4px 8px; }
+        #stateInstalled { background: #b5f2d4; color: #00533e; }
+        #stateUninstalled { background: #e5eef7; color: #52677d; }
+
+        #deleteButton { color: #c42b1c; }
+        #deleteButton:hover { background: #ffdad6; }
+
+        #moreButton { font-size: 18px; font-weight: 600; padding: 0px; }
+        #moreButton::menu-indicator { image: none; width: 0px; }
+
         #modScrollArea, #modScrollArea::viewport, #listContainer { background: transparent; }
         QScrollBar:vertical { background: transparent; width: 12px; margin: 4px 2px; }
         QScrollBar::handle:vertical { background: #9bbbd8; min-height: 32px; border-radius: 5px; }
         QScrollBar::handle:vertical:hover { background: #0067b1; }
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
-        #modRow { background: rgba(255, 255, 255, 155); border: 1px solid rgba(255, 255, 255, 145); border-radius: 16px; }
-        #modRow:hover { background: rgba(240, 247, 255, 225); }
-        #stateInstalled, #stateUninstalled { border-radius: 12px; font-size: 12px; padding: 4px 8px; }
-        #stateInstalled { background: #b5f2d4; color: #00533e; }
-        #stateUninstalled { background: #e5eef7; color: #52677d; }
         QToolButton { background: rgba(236, 247, 255, 80); border: 1px solid rgba(255, 255, 255, 165); border-radius: 18px; color: #31506d; padding: 6px 9px; }
         QToolButton:hover:enabled { background: rgba(214, 238, 255, 185); }
-        #moreButton { font-size: 18px; font-weight: 600; padding: 0px; }
-        #moreButton::menu-indicator { image: none; width: 0px; }
         QToolButton:disabled, #modListActionButton:disabled { color: #a6a6a6; }
-        #deleteButton { color: #c42b1c; }
-        #deleteButton:hover { background: #ffdad6; }
         #emptyState { color: #6b8197; padding: 56px; }
         QMenu { background: #ffffff; color: #102a43; border: none; border-radius: 8px; padding: 6px; }
         QMenu::item { border-radius: 18px; padding: 8px 26px 8px 12px; }

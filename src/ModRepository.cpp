@@ -1,5 +1,7 @@
 #include "ModRepository.h"
 
+#include "AppConfig.h"
+
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
@@ -20,8 +22,6 @@
 
 namespace
 {
-constexpr auto kModsDirectory = "E:/Neverness To Everness/Client/WindowsNoEditor/HT/Content/Paks/~mods";
-constexpr auto kBackupsDirectory = "E:/Neverness To Everness/Mods/Backups";
 constexpr auto kManifestFileName = ".nte-mod-manager.json";
 
 QString windowsErrorMessage(DWORD errorCode)
@@ -283,12 +283,12 @@ OperationResult moveDirectory(const QString& sourcePath, const QString& targetPa
 
 QString ModRepository::modsDirectory()
 {
-    return QString::fromUtf8(kModsDirectory);
+    return AppConfig::modsDirectory();
 }
 
 QString ModRepository::backupsDirectory()
 {
-    return QString::fromUtf8(kBackupsDirectory);
+    return AppConfig::backupsDirectory();
 }
 
 bool ModRepository::isSupportedArchive(const QString& archivePath)
