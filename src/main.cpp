@@ -2,7 +2,6 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
-#include <QRandomGenerator>
 #include <QStyleHints>
 
 #include <windows.h>
@@ -37,10 +36,10 @@ bool isSupportedBackgroundImage(const QString& fileName)
         || suffix == QStringLiteral("png");
 }
 
-QString selectStartupBackground()
+QStringList collectBackgroundImagePaths()
 {
     const QDir picturesRoot(AppConfig::backgroundImagesDirectory());
-    QList<QPair<QString, QStringList>> foldersWithImages;
+    QStringList imagePaths;
 
     const QFileInfoList directories = picturesRoot.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     for (const QFileInfo& directory : directories) {
@@ -51,23 +50,14 @@ QString selectStartupBackground()
         }
 
         const QDir folder(directory.absoluteFilePath());
-        QStringList imageFiles;
         for (const QString& fileName : folder.entryList(QDir::Files, QDir::Name)) {
             if (isSupportedBackgroundImage(fileName)) {
-                imageFiles.append(fileName);
+                imagePaths.append(folder.absoluteFilePath(fileName));
             }
         }
-        if (!imageFiles.isEmpty()) {
-            foldersWithImages.append({folder.absolutePath(), imageFiles});
-        }
     }
 
-    if (foldersWithImages.isEmpty()) {
-        return {};
-    }
-
-    const auto& folder = foldersWithImages.at(QRandomGenerator::global()->bounded(foldersWithImages.size()));
-    return QDir(folder.first).filePath(folder.second.at(QRandomGenerator::global()->bounded(folder.second.size())));
+    return imagePaths;
 }
 
 QString materialStyleSheet(Qt::ColorScheme colorScheme)
@@ -123,29 +113,65 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
         #dropTitle { color: #000000; font-weight: 600; font-size: 18px; }
         #dropHint { color: #606060; font-size: 14px; }
 
-        #sectionTitle { color: #ffffff; font-weight: 600; font-size: 20px; }
+        #sectionTitle { color: #ffffff; font-weight: 600; font-size: 20px; padding: 0px; }
         #count { color: #ffffff; font-size: 14px; }
 
         #modName { color: #000000; font-weight: 600; font-size: 18px; }
         #metadata { color: #606060; font-size: 14px; }
 
-        #categoryList { background: transparent; }
-        #categoryList::item {
-            background: rgba(255, 255, 255, 155); border: 1px solid rgba(255, 255, 255, 145);
-            border-radius: 14px; color: #102a43; padding: 0px;
+        #categoryList { 
+            background: transparent; 
+            font-size: 17px; 
+            color: #000000; 
+            qproperty-categoryCardTextColor: #000000;
+            qproperty-categoryCardTextHorizontalMargin: 14;
+            qproperty-categoryCardTextVerticalMargin: 16;
+            qproperty-categoryCardSelectedTextColor: #003b6f;
+            qproperty-categoryCardCountColor: #60758a;
+            qproperty-categoryCardCountFontSize: 13;
+            qproperty-categoryCardCountBold: false;
+            qproperty-categoryCardMarkerColor: rgba(0, 0, 0, 0);
+            qproperty-categoryCardMarkerMargin: 10;
+            qproperty-categoryCardMarkerWidth: 3;
+            qproperty-categoryCardPreviewBackgroundColor: rgba(255, 255, 255, 235);
+            qproperty-categoryCardPreviewBorderColor: #0067b1;
+            qproperty-categoryCardPreviewTextColor: #003b6f;
+            qproperty-categoryCardPlaceholderColor: rgba(0, 103, 177, 95);
+            qproperty-categoryCardPlaceholderMargin: 3;
+            qproperty-categoryCardPlaceholderWidth: 2;
+            qproperty-categoryCardCornerRadius: 14;
+            qproperty-categoryCardBorderWidth: 3;
+            qproperty-categoryCardWidth: 220;
+            qproperty-categoryCardHeight: 78;
+            qproperty-categoryGridWidth: 236;
+            qproperty-categoryGridHeight: 92;
+            qproperty-categoryCardNameBold: true;
         }
-        #categoryList::item:hover { background: rgba(240, 247, 255, 225); }
-        #categoryList::item:selected { background: #d9ecff; border: 1px solid #8bc0e8; color: #003b6f; }
-        #categoryCard { background: transparent; }
-        #categoryName { color: #102a43; font-size: 17px; font-weight: 600; }
-        #categoryCount { color: #60758a; font-size: 13px; }
+        #categoryList::item {
+            background: rgba(255, 255, 255, 155); 
+            border: 2px solid rgba(255, 255, 255, 255);
+            border-radius: 14px; 
+            color: #000000; 
+            padding: 0px;
+        }
+        #categoryList::item:hover { 
+            background: rgba(240, 247, 255, 225); 
+            border: 2px solid rgba(255, 255, 255, 255);
+            border-radius: 14px; 
+            color: #003b6f; 
+        }
+        #categoryList::item:selected { 
+            background: #d9ecff; 
+            border: 3px solid #8bc0e8; 
+            color: #003b6f; 
+        }
 
         #modListActionButton {
             background: rgba(236, 247, 255, 95); border: 1px solid rgba(255, 255, 255, 175); border-radius: 18px;
             color: #003b6f; min-height: 32px; padding: 3px 16px;
         }
         #modListActionButton:hover { background: #bdddff; }
-        #modListActionButton:pressed { background: #0067b1; color: #ffffff; }
+        #modListActionButton:pressed { background: #8bc0e8; color: #ffffff; }
         #modRow { background: rgba(255, 255, 255, 155); border: 1px solid rgba(255, 255, 255, 145); border-radius: 16px; }
         #modRow:hover { background: rgba(240, 247, 255, 225); }
 
@@ -168,7 +194,7 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
         QToolButton { background: rgba(236, 247, 255, 80); border: 1px solid rgba(255, 255, 255, 165); border-radius: 18px; color: #31506d; padding: 6px 9px; }
         QToolButton:hover:enabled { background: rgba(214, 238, 255, 185); }
         QToolButton:disabled, #modListActionButton:disabled { color: #a6a6a6; }
-        #emptyState { color: #6b8197; padding: 56px; }
+        #emptyState { color: #ffffff; padding: 56px; font-size: 20px; }
         QMenu { background: #ffffff; color: #102a43; border: none; border-radius: 8px; padding: 6px; }
         QMenu::item { border-radius: 18px; padding: 8px 26px 8px 12px; }
         QMenu::item:selected { background: #d9ecff; }
@@ -193,7 +219,7 @@ int main(int argc, char* argv[])
     QApplication application(argc, argv);
     application.setStyle(QStringLiteral("Fusion"));
     application.setFont(QFont(QStringLiteral("Segoe UI Variable"), 10));
-    const QString backgroundImagePath = selectStartupBackground();
+    const QStringList backgroundImagePaths = collectBackgroundImagePaths();
     applyMaterialTheme(application);
     QObject::connect(
         application.styleHints(),
@@ -201,7 +227,7 @@ int main(int argc, char* argv[])
         &application,
         [&application](Qt::ColorScheme) { applyMaterialTheme(application); });
 
-    MainWindow window(backgroundImagePath);
+    MainWindow window(backgroundImagePaths);
     window.show();
 
     const int exitCode = application.exec();

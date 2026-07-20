@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 
 #include "AppConfig.h"
+#include "CategoryListWidget.h"
+#include "ModListLogic.h"
 
 #include <QAbstractButton>
 #include <QAbstractItemView>
@@ -11,6 +13,7 @@
 #include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QColor>
 #include <QEvent>
 #include <QFileInfo>
 #include <QFrame>
@@ -25,22 +28,21 @@
 #include <QMessageBox>
 #include <QMetaObject>
 #include <QMimeData>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPixmap>
 #include <QPointer>
-#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QProcess>
+#include <QRandomGenerator>
 #include <QSignalBlocker>
 #include <QScrollArea>
 #include <QStyle>
-#include <QStyledItemDelegate>
 #include <QThread>
 #include <QTimer>
 #include <QToolButton>
 #include <QUrl>
+#include <QVariantAnimation>
 #include <QVBoxLayout>
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -51,17 +53,33 @@
 
 namespace
 {
-constexpr int kDragSourceRole = Qt::UserRole + 2;
-constexpr int kDropMarkerRole = Qt::UserRole + 3;
-constexpr int kDragPlaceholderRole = Qt::UserRole + 4;
-
 class BackgroundWidget final : public QWidget
 {
 public:
-    explicit BackgroundWidget(const QString& backgroundImagePath, QWidget* parent = nullptr)
+    explicit BackgroundWidget(const QStringList& backgroundImagePaths, QWidget* parent = nullptr)
         : QWidget(parent)
-        , background_(backgroundImagePath)
+        , backgroundImagePaths_(backgroundImagePaths)
     {
+        if (backgroundImagePaths_.isEmpty()) {
+            return;
+        }
+
+        backgroundIndex_ = QRandomGenerator::global()->bounded(backgroundImagePaths_.size());
+        background_ = QPixmap(backgroundImagePaths_.at(backgroundIndex_));
+
+        connect(&rotationTimer_, &QTimer::timeout, this, &BackgroundWidget::switchBackground);
+        rotationTimer_.start(10000);
+
+        connect(&transitionAnimation_, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+            transitionProgress_ = value.toReal();
+            update();
+        });
+        connect(&transitionAnimation_, &QVariantAnimation::finished, this, [this] {
+            background_ = nextBackground_;
+            nextBackground_ = QPixmap();
+            transitionProgress_ = 0.0;
+            update();
+        });
     }
 
 protected:
@@ -69,18 +87,55 @@ protected:
     {
         QPainter painter(this);
         painter.fillRect(rect(), QColor(QStringLiteral("#08111d")));
-        if (background_.isNull()) {
-            return;
-        }
-
-        const QSize scaledSize = background_.size().scaled(size(), Qt::KeepAspectRatioByExpanding);
-        const QPoint topLeft((width() - scaledSize.width()) / 2, (height() - scaledSize.height()) / 2);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform);
-        painter.drawPixmap(QRect(topLeft, scaledSize), background_);
+        drawBackground(painter, background_, 1.0 - transitionProgress_);
+        drawBackground(painter, nextBackground_, transitionProgress_);
     }
 
 private:
+    void switchBackground()
+    {
+        if (backgroundImagePaths_.size() < 2 || transitionAnimation_.state() == QAbstractAnimation::Running) {
+            return;
+        }
+
+        const int nextIndex = (backgroundIndex_ + 1) % backgroundImagePaths_.size();
+        const QPixmap nextBackground(backgroundImagePaths_.at(nextIndex));
+        if (nextBackground.isNull()) {
+            backgroundIndex_ = nextIndex;
+            return;
+        }
+
+        backgroundIndex_ = nextIndex;
+        nextBackground_ = nextBackground;
+        transitionAnimation_.setStartValue(0.0);
+        transitionAnimation_.setEndValue(1.0);
+        transitionAnimation_.setDuration(900);
+        transitionAnimation_.setEasingCurve(QEasingCurve::InOutCubic);
+        transitionAnimation_.start();
+    }
+
+    void drawBackground(QPainter& painter, const QPixmap& background, qreal opacity) const
+    {
+        if (background.isNull() || opacity <= 0.0) {
+            return;
+        }
+
+        const QSize scaledSize = background.size().scaled(size(), Qt::KeepAspectRatioByExpanding);
+        const QPoint topLeft((width() - scaledSize.width()) / 2, (height() - scaledSize.height()) / 2);
+        painter.save();
+        painter.setOpacity(opacity);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform);
+        painter.drawPixmap(QRect(topLeft, scaledSize), background);
+        painter.restore();
+    }
+
+    QStringList backgroundImagePaths_;
+    int backgroundIndex_ = 0;
     QPixmap background_;
+    QPixmap nextBackground_;
+    QTimer rotationTimer_;
+    QVariantAnimation transitionAnimation_;
+    qreal transitionProgress_ = 0.0;
 };
 
 class BusyIndicator final : public QWidget
@@ -119,440 +174,6 @@ private:
     int angle_ = 0;
 };
 
-class CategoryDragPreview final : public QWidget
-{
-public:
-    explicit CategoryDragPreview(QWidget* parent)
-        : QWidget(parent)
-    {
-        setAttribute(Qt::WA_TransparentForMouseEvents);
-        setFixedSize(220, 78);
-        hide();
-    }
-
-    void setCardText(const QString& categoryName, const QString& categoryCount)
-    {
-        categoryName_ = categoryName;
-        categoryCount_ = categoryCount;
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent*) override
-    {
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
-        const QRect cardRect = rect().adjusted(1, 1, -2, -2);
-        painter.setBrush(QColor(255, 255, 255, 235));
-        painter.setPen(QPen(QColor(QStringLiteral("#0067b1")), 2));
-        painter.drawRoundedRect(cardRect, 14, 14);
-
-        const QRect textRect = cardRect.adjusted(14, 10, -14, -10);
-        QFont nameFont = font();
-        nameFont.setBold(true);
-        painter.setFont(nameFont);
-        painter.setPen(QColor(QStringLiteral("#003b6f")));
-        painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignTop, categoryName_);
-
-        QFont countFont = font();
-        countFont.setBold(false);
-        painter.setFont(countFont);
-        painter.setPen(QColor(QStringLiteral("#60758a")));
-        painter.drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, categoryCount_);
-    }
-
-private:
-    QString categoryName_;
-    QString categoryCount_;
-};
-
-class CategoryCardDelegate final : public QStyledItemDelegate
-{
-public:
-    explicit CategoryCardDelegate(QObject* parent = nullptr)
-        : QStyledItemDelegate(parent)
-    {
-    }
-
-    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
-    {
-        painter->save();
-        painter->setRenderHint(QPainter::Antialiasing);
-
-        const bool placeholder = index.data(kDragPlaceholderRole).toBool();
-        const bool selected = option.state.testFlag(QStyle::State_Selected);
-        const bool dragging = option.widget != nullptr && option.widget->property("categoryDragging").toBool();
-        const bool hovered = !dragging && option.state.testFlag(QStyle::State_MouseOver);
-        const bool dragged = index.data(kDragSourceRole).toBool();
-        const int dropMarker = index.data(kDropMarkerRole).toInt();
-        const QRect cardRect = option.rect.adjusted(0, 0, -1, -1);
-        if (placeholder) {
-            painter->setBrush(Qt::NoBrush);
-            painter->setPen(QPen(QColor(0, 103, 177, 95), 2, Qt::DashLine));
-            painter->drawRoundedRect(cardRect.adjusted(3, 3, -3, -3), 14, 14);
-            painter->restore();
-            return;
-        }
-        const QColor background = selected
-            ? QColor(QStringLiteral("#d9ecff"))
-            : (hovered ? QColor(240, 247, 255, 225) : QColor(255, 255, 255, 155));
-        QColor cardBackground = background;
-        if (dragged) {
-            cardBackground.setAlpha(80);
-        }
-        painter->setBrush(cardBackground);
-        painter->setPen(selected ? QColor(QStringLiteral("#8bc0e8")) : QColor(255, 255, 255, 145));
-        painter->drawRoundedRect(cardRect, 14, 14);
-
-        if (dropMarker != 0) {
-            const int markerX = dropMarker < 0 ? cardRect.left() + 3 : cardRect.right() - 3;
-            painter->setPen(QPen(QColor(QStringLiteral("#0067b1")), 3, Qt::SolidLine, Qt::RoundCap));
-            painter->drawLine(markerX, cardRect.top() + 12, markerX, cardRect.bottom() - 12);
-        }
-
-        const QRect textRect = cardRect.adjusted(14, 10, -14, -10);
-        QFont nameFont = option.font;
-        nameFont.setBold(true);
-        painter->setFont(nameFont);
-        painter->setPen(selected ? QColor(QStringLiteral("#003b6f")) : QColor(QStringLiteral("#102a43")));
-        painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignTop, index.data(Qt::UserRole).toString());
-
-        QFont countFont = option.font;
-        countFont.setBold(false);
-        painter->setFont(countFont);
-        painter->setPen(QColor(QStringLiteral("#60758a")));
-        painter->drawText(textRect, Qt::AlignHCenter | Qt::AlignBottom, index.data(Qt::UserRole + 1).toString());
-        painter->restore();
-    }
-
-    QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
-    {
-        return QSize(220, 78);
-    }
-};
-
-class CategoryListWidget final : public QListWidget
-{
-public:
-    using QListWidget::QListWidget;
-
-    std::function<void()> orderChanged;
-
-protected:
-    void mousePressEvent(QMouseEvent* event) override
-    {
-        if (dragging_) {
-            cancelDrag();
-        }
-        cancelPreviewAnimation();
-        pressedItem_ = event->button() == Qt::LeftButton ? itemAt(event->position().toPoint()) : nullptr;
-        pressPosition_ = event->position().toPoint();
-        dragging_ = false;
-        QListWidget::mousePressEvent(event);
-    }
-
-    void mouseMoveEvent(QMouseEvent* event) override
-    {
-        if (pressedItem_ == nullptr || isFixedCategory(pressedItem_) || !(event->buttons() & Qt::LeftButton)) {
-            QListWidget::mouseMoveEvent(event);
-            return;
-        }
-
-        if (!dragging_ && (event->position().toPoint() - pressPosition_).manhattanLength() >= QApplication::startDragDistance()) {
-            beginDrag();
-            showPreview(event->position().toPoint());
-            updateDropTarget(event->position().toPoint());
-            viewport()->setCursor(Qt::ClosedHandCursor);
-        }
-        if (!dragging_) {
-            QListWidget::mouseMoveEvent(event);
-            return;
-        }
-
-        movePreview(event->position().toPoint());
-        updateDropTarget(event->position().toPoint());
-        event->accept();
-    }
-
-    void mouseReleaseEvent(QMouseEvent* event) override
-    {
-        const bool wasDragging = dragging_;
-        if (wasDragging && event->button() == Qt::LeftButton) {
-            updateDropTarget(event->position().toPoint());
-            const QRect destination = commitDrag();
-            animatePreviewTo(destination, draggedItem_);
-            event->accept();
-        } else {
-            QListWidget::mouseReleaseEvent(event);
-        }
-
-        pressedItem_ = nullptr;
-        draggedItem_ = nullptr;
-        placeholderItem_ = nullptr;
-        dragging_ = false;
-        viewport()->setProperty("categoryDragging", false);
-        viewport()->unsetCursor();
-    }
-
-private:
-    void beginDrag()
-    {
-        if (pressedItem_ == nullptr) {
-            return;
-        }
-
-        dragging_ = true;
-        const int sourceRow = row(pressedItem_);
-        draggedItem_ = takeItem(sourceRow);
-        placeholderItem_ = new QListWidgetItem();
-        placeholderItem_->setData(kDragPlaceholderRole, true);
-        placeholderItem_->setFlags(Qt::NoItemFlags);
-        placeholderItem_->setSizeHint(QSize(220, 78));
-        insertItem(sourceRow, placeholderItem_);
-        dropInsertionIndex_ = 0;
-        for (int index = 0; index < sourceRow; ++index) {
-            if (!isFixedCategory(item(index))) {
-                ++dropInsertionIndex_;
-            }
-        }
-        viewport()->setProperty("categoryDragging", true);
-        doItemsLayout();
-    }
-
-    void showPreview(const QPoint& position)
-    {
-        if (preview_ == nullptr) {
-            preview_ = new CategoryDragPreview(viewport());
-            previewAnimation_ = new QPropertyAnimation(preview_, "geometry", preview_);
-            previewAnimation_->setDuration(180);
-            previewAnimation_->setEasingCurve(QEasingCurve::OutCubic);
-            connect(previewAnimation_, &QPropertyAnimation::finished, this, [this] {
-                preview_->hide();
-                if (animatedItem_ != nullptr) {
-                    animatedItem_->setData(kDragSourceRole, false);
-                    animatedItem_ = nullptr;
-                    viewport()->update();
-                }
-            });
-        }
-
-        preview_->setCardText(
-            draggedItem_->data(Qt::UserRole).toString(),
-            draggedItem_->data(Qt::UserRole + 1).toString());
-        movePreview(position);
-        preview_->show();
-        preview_->raise();
-        viewport()->update();
-    }
-
-    void movePreview(const QPoint& position)
-    {
-        if (preview_ != nullptr && preview_->isVisible()) {
-            preview_->move(position - QPoint(preview_->width() / 2, preview_->height() / 2));
-        }
-    }
-
-    void updateDropTarget(const QPoint& position)
-    {
-        QListWidgetItem* newTarget = itemAt(position);
-        if (newTarget == nullptr || newTarget == placeholderItem_) {
-            return;
-        }
-
-        int newMarker = 0;
-        int newInsertionIndex = dropInsertionIndex_;
-        if (newTarget != nullptr) {
-            if (isAllCategory(newTarget)) {
-                newMarker = 1;
-                newInsertionIndex = 0;
-            } else if (isOtherCategory(newTarget)) {
-                newMarker = -1;
-                newInsertionIndex = movableCategoryCount();
-            } else {
-                const QRect targetRect = visualItemRect(newTarget);
-                const QPoint targetCenter = targetRect.center();
-                const bool afterTarget = std::abs(position.y() - targetCenter.y()) > targetRect.height() / 3
-                    ? position.y() > targetCenter.y()
-                    : position.x() > targetCenter.x();
-                newMarker = afterTarget ? 1 : -1;
-                const int targetIndex = movableCategoryIndex(newTarget);
-                if (targetIndex < 0) {
-                    return;
-                }
-                newInsertionIndex = targetIndex + (afterTarget ? 1 : 0);
-            }
-        }
-
-        const bool targetChanged = dropTargetItem_ != newTarget || dropMarker_ != newMarker;
-        const bool insertionChanged = dropInsertionIndex_ != newInsertionIndex;
-        if (targetChanged || insertionChanged) {
-            if (dropTargetItem_ != nullptr) {
-                dropTargetItem_->setData(kDropMarkerRole, 0);
-            }
-            dropTargetItem_ = newTarget;
-            dropMarker_ = newMarker;
-            dropInsertionIndex_ = newInsertionIndex;
-            if (dropTargetItem_ != nullptr) {
-                dropTargetItem_->setData(kDropMarkerRole, dropMarker_);
-            }
-            movePlaceholder();
-            viewport()->update();
-        }
-    }
-
-    void movePlaceholder()
-    {
-        if (placeholderItem_ == nullptr) {
-            return;
-        }
-
-        const int destinationRow = 1 + std::clamp(dropInsertionIndex_, 0, movableCategoryCount());
-        if (row(placeholderItem_) == destinationRow) {
-            return;
-        }
-
-        viewport()->setUpdatesEnabled(false);
-        takeItem(row(placeholderItem_));
-        insertItem(destinationRow, placeholderItem_);
-        doItemsLayout();
-        viewport()->setUpdatesEnabled(true);
-        viewport()->update();
-    }
-
-    int movableCategoryCount() const
-    {
-        int count = 0;
-        for (int index = 0; index < this->count(); ++index) {
-            const QListWidgetItem* listItem = item(index);
-            if (listItem != placeholderItem_ && !isFixedCategory(listItem)) {
-                ++count;
-            }
-        }
-        return count;
-    }
-
-    int movableCategoryIndex(const QListWidgetItem* targetItem) const
-    {
-        int index = 0;
-        for (int rowIndex = 0; rowIndex < count(); ++rowIndex) {
-            const QListWidgetItem* listItem = item(rowIndex);
-            if (listItem == placeholderItem_ || isFixedCategory(listItem)) {
-                continue;
-            }
-            if (listItem == targetItem) {
-                return index;
-            }
-            ++index;
-        }
-        return -1;
-    }
-
-    QRect commitDrag()
-    {
-        if (draggedItem_ == nullptr || placeholderItem_ == nullptr) {
-            return {};
-        }
-
-        const int destinationRow = row(placeholderItem_);
-        takeItem(destinationRow);
-        delete placeholderItem_;
-        placeholderItem_ = nullptr;
-        draggedItem_->setData(kDragSourceRole, true);
-        insertItem(destinationRow, draggedItem_);
-        setCurrentItem(draggedItem_);
-        doItemsLayout();
-        if (orderChanged) {
-            orderChanged();
-        }
-        return visualItemRect(draggedItem_);
-    }
-
-    void animatePreviewTo(const QRect& destination, QListWidgetItem* item)
-    {
-        if (dropTargetItem_ != nullptr) {
-            dropTargetItem_->setData(kDropMarkerRole, 0);
-            dropTargetItem_ = nullptr;
-            dropMarker_ = 0;
-        }
-
-        if (preview_ == nullptr || !preview_->isVisible() || !destination.isValid()) {
-            item->setData(kDragSourceRole, false);
-            viewport()->update();
-            return;
-        }
-
-        animatedItem_ = item;
-        previewAnimation_->stop();
-        previewAnimation_->setStartValue(preview_->geometry());
-        previewAnimation_->setEndValue(destination);
-        previewAnimation_->start();
-    }
-
-    void cancelPreviewAnimation()
-    {
-        if (previewAnimation_ != nullptr && previewAnimation_->state() == QAbstractAnimation::Running) {
-            previewAnimation_->stop();
-        }
-        if (preview_ != nullptr) {
-            preview_->hide();
-        }
-        if (animatedItem_ != nullptr) {
-            animatedItem_->setData(kDragSourceRole, false);
-            animatedItem_ = nullptr;
-            viewport()->update();
-        }
-    }
-
-    void cancelDrag()
-    {
-        if (placeholderItem_ != nullptr && draggedItem_ != nullptr) {
-            const int destinationRow = row(placeholderItem_);
-            takeItem(destinationRow);
-            delete placeholderItem_;
-            insertItem(destinationRow, draggedItem_);
-            draggedItem_->setData(kDragSourceRole, false);
-        }
-        if (dropTargetItem_ != nullptr) {
-            dropTargetItem_->setData(kDropMarkerRole, 0);
-            dropTargetItem_ = nullptr;
-        }
-        placeholderItem_ = nullptr;
-        draggedItem_ = nullptr;
-        dropMarker_ = 0;
-        dropInsertionIndex_ = 0;
-        dragging_ = false;
-        viewport()->setProperty("categoryDragging", false);
-        viewport()->update();
-    }
-
-    static bool isAllCategory(const QListWidgetItem* item)
-    {
-        return item->data(Qt::UserRole).toString() == QStringLiteral("全部");
-    }
-
-    static bool isOtherCategory(const QListWidgetItem* item)
-    {
-        return item->data(Qt::UserRole).toString() == QStringLiteral("其他");
-    }
-
-    static bool isFixedCategory(const QListWidgetItem* item)
-    {
-        return isAllCategory(item) || isOtherCategory(item);
-    }
-
-    QListWidgetItem* pressedItem_ = nullptr;
-    QListWidgetItem* draggedItem_ = nullptr;
-    QListWidgetItem* placeholderItem_ = nullptr;
-    QListWidgetItem* dropTargetItem_ = nullptr;
-    QListWidgetItem* animatedItem_ = nullptr;
-    QPoint pressPosition_;
-    CategoryDragPreview* preview_ = nullptr;
-    QPropertyAnimation* previewAnimation_ = nullptr;
-    int dropMarker_ = 0;
-    int dropInsertionIndex_ = 0;
-    bool dragging_ = false;
-};
-
 QToolButton* createActionButton(
     QWidget* parent,
     const QString& text,
@@ -579,22 +200,13 @@ void addTextShadow(QLabel* label)
 }
 }
 
-MainWindow::MainWindow(const QString& backgroundImagePath, QWidget* parent)
+MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
     : QMainWindow(parent)
-    , backgroundImagePath_(backgroundImagePath)
+    , backgroundImagePaths_(backgroundImagePaths)
     , sortOrder_(static_cast<ModSortOrder>(std::clamp(AppConfig::modListSortOrder(), 0, 6)))
-    , categories_(AppConfig::modCategories())
+    , categories_(ModListLogic::normalizeCategories(AppConfig::modCategories()))
     , categoryOrder_(AppConfig::modCategoryOrder())
 {
-    QStringList validCategories;
-    for (const QString& category : categories_) {
-        if (!category.isEmpty() && category != QStringLiteral("全部") && category != QStringLiteral("其他")
-            && !validCategories.contains(category)) {
-            validCategories.append(category);
-        }
-    }
-    categories_ = validCategories;
-
     setAcceptDrops(true);
     setWindowTitle(QStringLiteral("NTE 模组管理器"));
     setMinimumSize(820, 560);
@@ -665,7 +277,7 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
 
 void MainWindow::buildUi()
 {
-    auto* root = new BackgroundWidget(backgroundImagePath_, this);
+    auto* root = new BackgroundWidget(backgroundImagePaths_, this);
     root->setObjectName(QStringLiteral("root"));
     root->setAcceptDrops(true);
     auto* rootLayout = new QVBoxLayout(root);
@@ -752,10 +364,14 @@ void MainWindow::buildUi()
     auto* categoryPageLayout = new QVBoxLayout(categoryPage);
     categoryPageLayout->setContentsMargins(0, 0, 0, 0);
     auto* categoryHeader = new QHBoxLayout();
+    categoryHeader->setContentsMargins(0, 8, 0, 8);
     auto* categoryTitle = new QLabel(QStringLiteral("模组分类"), categoryPage);
     categoryTitle->setObjectName(QStringLiteral("sectionTitle"));
+    categoryTitle->setMinimumHeight(32);
+    categoryTitle->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     addTextShadow(categoryTitle);
     categoryHeader->addWidget(categoryTitle);
+    categoryHeader->setAlignment(categoryTitle, Qt::AlignTop);
     categoryHeader->addStretch();
     categoryPageLayout->addLayout(categoryHeader);
 
@@ -767,12 +383,15 @@ void MainWindow::buildUi()
     categoryList_->setWrapping(true);
     categoryList_->setResizeMode(QListView::Adjust);
     categoryList_->setMovement(QListView::Snap);
-    categoryList_->setGridSize(QSize(236, 92));
+    const int categoryGridWidth = categoryList_->property("categoryGridWidth").toInt();
+    const int categoryGridHeight = categoryList_->property("categoryGridHeight").toInt();
+    categoryList_->setGridSize(QSize(
+        categoryGridWidth > 0 ? categoryGridWidth : 236,
+        categoryGridHeight > 0 ? categoryGridHeight : 92));
     categoryList_->setDragDropMode(QAbstractItemView::NoDragDrop);
     categoryList_->setDragEnabled(false);
     categoryList_->setAcceptDrops(false);
     categoryList_->setDropIndicatorShown(false);
-    categoryList_->setItemDelegate(new CategoryCardDelegate(categoryList_));
     categoryList->orderChanged = [this] {
         updateCategoryOrderFromList();
     };
@@ -790,6 +409,7 @@ void MainWindow::buildUi()
     auto* modsPageLayout = new QVBoxLayout(modsPage);
     modsPageLayout->setContentsMargins(0, 0, 0, 0);
     auto* listHeader = new QHBoxLayout();
+    listHeader->setContentsMargins(0, 8, 0, 8);
     auto* backButton = new QPushButton(style()->standardIcon(QStyle::SP_ArrowBack), {}, modsPage);
     backButton->setObjectName(QStringLiteral("modListActionButton"));
     backButton->setToolTip(QStringLiteral("返回模组分类"));
@@ -798,12 +418,18 @@ void MainWindow::buildUi()
     listHeader->addWidget(backButton);
     modCategoryLabel_ = new QLabel(QStringLiteral("已导入模组"), modsPage);
     modCategoryLabel_->setObjectName(QStringLiteral("sectionTitle"));
+    modCategoryLabel_->setMinimumHeight(32);
+    modCategoryLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     addTextShadow(modCategoryLabel_);
     modCountLabel_ = new QLabel(root);
     modCountLabel_->setObjectName(QStringLiteral("count"));
+    modCountLabel_->setMinimumHeight(32);
+    modCountLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     addTextShadow(modCountLabel_);
     listHeader->addWidget(modCategoryLabel_);
+    listHeader->setAlignment(modCategoryLabel_, Qt::AlignTop);
     listHeader->addWidget(modCountLabel_);
+    listHeader->setAlignment(modCountLabel_, Qt::AlignTop);
     listHeader->addStretch();
 
     auto* sortButton = new QPushButton(style()->standardIcon(QStyle::SP_FileDialogDetailedView), {}, root);
@@ -835,7 +461,7 @@ void MainWindow::buildUi()
 
     auto* installAllButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogApplyButton), QStringLiteral("全部安装"), root);
     installAllButton->setObjectName(QStringLiteral("modListActionButton"));
-    installAllButton->setToolTip(QStringLiteral("将所有未安装模组复制到游戏的 ~mods 文件夹"));
+    installAllButton->setToolTip(QStringLiteral("将当前分类中所有未安装模组复制到游戏的 ~mods 文件夹"));
     installAllButton->setCursor(Qt::PointingHandCursor);
     connect(installAllButton, &QPushButton::clicked, this, [this] {
         changeInstallationForAll(true);
@@ -844,7 +470,7 @@ void MainWindow::buildUi()
 
     auto* uninstallAllButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogCancelButton), QStringLiteral("全部卸载"), root);
     uninstallAllButton->setObjectName(QStringLiteral("modListActionButton"));
-    uninstallAllButton->setToolTip(QStringLiteral("从游戏的 ~mods 文件夹中删除所有已安装模组文件"));
+    uninstallAllButton->setToolTip(QStringLiteral("从游戏的 ~mods 文件夹中删除当前分类的所有已安装模组文件"));
     uninstallAllButton->setCursor(Qt::PointingHandCursor);
     connect(uninstallAllButton, &QPushButton::clicked, this, [this] {
         changeInstallationForAll(false);
@@ -895,32 +521,11 @@ void MainWindow::buildUi()
     root->installEventFilter(this);
 }
 
-QString MainWindow::categoryForMod(const ModInfo& mod) const
-{
-    QString matchedCategory;
-    for (const QString& category : categories_) {
-        if (mod.name.startsWith(category) && category.size() > matchedCategory.size()) {
-            matchedCategory = category;
-        }
-    }
-    return matchedCategory.isEmpty() ? QStringLiteral("其他") : matchedCategory;
-}
-
 void MainWindow::refreshCategories()
 {
     const QList<ModInfo> mods = repository_.scan();
-    QStringList orderedCategories;
-    for (const QString& category : categoryOrder_) {
-        if (categories_.contains(category) && !orderedCategories.contains(category)) {
-            orderedCategories.append(category);
-        }
-    }
-    for (const QString& category : categories_) {
-        if (!orderedCategories.contains(category)) {
-            orderedCategories.append(category);
-        }
-    }
-    categoryOrder_ = orderedCategories;
+    categoryOrder_ = ModListLogic::orderedCategories(categories_, categoryOrder_);
+    const QHash<QString, int> categoryCounts = ModListLogic::countByCategory(mods, categories_);
 
     QSignalBlocker blocker(categoryList_);
     categoryList_->clear();
@@ -928,16 +533,9 @@ void MainWindow::refreshCategories()
     displayCategories += categoryOrder_;
     displayCategories.append(QStringLiteral("其他"));
     for (const QString& category : displayCategories) {
-        int count = 0;
-        for (const ModInfo& mod : mods) {
-            if (category == QStringLiteral("全部") || categoryForMod(mod) == category) {
-                ++count;
-            }
-        }
-
         auto* item = new QListWidgetItem(categoryList_);
         item->setData(Qt::UserRole, category);
-        item->setData(Qt::UserRole + 1, QStringLiteral("%1 个模组").arg(count));
+        item->setData(Qt::UserRole + 1, QStringLiteral("%1 个模组").arg(categoryCounts.value(category)));
         Qt::ItemFlags itemFlags = item->flags() | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
         if (category == QStringLiteral("全部") || category == QStringLiteral("其他")) {
             itemFlags &= ~Qt::ItemIsDragEnabled;
@@ -966,14 +564,14 @@ void MainWindow::showCategory(const QString& category)
 
 void MainWindow::updateCategoryOrderFromList()
 {
-    QStringList newOrder;
+    QStringList requestedOrder;
     for (int index = 0; index < categoryList_->count(); ++index) {
         const QString category = categoryList_->item(index)->data(Qt::UserRole).toString();
-        if (categories_.contains(category) && !newOrder.contains(category)) {
-            newOrder.append(category);
+        if (categories_.contains(category)) {
+            requestedOrder.append(category);
         }
     }
-    categoryOrder_ = newOrder;
+    categoryOrder_ = ModListLogic::orderedCategories(categories_, requestedOrder);
     AppConfig::setModCategoryOrder(categoryOrder_);
 }
 
@@ -986,46 +584,11 @@ void MainWindow::refreshMods()
         delete item;
     }
 
-    QList<ModInfo> mods = repository_.scan();
-    if (currentCategory_ != QStringLiteral("全部")) {
-        mods.erase(std::remove_if(mods.begin(), mods.end(), [this](const ModInfo& mod) {
-            return categoryForMod(mod) != currentCategory_;
-        }), mods.end());
-    }
-    switch (sortOrder_) {
-    case ModSortOrder::InstalledFirst:
-        break;
-    case ModSortOrder::NameAscending:
-        std::sort(mods.begin(), mods.end(), [](const ModInfo& left, const ModInfo& right) {
-            return QString::localeAwareCompare(left.name, right.name) < 0;
-        });
-        break;
-    case ModSortOrder::NameDescending:
-        std::sort(mods.begin(), mods.end(), [](const ModInfo& left, const ModInfo& right) {
-            return QString::localeAwareCompare(left.name, right.name) > 0;
-        });
-        break;
-    case ModSortOrder::ImportedNewestFirst:
-        std::sort(mods.begin(), mods.end(), [](const ModInfo& left, const ModInfo& right) {
-            return left.importedAt > right.importedAt;
-        });
-        break;
-    case ModSortOrder::ImportedOldestFirst:
-        std::sort(mods.begin(), mods.end(), [](const ModInfo& left, const ModInfo& right) {
-            return left.importedAt < right.importedAt;
-        });
-        break;
-    case ModSortOrder::SizeLargestFirst:
-        std::sort(mods.begin(), mods.end(), [](const ModInfo& left, const ModInfo& right) {
-            return left.sizeBytes > right.sizeBytes;
-        });
-        break;
-    case ModSortOrder::SizeSmallestFirst:
-        std::sort(mods.begin(), mods.end(), [](const ModInfo& left, const ModInfo& right) {
-            return left.sizeBytes < right.sizeBytes;
-        });
-        break;
-    }
+    const QList<ModInfo> mods = ModListLogic::filterAndSort(
+        repository_.scan(),
+        currentCategory_,
+        categories_,
+        sortOrder_);
     modCategoryLabel_->setText(currentCategory_);
     modCountLabel_->setText(QStringLiteral("%1 个").arg(mods.size()));
     if (mods.isEmpty()) {
@@ -1204,6 +767,9 @@ void MainWindow::packageMod()
                 return OperationResult{false, QStringLiteral("无法启动打包脚本：%1").arg(process.errorString())};
             }
             process.waitForFinished(-1);
+            if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 2) {
+                return OperationResult{false, {}, true};
+            }
             if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
                 const QString output = QString::fromLocal8Bit(
                     process.readAllStandardError() + process.readAllStandardOutput()).trimmed();
@@ -1213,7 +779,11 @@ void MainWindow::packageMod()
         },
         [this, packageDirectory](const OperationResult& result) {
             if (!result.success) {
-                handleOperation(result);
+                if (result.cancelled) {
+                    activityLabel_->setText(QStringLiteral("已取消打包模组"));
+                } else {
+                    handleOperation(result);
+                }
                 return;
             }
 
@@ -1257,8 +827,11 @@ void MainWindow::handleOperation(const OperationResult& result)
 void MainWindow::changeInstallationForAll(bool install)
 {
     const QString action = install ? QStringLiteral("安装") : QStringLiteral("卸载");
-    runAsyncOperation(QStringLiteral("正在批量%1模组...").arg(action), [repository = repository_, install, action](const auto& updateActivity) {
-        const QList<ModInfo> mods = repository.scan();
+    const QString category = currentCategory_;
+    const QStringList categories = categories_;
+    const ModSortOrder sortOrder = sortOrder_;
+    runAsyncOperation(QStringLiteral("正在批量%1模组...").arg(action), [repository = repository_, install, action, category, categories, sortOrder](const auto& updateActivity) {
+        const QList<ModInfo> mods = ModListLogic::filterAndSort(repository.scan(), category, categories, sortOrder);
         QList<ModInfo> pendingMods;
         for (const ModInfo& mod : mods) {
             if (mod.installed != install) {

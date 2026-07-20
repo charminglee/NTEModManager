@@ -26,7 +26,11 @@ configure_file(
 
 qt_add_executable(NteModManager WIN32
     src/AppConfig.cpp
+    src/CategoryListWidget.cpp
+    src/CategoryListWidget.h
     src/MainWindow.cpp
+    src/ModListLogic.cpp
+    src/ModListLogic.h
     src/ModRepository.cpp
     src/main.cpp
 )

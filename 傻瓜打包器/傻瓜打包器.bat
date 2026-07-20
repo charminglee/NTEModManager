@@ -55,7 +55,7 @@ set "IMPORT_EXIT_CODE=%errorlevel%"
 
 if "%IMPORT_EXIT_CODE%"=="2" (
     echo [已取消] 未选择文件夹，已停止封包。
-    exit /b 0
+    exit /b 2
 )
 
 if not "%IMPORT_EXIT_CODE%"=="0" (

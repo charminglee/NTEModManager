@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ModListLogic.h"
 #include "ModRepository.h"
 
 #include <functional>
@@ -23,7 +24,7 @@ class QWidget;
 class MainWindow final : public QMainWindow
 {
 public:
-    explicit MainWindow(const QString& backgroundImagePath, QWidget* parent = nullptr);
+    explicit MainWindow(const QStringList& backgroundImagePaths, QWidget* parent = nullptr);
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -32,16 +33,7 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
-    enum class ModSortOrder
-    {
-        InstalledFirst,
-        NameAscending,
-        NameDescending,
-        ImportedNewestFirst,
-        ImportedOldestFirst,
-        SizeLargestFirst,
-        SizeSmallestFirst,
-    };
+    using ModSortOrder = ModListLogic::SortOrder;
 
     void buildUi();
     void refreshCategories();
@@ -63,10 +55,9 @@ private:
 
     [[nodiscard]] static QStringList archivePathsFromDrop(const QMimeData* mimeData);
     [[nodiscard]] static QString formatFileSize(qint64 byteCount);
-    [[nodiscard]] QString categoryForMod(const ModInfo& mod) const;
 
     ModRepository repository_;
-    QString backgroundImagePath_;
+    QStringList backgroundImagePaths_;
     QStackedWidget* contentStack_ = nullptr;
     QListWidget* categoryList_ = nullptr;
     QVBoxLayout* modListLayout_ = nullptr;

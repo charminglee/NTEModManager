@@ -17,6 +17,7 @@ struct OperationResult
 {
     bool success = false;
     QString message;
+    bool cancelled = false;
 };
 
 class ModRepository
