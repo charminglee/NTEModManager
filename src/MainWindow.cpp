@@ -665,28 +665,28 @@ void MainWindow::addModRow(const ModInfo& mod)
     });
     layout->addWidget(installButton);
 
-    auto* deleteButton = createActionButton(
-        row,
-        {},
-        style()->standardIcon(QStyle::SP_TrashIcon),
-        QStringLiteral("删除已安装的模组文件及其备份文件")
-    );
-    deleteButton->setObjectName(QStringLiteral("deleteButton"));
-    connect(deleteButton, &QToolButton::clicked, this, [this, mod] {
-        QMessageBox confirmation(this);
-        confirmation.setWindowTitle(QStringLiteral("删除模组"));
-        confirmation.setIcon(QMessageBox::Warning);
-        confirmation.setText(QStringLiteral("将永久删除“%1”的备份文件及已安装的模组文件。此操作无法撤销。").arg(mod.name));
-        QPushButton* confirmDelete = confirmation.addButton(QStringLiteral("删除"), QMessageBox::DestructiveRole);
-        confirmation.addButton(QMessageBox::Cancel);
-        confirmation.exec();
-        if (confirmation.clickedButton() == confirmDelete) {
-            runAsyncOperation(QStringLiteral("正在删除 %1...").arg(mod.name), [repository = repository_, mod](const auto&) {
-                return repository.remove(mod);
-            });
-        }
-    });
-    layout->addWidget(deleteButton);
+    // auto* deleteButton = createActionButton(
+    //     row,
+    //     {},
+    //     style()->standardIcon(QStyle::SP_TrashIcon),
+    //     QStringLiteral("删除已安装的模组文件及其备份文件")
+    // );
+    // deleteButton->setObjectName(QStringLiteral("deleteButton"));
+    // connect(deleteButton, &QToolButton::clicked, this, [this, mod] {
+    //     QMessageBox confirmation(this);
+    //     confirmation.setWindowTitle(QStringLiteral("删除模组"));
+    //     confirmation.setIcon(QMessageBox::Warning);
+    //     confirmation.setText(QStringLiteral("将永久删除“%1”的备份文件及已安装的模组文件。此操作无法撤销。").arg(mod.name));
+    //     QPushButton* confirmDelete = confirmation.addButton(QStringLiteral("删除"), QMessageBox::DestructiveRole);
+    //     confirmation.addButton(QMessageBox::Cancel);
+    //     confirmation.exec();
+    //     if (confirmation.clickedButton() == confirmDelete) {
+    //         runAsyncOperation(QStringLiteral("正在删除 %1...").arg(mod.name), [repository = repository_, mod](const auto&) {
+    //             return repository.remove(mod);
+    //         });
+    //     }
+    // });
+    // layout->addWidget(deleteButton);
 
     auto* moreButton = createActionButton(
         row,
@@ -697,6 +697,7 @@ void MainWindow::addModRow(const ModInfo& mod)
     moreButton->setObjectName(QStringLiteral("moreButton"));
     moreButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
     moreButton->setFixedSize(32, 32);
+
     auto* moreMenu = new QMenu(moreButton);
     QAction* renameAction = moreMenu->addAction(QStringLiteral("重命名"));
     connect(renameAction, &QAction::triggered, this, [this, mod] {
@@ -713,12 +714,30 @@ void MainWindow::addModRow(const ModInfo& mod)
             handleOperation(repository_.rename(mod, newName));
         }
     });
+
+    QAction* delAction = moreMenu->addAction(QStringLiteral("删除"));
+    connect(delAction, &QAction::triggered, this, [this, mod] {
+        QMessageBox confirmation(this);
+        confirmation.setWindowTitle(QStringLiteral("删除模组"));
+        confirmation.setIcon(QMessageBox::Warning);
+        confirmation.setText(QStringLiteral("将永久删除“%1”的备份文件及已安装的模组文件。此操作无法撤销。").arg(mod.name));
+        QPushButton* confirmDelete = confirmation.addButton(QStringLiteral("删除"), QMessageBox::DestructiveRole);
+        confirmation.addButton(QMessageBox::Cancel);
+        confirmation.exec();
+        if (confirmation.clickedButton() == confirmDelete) {
+            runAsyncOperation(QStringLiteral("正在删除 %1...").arg(mod.name), [repository = repository_, mod](const auto&) {
+                return repository.remove(mod);
+            });
+        }
+    });
+    
     QAction* openAction = moreMenu->addAction(QStringLiteral("打开源文件位置"));
     connect(openAction, &QAction::triggered, this, [this, mod] {
         if (!QDesktopServices::openUrl(QUrl::fromLocalFile(mod.sourcePath))) {
             QMessageBox::warning(this, QStringLiteral("无法打开文件夹"), QStringLiteral("无法在资源管理器中打开：%1").arg(mod.sourcePath));
         }
     });
+
     if (mod.installed) {
         QAction* openInstallLocationAction = moreMenu->addAction(QStringLiteral("打开安装位置"));
         connect(openInstallLocationAction, &QAction::triggered, this, [this, mod] {
@@ -728,6 +747,7 @@ void MainWindow::addModRow(const ModInfo& mod)
             }
         });
     }
+
     moreButton->setMenu(moreMenu);
     moreButton->setPopupMode(QToolButton::InstantPopup);
     layout->addWidget(moreButton);
