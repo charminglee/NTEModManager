@@ -350,7 +350,7 @@ void MainWindow::buildUi()
     importTextLayout->setSpacing(2);
     auto* importTitle = new QLabel(QStringLiteral("拖放导入模组"), dropZone);
     importTitle->setObjectName(QStringLiteral("dropTitle"));
-    auto* importHint = new QLabel(QStringLiteral("将 .zip 或 .rar 压缩包拖放到这里即可导入"), dropZone);
+    auto* importHint = new QLabel(QStringLiteral("将压缩包拖放到此处即可导入"), dropZone);
     importHint->setObjectName(QStringLiteral("dropHint"));
     importTextLayout->addWidget(importTitle);
     importTextLayout->addWidget(importHint);
@@ -637,7 +637,8 @@ void MainWindow::addModRow(const ModInfo& mod)
     auto* metadata = new QLabel(
         QStringLiteral("%1  |  导入于 %2")
             .arg(formatFileSize(mod.sizeBytes), mod.importedAt.toLocalTime().toString(QStringLiteral("yyyy-MM-dd HH:mm"))),
-        row);
+        row
+    );
     metadata->setObjectName(QStringLiteral("metadata"));
     detailsLayout->addWidget(name);
     detailsLayout->addWidget(metadata);
@@ -668,7 +669,8 @@ void MainWindow::addModRow(const ModInfo& mod)
         row,
         {},
         style()->standardIcon(QStyle::SP_TrashIcon),
-        QStringLiteral("删除已安装的模组文件及其备份文件"));
+        QStringLiteral("删除已安装的模组文件及其备份文件")
+    );
     deleteButton->setObjectName(QStringLiteral("deleteButton"));
     connect(deleteButton, &QToolButton::clicked, this, [this, mod] {
         QMessageBox confirmation(this);
@@ -690,7 +692,8 @@ void MainWindow::addModRow(const ModInfo& mod)
         row,
         QStringLiteral("•••"),
         {},
-        QStringLiteral("更多选项"));
+        QStringLiteral("更多选项")
+    );
     moreButton->setObjectName(QStringLiteral("moreButton"));
     moreButton->setToolButtonStyle(Qt::ToolButtonTextOnly);
     moreButton->setFixedSize(32, 32);
@@ -704,17 +707,27 @@ void MainWindow::addModRow(const ModInfo& mod)
             QStringLiteral("模组名称："),
             QLineEdit::Normal,
             mod.name,
-            &accepted);
+            &accepted
+        );
         if (accepted) {
             handleOperation(repository_.rename(mod, newName));
         }
     });
-    QAction* openAction = moreMenu->addAction(QStringLiteral("打开"));
+    QAction* openAction = moreMenu->addAction(QStringLiteral("打开源文件位置"));
     connect(openAction, &QAction::triggered, this, [this, mod] {
         if (!QDesktopServices::openUrl(QUrl::fromLocalFile(mod.sourcePath))) {
             QMessageBox::warning(this, QStringLiteral("无法打开文件夹"), QStringLiteral("无法在资源管理器中打开：%1").arg(mod.sourcePath));
         }
     });
+    if (mod.installed) {
+        QAction* openInstallLocationAction = moreMenu->addAction(QStringLiteral("打开安装位置"));
+        connect(openInstallLocationAction, &QAction::triggered, this, [this, mod] {
+            const QString installPath = QStringLiteral("%1/%2").arg(ModRepository::modsDirectory()).arg(mod.name);
+            if (!QDesktopServices::openUrl(QUrl::fromLocalFile(installPath))) {
+                QMessageBox::warning(this, QStringLiteral("无法打开文件夹"), QStringLiteral("无法在资源管理器中打开：%1").arg(installPath));
+            }
+        });
+    }
     moreButton->setMenu(moreMenu);
     moreButton->setPopupMode(QToolButton::InstantPopup);
     layout->addWidget(moreButton);
@@ -734,6 +747,29 @@ void MainWindow::importArchives(const QStringList& archivePaths)
             failures.append(QStringLiteral("%1：%2").arg(fileName, result.message));
         } else {
             activityLabel_->setText(result.message);
+            const QString importedName = result.message.mid(QStringLiteral("已导入 ").size());
+            const QList<ModInfo> importedMods = repository_.scan();
+            const auto importedMod = std::find_if(importedMods.cbegin(), importedMods.cend(), [&importedName](const ModInfo& mod) {
+                return mod.name == importedName;
+            });
+            if (importedMod != importedMods.cend()) {
+                bool accepted = false;
+                const QString newName = QInputDialog::getText(
+                    this,
+                    QStringLiteral("重命名模组"),
+                    QStringLiteral("模组名称："),
+                    QLineEdit::Normal,
+                    QFileInfo(archivePath).completeBaseName(),
+                    &accepted);
+                if (accepted && newName != importedMod->name) {
+                    const OperationResult renamed = repository_.rename(*importedMod, newName);
+                    if (!renamed.success) {
+                        failures.append(QStringLiteral("%1：%2").arg(fileName, renamed.message));
+                    } else {
+                        activityLabel_->setText(renamed.message);
+                    }
+                }
+            }
         }
     }
 

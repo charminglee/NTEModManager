@@ -294,7 +294,7 @@ QString ModRepository::backupsDirectory()
 bool ModRepository::isSupportedArchive(const QString& archivePath)
 {
     const QString suffix = QFileInfo(archivePath).suffix().toLower();
-    return suffix == QStringLiteral("zip") || suffix == QStringLiteral("rar");
+    return suffix == QStringLiteral("zip") || suffix == QStringLiteral("rar") || suffix == QStringLiteral("7z");
 }
 
 OperationResult ModRepository::initialize() const
@@ -358,7 +358,7 @@ OperationResult ModRepository::importArchive(const QString& archivePath) const
         return {false, QStringLiteral("找不到压缩包：%1").arg(archivePath)};
     }
     if (!isSupportedArchive(archivePath)) {
-        return {false, QStringLiteral("只支持 .zip 和 .rar 压缩包：%1").arg(archiveInfo.fileName())};
+        return {false, QStringLiteral("只支持 .zip、.rar 和 .7z 压缩包：%1").arg(archiveInfo.fileName())};
     }
 
     const OperationResult initialization = initialize();

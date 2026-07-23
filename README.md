@@ -24,7 +24,7 @@ The backup directory is created on first launch. The program creates `~mods` onl
 - CMake 3.21 or newer.
 - A C++20 compiler. Visual Studio 2022 Build Tools with the Desktop development with C++ workload is recommended.
 - Qt 6.5 or newer with the `Widgets` component, built for the same compiler and architecture as the project.
-- [7-Zip](https://www.7-zip.org/) for ZIP and RAR extraction.
+- [7-Zip](https://www.7-zip.org/) for ZIP, RAR, and 7z extraction.
 
 The program finds `7z.exe` in this order:
 
@@ -50,7 +50,7 @@ windeployqt build\Release\NteModManager.exe
 
 ## Behavior
 
-- Drop one or more `.zip` or `.rar` files anywhere on the application window.
+- Drop one or more `.zip`, `.rar`, or `.7z` files anywhere on the application window.
 - Each archive is extracted into a distinct directory in `Backups`. If the archive contains exactly one top-level folder, that folder is used as the mod root.
 - The original archive is permanently deleted only after extraction and state recording succeed. It is not sent to the Recycle Bin.
 - **Package Mod** runs `傻瓜打包器\傻瓜打包器.bat`. After it succeeds, enter a mod name to copy `Mod_P.pak`, `Mod_P.ucas`, and `Mod_P.utoc` into a new folder in `Backups`.
