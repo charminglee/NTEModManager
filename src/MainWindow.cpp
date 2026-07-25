@@ -198,6 +198,26 @@ void addTextShadow(QLabel* label)
     shadow->setColor(QColor(0, 0, 0, 255));
     label->setGraphicsEffect(shadow);
 }
+
+OperationResult runPackager(const QString& batchPath, const QString& packageDirectory)
+{
+    QProcess process;
+    process.setWorkingDirectory(packageDirectory);
+    process.start(QStringLiteral("cmd.exe"), {QStringLiteral("/c"), QDir::toNativeSeparators(batchPath)});
+    if (!process.waitForStarted(10000)) {
+        return {false, QStringLiteral("无法启动打包脚本：%1").arg(process.errorString())};
+    }
+    process.waitForFinished(-1);
+    if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 2) {
+        return {false, {}, true};
+    }
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        const QString output = QString::fromLocal8Bit(
+            process.readAllStandardError() + process.readAllStandardOutput()).trimmed();
+        return {false, QStringLiteral("打包失败：%1").arg(output.isEmpty() ? QStringLiteral("打包脚本异常退出。") : output)};
+    }
+    return {true, {}};
+}
 }
 
 MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
@@ -654,14 +674,15 @@ void MainWindow::addModRow(const ModInfo& mod)
         row,
         {},
         style()->standardIcon(mod.installed ? QStyle::SP_DialogCancelButton : QStyle::SP_DialogApplyButton),
-        mod.installed ? QStringLiteral("从游戏的 ~mods 文件夹中删除此模组的文件")
-                      : QStringLiteral("将此模组的文件复制到游戏的 ~mods 文件夹"));
+        mod.installed ? QStringLiteral("从游戏的 ~mods 文件夹中删除此模组的文件") : QStringLiteral("将此模组的文件复制到游戏的 ~mods 文件夹")
+    );
     connect(installButton, &QToolButton::clicked, this, [this, mod] {
         runAsyncOperation(
             mod.installed ? QStringLiteral("正在卸载 %1...").arg(mod.name) : QStringLiteral("正在安装 %1...").arg(mod.name),
             [repository = repository_, mod](const auto&) {
                 return mod.installed ? repository.uninstall(mod) : repository.install(mod);
-            });
+            }
+        );
     });
     layout->addWidget(installButton);
 
@@ -713,6 +734,11 @@ void MainWindow::addModRow(const ModInfo& mod)
         if (accepted) {
             handleOperation(repository_.rename(mod, newName));
         }
+    });
+
+    QAction* repackageAction = moreMenu->addAction(QStringLiteral("重新打包"));
+    connect(repackageAction, &QAction::triggered, this, [this, mod] {
+        repackageMod(mod);
     });
 
     QAction* delAction = moreMenu->addAction(QStringLiteral("删除"));
@@ -816,22 +842,7 @@ void MainWindow::packageMod()
     runAsyncOperation(
         QStringLiteral("正在打包模组..."),
         [batchPath, packageDirectory](const auto&) {
-            QProcess process;
-            process.setWorkingDirectory(packageDirectory);
-            process.start(QStringLiteral("cmd.exe"), {QStringLiteral("/c"), QDir::toNativeSeparators(batchPath)});
-            if (!process.waitForStarted(10000)) {
-                return OperationResult{false, QStringLiteral("无法启动打包脚本：%1").arg(process.errorString())};
-            }
-            process.waitForFinished(-1);
-            if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 2) {
-                return OperationResult{false, {}, true};
-            }
-            if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-                const QString output = QString::fromLocal8Bit(
-                    process.readAllStandardError() + process.readAllStandardOutput()).trimmed();
-                return OperationResult{false, QStringLiteral("打包失败：%1").arg(output.isEmpty() ? QStringLiteral("打包脚本异常退出。") : output)};
-            }
-            return OperationResult{true, {}};
+            return runPackager(batchPath, packageDirectory);
         },
         [this, packageDirectory](const OperationResult& result) {
             if (!result.success) {
@@ -862,6 +873,55 @@ void MainWindow::packageMod()
                     return repository.importPackagedMod(modName, packageDirectory);
                 });
         });
+}
+
+void MainWindow::repackageMod(const ModInfo& mod)
+{
+    const QString packageDirectory = AppConfig::packagerDirectory();
+    const QString batchPath = QDir(packageDirectory).filePath(QStringLiteral("傻瓜打包器.bat"));
+    if (!QFileInfo(batchPath).isFile()) {
+        QMessageBox::warning(this, QStringLiteral("无法重新打包模组"), QStringLiteral("找不到打包脚本：%1").arg(batchPath));
+        return;
+    }
+
+    runAsyncOperation(
+        QStringLiteral("正在重新打包 %1...").arg(mod.name),
+        [batchPath, packageDirectory](const auto&) {
+            return runPackager(batchPath, packageDirectory);
+        },
+        [this, mod, packageDirectory](const OperationResult& result) {
+            if (!result.success) {
+                if (result.cancelled) {
+                    activityLabel_->setText(QStringLiteral("已取消重新打包"));
+                } else {
+                    handleOperation(result);
+                }
+                return;
+            }
+
+            runAsyncOperation(
+                QStringLiteral("正在替换 %1 的源文件...").arg(mod.name),
+                [repository = repository_, mod, packageDirectory](const auto&) {
+                    OperationResult res = repository.replacePackagedMod(mod, packageDirectory);
+                    if (!res.success) {
+                        return res;
+                    }
+                    if (mod.installed) {
+                        const OperationResult uninstalled = repository.uninstall(mod);
+                        if (!uninstalled.success) {
+                            return uninstalled;
+                        }
+
+                        const OperationResult installed = repository.install(mod);
+                        if (!installed.success) {
+                            return installed;
+                        }
+                    }
+                    return res;
+                }
+            );
+        }
+    );
 }
 
 void MainWindow::handleOperation(const OperationResult& result)

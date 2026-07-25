@@ -45,6 +45,7 @@ private:
     void addModRow(const ModInfo& mod);
     void importArchives(const QStringList& archivePaths);
     void packageMod();
+    void repackageMod(const ModInfo& mod);
     void handleOperation(const OperationResult& result);
     void changeInstallationForAll(bool install);
     void runAsyncOperation(

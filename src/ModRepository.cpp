@@ -487,6 +487,49 @@ OperationResult ModRepository::importPackagedMod(const QString& modName, const Q
     return {true, QStringLiteral("已导入 %1").arg(sanitizedName)};
 }
 
+OperationResult ModRepository::replacePackagedMod(const ModInfo& mod, const QString& packageDirectory) const
+{
+    if (!QFileInfo(mod.sourcePath).isDir()) {
+        return {false, QStringLiteral("模组源文件夹不存在：%1").arg(mod.sourcePath)};
+    }
+
+    const QDir sourceDirectory(packageDirectory);
+    const QDir targetDirectory(mod.sourcePath);
+    const QStringList packageFiles = {
+        QStringLiteral("Mod_P.pak"),
+        QStringLiteral("Mod_P.ucas"),
+        QStringLiteral("Mod_P.utoc"),
+    };
+    for (const QString& packageFile : packageFiles) {
+        const QFileInfo sourceFile(sourceDirectory.filePath(packageFile));
+        if (!sourceFile.isFile()) {
+            return {false, QStringLiteral("找不到打包产物：%1").arg(sourceFile.absoluteFilePath())};
+        }
+    }
+
+    for (const QString& packageFile : packageFiles) {
+        const QString sourcePath = sourceDirectory.filePath(packageFile);
+        const QString targetPath = targetDirectory.filePath(packageFile);
+        const QString temporaryPath = targetPath + QStringLiteral(".repack.tmp");
+        QFile::remove(temporaryPath);
+        if (!QFile::copy(sourcePath, temporaryPath)) {
+            QFile::remove(temporaryPath);
+            return {false, QStringLiteral("无法准备替换文件：%1").arg(packageFile)};
+        }
+        if (QFileInfo::exists(targetPath) && !QFile::remove(targetPath)) {
+            QFile::remove(temporaryPath);
+            return {false, QStringLiteral("无法替换源文件：%1").arg(packageFile)};
+        }
+        if (!QFile::rename(temporaryPath, targetPath)) {
+            QFile::remove(temporaryPath);
+            return {false, QStringLiteral("无法写入源文件：%1").arg(packageFile)};
+        }
+        QFile::setPermissions(targetPath, QFileInfo(sourcePath).permissions());
+    }
+
+    return {true, QStringLiteral("已重新打包并替换 %1 的源文件").arg(mod.name)};
+}
+
 OperationResult ModRepository::install(const ModInfo& mod) const
 {
     if (!QFileInfo(mod.sourcePath).isDir()) {
