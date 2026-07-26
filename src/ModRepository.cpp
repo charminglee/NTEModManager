@@ -146,6 +146,32 @@ qint64 directorySize(const QString& path)
     return totalSize;
 }
 
+ModFileEntry scanDirectoryEntry(const QFileInfo& directoryInfo)
+{
+    ModFileEntry entry;
+    entry.name = directoryInfo.fileName();
+    entry.directory = true;
+
+    const QDir directory(directoryInfo.absoluteFilePath());
+    const QFileInfoList entries = directory.entryInfoList(
+        QDir::AllEntries | QDir::NoDotAndDotDot,
+        QDir::DirsFirst | QDir::Name | QDir::IgnoreCase);
+    for (const QFileInfo& childInfo : entries) {
+        if (childInfo.isSymLink()) {
+            continue;
+        }
+        if (childInfo.isDir()) {
+            ModFileEntry child = scanDirectoryEntry(childInfo);
+            entry.sizeBytes += child.sizeBytes;
+            entry.children.append(std::move(child));
+        } else if (childInfo.isFile()) {
+            entry.children.append(ModFileEntry{childInfo.fileName(), childInfo.size(), false, {}});
+            entry.sizeBytes += childInfo.size();
+        }
+    }
+    return entry;
+}
+
 QString sanitizeDirectoryName(QString name)
 {
     name.replace(QRegularExpression(QStringLiteral(R"([<>:"/\\|?*])")), QStringLiteral("_"));
@@ -155,6 +181,28 @@ QString sanitizeDirectoryName(QString name)
     }
     return name.isEmpty() ? QStringLiteral("Imported Mod") : name;
 }
+
+QString sanitizeFileName(QString name)
+{
+    name.replace(QRegularExpression(QStringLiteral(R"([<>:"/\\|?*])")), QStringLiteral("_"));
+    while (name.endsWith(QLatin1Char('.'))) {
+        name.chop(1);
+    }
+    return name;
+}
+
+bool isPackageExtension(const QString& extension)
+{
+    return extension == QStringLiteral("pak")
+        || extension == QStringLiteral("ucas")
+        || extension == QStringLiteral("utoc");
+}
+
+struct FileRenameOperation
+{
+    QString oldPath;
+    QString newPath;
+};
 
 
 
@@ -334,6 +382,19 @@ QList<ModInfo> ModRepository::scan() const
         mod.name = directory.fileName();
         mod.sourcePath = directory.absoluteFilePath();
         mod.sizeBytes = directorySize(mod.sourcePath);
+        const QFileInfoList entries = QDir(mod.sourcePath).entryInfoList(
+            QDir::AllEntries | QDir::NoDotAndDotDot,
+            QDir::DirsFirst | QDir::Name | QDir::IgnoreCase);
+        for (const QFileInfo& entryInfo : entries) {
+            if (entryInfo.isSymLink()) {
+                continue;
+            }
+            if (entryInfo.isDir()) {
+                mod.files.append(scanDirectoryEntry(entryInfo));
+            } else if (entryInfo.isFile()) {
+                mod.files.append(ModFileEntry{entryInfo.fileName(), entryInfo.size(), false, {}});
+            }
+        }
         mod.importedAt = QDateTime::fromString(metadata.value(QStringLiteral("importedAt")).toString(), Qt::ISODateWithMs);
         if (!mod.importedAt.isValid()) {
             mod.importedAt = directory.birthTime();
@@ -495,21 +556,44 @@ OperationResult ModRepository::replacePackagedMod(const ModInfo& mod, const QStr
 
     const QDir sourceDirectory(packageDirectory);
     const QDir targetDirectory(mod.sourcePath);
-    const QStringList packageFiles = {
+    const QStringList packageExtensions = {
+        QStringLiteral("pak"),
+        QStringLiteral("ucas"),
+        QStringLiteral("utoc"),
+    };
+    const QStringList packagedFiles = {
         QStringLiteral("Mod_P.pak"),
         QStringLiteral("Mod_P.ucas"),
         QStringLiteral("Mod_P.utoc"),
     };
-    for (const QString& packageFile : packageFiles) {
-        const QFileInfo sourceFile(sourceDirectory.filePath(packageFile));
+
+    QStringList targetFiles;
+    const QFileInfoList sourceFiles = targetDirectory.entryInfoList(QDir::Files | QDir::NoDotAndDotDot);
+    for (const QString& extension : packageExtensions) {
+        QFileInfoList matchingFiles;
+        for (const QFileInfo& sourceFile : sourceFiles) {
+            if (sourceFile.suffix().compare(extension, Qt::CaseInsensitive) == 0) {
+                matchingFiles.append(sourceFile);
+            }
+        }
+        if (matchingFiles.isEmpty()) {
+            return {false, QStringLiteral("模组源文件夹中找不到对应的 .%1 文件。 ").arg(extension)};
+        }
+        if (matchingFiles.size() > 1) {
+            return {false, QStringLiteral("模组源文件夹中存在多个 .%1 文件，无法确定替换目标。 ").arg(extension)};
+        }
+        targetFiles.append(matchingFiles.constFirst().fileName());
+    }
+
+    for (qsizetype index = 0; index < packagedFiles.size(); ++index) {
+        const QString& packageFile = packagedFiles.at(index);
+        const QString sourcePath = sourceDirectory.filePath(packageFile);
+        const QFileInfo sourceFile(sourcePath);
         if (!sourceFile.isFile()) {
             return {false, QStringLiteral("找不到打包产物：%1").arg(sourceFile.absoluteFilePath())};
         }
-    }
 
-    for (const QString& packageFile : packageFiles) {
-        const QString sourcePath = sourceDirectory.filePath(packageFile);
-        const QString targetPath = targetDirectory.filePath(packageFile);
+        const QString targetPath = targetDirectory.filePath(targetFiles.at(index));
         const QString temporaryPath = targetPath + QStringLiteral(".repack.tmp");
         QFile::remove(temporaryPath);
         if (!QFile::copy(sourcePath, temporaryPath)) {
@@ -648,6 +732,141 @@ OperationResult ModRepository::rename(const ModInfo& mod, const QString& newName
     }
 
     return {true, QStringLiteral("已将 %1 重命名为 %2").arg(mod.name, sanitizedName)};
+}
+
+OperationResult ModRepository::renameFile(
+    const ModInfo& mod,
+    const QString& relativeFilePath,
+    const QString& newFileName) const
+{
+    const QString cleanRelativeFilePath = QDir::cleanPath(relativeFilePath);
+    if (relativeFilePath.trimmed().isEmpty()
+        || QDir::isAbsolutePath(relativeFilePath)
+        || cleanRelativeFilePath == QStringLiteral("..")
+        || cleanRelativeFilePath.startsWith(QStringLiteral("../"))) {
+        return {false, QStringLiteral("无法重命名无效的模组文件路径。")};
+    }
+
+    const QFileInfo oldFileInfo(QDir(mod.sourcePath).filePath(cleanRelativeFilePath));
+    if (!oldFileInfo.isFile()) {
+        return {false, QStringLiteral("模组文件不存在：%1").arg(relativeFilePath)};
+    }
+
+    const QString oldFileName = oldFileInfo.fileName();
+    QString targetFileName = newFileName.trimmed();
+    if (targetFileName.isEmpty()) {
+        return {false, QStringLiteral("文件名不能为空。")};
+    }
+    if (targetFileName.contains(QLatin1Char('/')) || targetFileName.contains(QLatin1Char('\\'))) {
+        return {false, QStringLiteral("文件名不能包含路径。")};
+    }
+
+    const QString sanitizedName = sanitizeFileName(targetFileName);
+    if (sanitizedName != targetFileName || targetFileName == QStringLiteral(".") || targetFileName == QStringLiteral("..")) {
+        return {false, QStringLiteral("文件名包含无效字符，无法重命名。")};
+    }
+
+    const QString oldExtension = oldFileInfo.suffix().toLower();
+    const bool packageFile = isPackageExtension(oldExtension);
+    const QString enteredExtension = QFileInfo(targetFileName).suffix().toLower();
+    if (enteredExtension.isEmpty()) {
+        targetFileName += QLatin1Char('.') + oldFileInfo.suffix();
+    } else if (packageFile && !isPackageExtension(enteredExtension)) {
+        return {false, QStringLiteral("pak、ucas 和 utoc 文件只能保留这三种后缀。")};
+    }
+
+    const QString targetStem = QFileInfo(targetFileName).completeBaseName();
+    if (packageFile && !targetStem.endsWith(QStringLiteral("_P"))) {
+        return {false, QStringLiteral("文件名后缀名前必须以“_P”结尾，已取消重命名。")};
+    }
+    if (targetFileName == oldFileName) {
+        return {true, QStringLiteral("文件名未变更。")};
+    }
+
+    const QString relativeDirectory = QFileInfo(cleanRelativeFilePath).path();
+    const auto relativePathForName = [relativeDirectory](const QString& fileName) {
+        return relativeDirectory == QStringLiteral(".")
+            ? fileName
+            : QDir(relativeDirectory).filePath(fileName);
+    };
+
+    QList<QPair<QString, QString>> relativeRenames;
+    if (packageFile) {
+        const QString oldStem = oldFileInfo.completeBaseName();
+        for (const QString& extension : {QStringLiteral("pak"), QStringLiteral("ucas"), QStringLiteral("utoc")}) {
+            const QString oldRelativePath = relativePathForName(oldStem + QLatin1Char('.') + extension);
+            if (!QFileInfo(QDir(mod.sourcePath).filePath(oldRelativePath)).isFile()) {
+                return {false, QStringLiteral("文件组不完整，必须同时存在同名的 .pak、.ucas 和 .utoc 文件。")};
+            }
+            relativeRenames.append({oldRelativePath, relativePathForName(targetStem + QLatin1Char('.') + extension)});
+        }
+    } else {
+        relativeRenames.append({cleanRelativeFilePath, relativePathForName(targetFileName)});
+    }
+
+    QList<FileRenameOperation> operations;
+    const auto appendOperations = [&relativeRenames, &operations](
+                                      const QString& rootPath,
+                                      const QString& rootDescription,
+                                      bool allowMissing) -> OperationResult {
+        for (const auto& relativeRename : relativeRenames) {
+            const QString oldPath = QDir(rootPath).filePath(relativeRename.first);
+            const QString newPath = QDir(rootPath).filePath(relativeRename.second);
+            if (!QFileInfo(oldPath).isFile()) {
+                if (allowMissing) {
+                    continue;
+                }
+                return {false, QStringLiteral("%1中缺少文件：%2").arg(rootDescription, relativeRename.first)};
+            }
+            if (pathExists(newPath) && oldPath.compare(newPath, Qt::CaseInsensitive) != 0) {
+                return {false, QStringLiteral("%1中已存在同名文件：%2").arg(rootDescription, relativeRename.second)};
+            }
+            operations.append({oldPath, newPath});
+        }
+        return {true, {}};
+    };
+
+    const OperationResult sourceOperations = appendOperations(
+        mod.sourcePath,
+        QStringLiteral("模组源文件夹"),
+        false);
+    if (!sourceOperations.success) {
+        return sourceOperations;
+    }
+    if (mod.installed) {
+        const QString installedRoot = QDir(modsDirectory()).filePath(mod.name);
+        const OperationResult installedOperations = appendOperations(
+            installedRoot,
+            QStringLiteral("已安装模组文件夹"),
+            !packageFile);
+        if (!installedOperations.success) {
+            return installedOperations;
+        }
+    }
+
+    QList<FileRenameOperation> completedOperations;
+    for (const FileRenameOperation& operation : operations) {
+        if (!QFile::rename(operation.oldPath, operation.newPath)) {
+            bool rollbackSucceeded = true;
+            for (auto iterator = completedOperations.crbegin(); iterator != completedOperations.crend(); ++iterator) {
+                if (!QFile::rename(iterator->newPath, iterator->oldPath)) {
+                    rollbackSucceeded = false;
+                }
+            }
+            const QString rollbackMessage = rollbackSucceeded
+                ? QStringLiteral("已回滚已完成的文件操作。")
+                : QStringLiteral("部分文件无法回滚，请检查源文件夹和安装文件夹。 ");
+            return {false, QStringLiteral("重命名模组文件失败：无法将 %1 重命名为 %2。%3")
+                                .arg(operation.oldPath, operation.newPath, rollbackMessage)};
+        }
+        completedOperations.append(operation);
+    }
+
+    const QString oldDisplayName = oldFileName;
+    const QString newDisplayName = packageFile
+        ? targetStem + QLatin1Char('.') + oldExtension
+        : targetFileName;
+    return {true, QStringLiteral("已将 %1 重命名为 %2").arg(oldDisplayName, newDisplayName)};
 }
 
 OperationResult ModRepository::remove(const ModInfo& mod) const

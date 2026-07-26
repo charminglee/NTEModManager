@@ -21,6 +21,7 @@
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QInputDialog>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
@@ -28,20 +29,24 @@
 #include <QMessageBox>
 #include <QMetaObject>
 #include <QMimeData>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPixmap>
 #include <QPointer>
 #include <QPushButton>
 #include <QProcess>
+#include <QParallelAnimationGroup>
 #include <QRandomGenerator>
 #include <QSignalBlocker>
 #include <QScrollArea>
+#include <QSizePolicy>
 #include <QStyle>
 #include <QThread>
 #include <QTimer>
 #include <QToolButton>
 #include <QUrl>
+#include <QPropertyAnimation>
 #include <QVariantAnimation>
 #include <QVBoxLayout>
 #include <QListWidget>
@@ -50,9 +55,74 @@
 
 #include <array>
 #include <algorithm>
+#include <memory>
 
 namespace
 {
+class ClickableFrame final : public QFrame
+{
+public:
+    explicit ClickableFrame(QWidget* parent = nullptr)
+        : QFrame(parent)
+    {
+        setCursor(Qt::PointingHandCursor);
+    }
+
+    std::function<void()> onClicked;
+
+protected:
+    void mousePressEvent(QMouseEvent* event) override
+    {
+        if (event->button() == Qt::LeftButton && onClicked) {
+            onClicked();
+            event->accept();
+            return;
+        }
+        QFrame::mousePressEvent(event);
+    }
+};
+
+class EditableFileNameLabel final : public QLabel
+{
+public:
+    using QLabel::QLabel;
+
+    std::function<void()> onDoubleClicked;
+
+protected:
+    void mousePressEvent(QMouseEvent* event) override
+    {
+        event->accept();
+    }
+
+    void mouseDoubleClickEvent(QMouseEvent* event) override
+    {
+        if (event->button() == Qt::LeftButton && onDoubleClicked) {
+            onDoubleClicked();
+        }
+        event->accept();
+    }
+};
+
+class InlineFileNameEditor final : public QLineEdit
+{
+public:
+    using QLineEdit::QLineEdit;
+
+    std::function<void()> onEscape;
+
+protected:
+    void keyPressEvent(QKeyEvent* event) override
+    {
+        if (event->key() == Qt::Key_Escape && onEscape) {
+            onEscape();
+            event->accept();
+            return;
+        }
+        QLineEdit::keyPressEvent(event);
+    }
+};
+
 class BackgroundWidget final : public QWidget
 {
 public:
@@ -230,7 +300,7 @@ MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
     setAcceptDrops(true);
     setWindowTitle(QStringLiteral("NTE 模组管理器"));
     setMinimumSize(820, 560);
-    resize(1080, 720);
+    resize(1315, 1000);
 
     buildUi();
     const OperationResult initialization = repository_.initialize();
@@ -318,7 +388,7 @@ void MainWindow::buildUi()
     auto* title = new QLabel(QStringLiteral("NTE 模组管理器"), root);
     title->setObjectName(QStringLiteral("title"));
     addTextShadow(title);
-    auto* subtitle = new QLabel(QStringLiteral("Neverness to Everness"), root);
+    auto* subtitle = new QLabel(QStringLiteral("Neverness to Everness Mod Manager - by Nuoyan"), root);
     subtitle->setObjectName(QStringLiteral("subtitle"));
     addTextShadow(subtitle);
     titleLayout->addWidget(title);
@@ -328,7 +398,7 @@ void MainWindow::buildUi()
 
     auto* launchGameButton = new QPushButton(style()->standardIcon(QStyle::SP_MediaPlay), QStringLiteral("启动游戏"), root);
     launchGameButton->setObjectName(QStringLiteral("modListActionButton"));
-    launchGameButton->setToolTip(QStringLiteral("启动 Neverness To Everness"));
+    launchGameButton->setToolTip(QStringLiteral("启动异环"));
     launchGameButton->setCursor(Qt::PointingHandCursor);
     connect(launchGameButton, &QPushButton::clicked, this, [this] {
         const QString launcherPath = AppConfig::gameLauncherPath();
@@ -645,14 +715,21 @@ void MainWindow::addModRow(const ModInfo& mod)
     auto* row = new QFrame(centralWidget());
     row->setObjectName(QStringLiteral("modRow"));
     row->setFrameShape(QFrame::StyledPanel);
-    auto* layout = new QHBoxLayout(row);
-    layout->setContentsMargins(18, 14, 14, 14);
-    layout->setSpacing(14);
+    auto* layout = new QVBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+
+    auto* header = new ClickableFrame(row);
+    header->setObjectName(QStringLiteral("modHeader"));
+    auto* headerLayout = new QHBoxLayout(header);
+    headerLayout->setContentsMargins(18, 14, 14, 14);
+    headerLayout->setSpacing(14);
 
     auto* detailsLayout = new QVBoxLayout();
     detailsLayout->setSpacing(4);
     auto* name = new QLabel(mod.name, row);
     name->setObjectName(QStringLiteral("modName"));
+    name->setAttribute(Qt::WA_TransparentForMouseEvents);
     name->setTextInteractionFlags(Qt::TextSelectableByMouse);
     auto* metadata = new QLabel(
         QStringLiteral("%1  |  导入于 %2")
@@ -660,15 +737,17 @@ void MainWindow::addModRow(const ModInfo& mod)
         row
     );
     metadata->setObjectName(QStringLiteral("metadata"));
+    metadata->setAttribute(Qt::WA_TransparentForMouseEvents);
     detailsLayout->addWidget(name);
     detailsLayout->addWidget(metadata);
-    layout->addLayout(detailsLayout, 1);
+    headerLayout->addLayout(detailsLayout, 1);
 
     auto* state = new QLabel(mod.installed ? QStringLiteral("已安装") : QStringLiteral("未安装"), row);
     state->setObjectName(mod.installed ? QStringLiteral("stateInstalled") : QStringLiteral("stateUninstalled"));
+    state->setAttribute(Qt::WA_TransparentForMouseEvents);
     state->setAlignment(Qt::AlignCenter);
     state->setMinimumWidth(58);
-    layout->addWidget(state);
+    headerLayout->addWidget(state);
 
     auto* installButton = createActionButton(
         row,
@@ -684,7 +763,7 @@ void MainWindow::addModRow(const ModInfo& mod)
             }
         );
     });
-    layout->addWidget(installButton);
+    headerLayout->addWidget(installButton);
 
     // auto* deleteButton = createActionButton(
     //     row,
@@ -776,9 +855,285 @@ void MainWindow::addModRow(const ModInfo& mod)
 
     moreButton->setMenu(moreMenu);
     moreButton->setPopupMode(QToolButton::InstantPopup);
-    layout->addWidget(moreButton);
+    headerLayout->addWidget(moreButton);
+
+    auto* expandIndicator = new QLabel(header);
+    expandIndicator->setPixmap(style()->standardIcon(QStyle::SP_ArrowRight).pixmap(16, 16));
+    expandIndicator->setObjectName(QStringLiteral("modExpandIndicator"));
+    expandIndicator->setAttribute(Qt::WA_TransparentForMouseEvents);
+    headerLayout->insertWidget(0, expandIndicator);
+    header->setFixedHeight(header->sizeHint().height());
+    layout->addWidget(header);
+
+    auto* filesClip = new QWidget(centralWidget());
+    filesClip->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    auto* filesClipLayout = new QVBoxLayout(filesClip);
+    filesClipLayout->setContentsMargins(0, 0, 0, 0);
+    filesClipLayout->setSpacing(0);
+
+    auto* filesCard = new QFrame(filesClip);
+    filesCard->setObjectName(QStringLiteral("modFilesCard"));
+    filesCard->setFrameShape(QFrame::StyledPanel);
+    auto* filesLayout = new QVBoxLayout(filesCard);
+    filesLayout->setContentsMargins(18, 8, 18, 12);
+    filesLayout->setSpacing(2);
+    filesClipLayout->addWidget(filesCard, 0, Qt::AlignTop);
+    filesClip->setMaximumHeight(0);
+    filesClip->hide();
+
+    auto expandedState = std::make_shared<bool>(false);
+    auto activeAnimation = std::make_shared<QPointer<QPropertyAnimation>>();
+    const auto updateFilesCardHeight = [filesClip, filesCard, expandedState] {
+        filesCard->layout()->activate();
+        const int cardHeight = filesCard->layout()->sizeHint().height();
+        filesCard->setFixedHeight(cardHeight);
+        if (*expandedState) {
+            filesClip->setMaximumHeight(cardHeight);
+        }
+        filesCard->updateGeometry();
+        filesClip->updateGeometry();
+    };
+    const auto setExpanded = [header, filesClip, filesCard, expandIndicator, expandedState, activeAnimation](bool expanded) {
+        const int targetHeight = expanded ? filesCard->layout()->sizeHint().height() : 0;
+        const int startHeight = filesClip->height();
+        if (*activeAnimation) {
+            (*activeAnimation)->stop();
+            *activeAnimation = nullptr;
+        }
+        if (expanded) {
+            filesClip->show();
+        }
+        filesClip->setMinimumHeight(0);
+        filesClip->setMaximumHeight(startHeight);
+        *expandedState = expanded;
+
+        auto* animation = new QPropertyAnimation(filesClip, "maximumHeight", filesClip);
+        *activeAnimation = animation;
+        animation->setDuration(220);
+        animation->setStartValue(startHeight);
+        animation->setEndValue(targetHeight);
+        animation->setEasingCurve(QEasingCurve::OutCubic);
+        QObject::connect(animation, &QPropertyAnimation::finished, filesClip, [filesClip, expanded, targetHeight, activeAnimation, animation] {
+            if (*activeAnimation != animation) {
+                return;
+            }
+            *activeAnimation = nullptr;
+            if (!expanded) {
+                filesClip->setMinimumHeight(0);
+                filesClip->setMaximumHeight(0);
+                filesClip->hide();
+            } else {
+                filesClip->setMinimumHeight(0);
+                filesClip->setMaximumHeight(targetHeight);
+            }
+        });
+        animation->start(QAbstractAnimation::DeleteWhenStopped);
+        expandIndicator->setPixmap(header->style()->standardIcon(expanded ? QStyle::SP_ArrowDown : QStyle::SP_ArrowRight).pixmap(16, 16));
+    };
+
+    auto fileNameLabels = std::make_shared<QList<QPair<std::shared_ptr<QString>, EditableFileNameLabel*>>>();
+    std::function<void(const QList<ModFileEntry>&, QVBoxLayout*, int, const QString&)> addEntries;
+    addEntries = [&addEntries, updateFilesCardHeight, fileNameLabels, this, mod](
+        const QList<ModFileEntry>& entries,
+        QVBoxLayout* parentLayout,
+        int depth,
+        const QString& relativeDirectory) {
+        for (const ModFileEntry& entry : entries) {
+            auto* entryRow = new ClickableFrame(parentLayout->parentWidget());
+            auto* entryLayout = new QHBoxLayout(entryRow);
+            entryLayout->setContentsMargins(8 + depth * 18, 2, 4, 2);
+            entryLayout->setSpacing(8);
+            if (entry.directory) {
+                auto* folderButton = new QToolButton(entryRow);
+                folderButton->setObjectName(QStringLiteral("modFolderButton"));
+                folderButton->setFocusPolicy(Qt::NoFocus);
+                folderButton->setFixedSize(12, 12);
+                folderButton->setCursor(Qt::PointingHandCursor);
+                folderButton->setIcon(entryRow->style()->standardIcon(QStyle::SP_ArrowRight));
+                folderButton->setToolTip(QStringLiteral("展开文件夹"));
+                entryLayout->setContentsMargins(6, 2, 4, 2);
+                entryLayout->setSpacing(0);
+                entryLayout->addWidget(folderButton);
+                auto* label = new QLabel(QStringLiteral("%1  (%2)").arg(entry.name, MainWindow::formatFileSize(entry.sizeBytes)), entryRow);
+                label->setObjectName(QStringLiteral("modFolderEntry"));
+                label->setAttribute(Qt::WA_TransparentForMouseEvents);
+                entryLayout->addWidget(label, 1);
+
+                auto* childrenPanel = new QWidget(parentLayout->parentWidget());
+                auto* childrenLayout = new QVBoxLayout(childrenPanel);
+                childrenLayout->setContentsMargins(0, 0, 0, 0);
+                childrenLayout->setSpacing(2);
+                const QString childDirectory = relativeDirectory.isEmpty()
+                    ? entry.name
+                    : QDir(relativeDirectory).filePath(entry.name);
+                addEntries(entry.children, childrenLayout, depth + 1, childDirectory);
+                childrenPanel->setMaximumHeight(0);
+                childrenPanel->hide();
+                parentLayout->addWidget(entryRow);
+                parentLayout->addWidget(childrenPanel);
+                const auto toggleFolder = [folderButton, childrenPanel, updateFilesCardHeight] {
+                    const bool expanded = childrenPanel->isHidden();
+                    const int startHeight = expanded ? 0 : childrenPanel->height();
+                    const int targetHeight = expanded ? childrenPanel->layout()->sizeHint().height() : 0;
+                    if (expanded) {
+                        childrenPanel->setMinimumHeight(0);
+                        childrenPanel->setMaximumHeight(0);
+                        childrenPanel->show();
+                    } else {
+                        childrenPanel->setMinimumHeight(startHeight);
+                        childrenPanel->setMaximumHeight(startHeight);
+                    }
+                    auto* animation = new QParallelAnimationGroup(childrenPanel);
+                    for (const char* propertyName : {"minimumHeight", "maximumHeight"}) {
+                        auto* heightAnimation = new QPropertyAnimation(childrenPanel, propertyName, animation);
+                        heightAnimation->setDuration(180);
+                        heightAnimation->setStartValue(startHeight);
+                        heightAnimation->setEndValue(targetHeight);
+                        heightAnimation->setEasingCurve(QEasingCurve::OutCubic);
+                        QObject::connect(heightAnimation, &QPropertyAnimation::valueChanged, childrenPanel, [updateFilesCardHeight](const QVariant&) {
+                            updateFilesCardHeight();
+                        });
+                        animation->addAnimation(heightAnimation);
+                    }
+                    QObject::connect(animation, &QParallelAnimationGroup::finished, childrenPanel, [childrenPanel, expanded, updateFilesCardHeight] {
+                        if (!expanded) {
+                            childrenPanel->setMinimumHeight(0);
+                            childrenPanel->setMaximumHeight(0);
+                            childrenPanel->hide();
+                        }
+                        updateFilesCardHeight();
+                    });
+                    animation->start(QAbstractAnimation::DeleteWhenStopped);
+                    folderButton->setIcon(folderButton->style()->standardIcon(expanded ? QStyle::SP_ArrowDown : QStyle::SP_ArrowRight));
+                };
+                QObject::connect(folderButton, &QToolButton::clicked, childrenPanel, toggleFolder);
+                entryRow->onClicked = toggleFolder;
+            } else {
+                entryLayout->addSpacing(0);
+                const QString relativeFilePath = relativeDirectory.isEmpty()
+                    ? entry.name
+                    : QDir(relativeDirectory).filePath(entry.name);
+                auto currentFilePath = std::make_shared<QString>(relativeFilePath);
+                auto* nameStack = new QStackedWidget(entryRow);
+                auto* label = new EditableFileNameLabel(entry.name, nameStack);
+                label->setObjectName(QStringLiteral("modFileEntry"));
+                label->setCursor(Qt::IBeamCursor);
+                auto* editor = new InlineFileNameEditor(nameStack);
+                editor->setObjectName(QStringLiteral("modFileNameEditor"));
+                editor->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+                nameStack->addWidget(label);
+                nameStack->addWidget(editor);
+                nameStack->setCurrentWidget(label);
+                entryLayout->addWidget(nameStack, 1);
+                fileNameLabels->append({currentFilePath, label});
+                auto* size = new QLabel(MainWindow::formatFileSize(entry.sizeBytes), entryRow);
+                size->setObjectName(QStringLiteral("modFileSize"));
+                size->setAttribute(Qt::WA_TransparentForMouseEvents);
+                entryLayout->addWidget(size);
+
+                const auto editing = std::make_shared<bool>(false);
+                std::function<void(bool)> finishRename;
+                finishRename = [this, mod, currentFilePath, nameStack, label, editor, editing, updateFilesCardHeight, fileNameLabels](bool commit) {
+                    if (!*editing) {
+                        return;
+                    }
+                    *editing = false;
+                    if (!commit) {
+                        nameStack->setCurrentWidget(label);
+                        editor->clearFocus();
+                        updateFilesCardHeight();
+                        return;
+                    }
+
+                    const QString oldFilePath = *currentFilePath;
+                    const QString oldFileName = QFileInfo(oldFilePath).fileName();
+                    const QString newName = editor->text().trimmed();
+                    if (newName == oldFileName) {
+                        nameStack->setCurrentWidget(label);
+                        editor->clearFocus();
+                        updateFilesCardHeight();
+                        return;
+                    }
+
+                    const OperationResult result = repository_.renameFile(mod, oldFilePath, newName);
+                    nameStack->setCurrentWidget(label);
+                    editor->clearFocus();
+                    if (!result.success) {
+                        activityLabel_->setText(QStringLiteral("操作未完成"));
+                        QMessageBox::warning(this, QStringLiteral("操作未完成"), result.message);
+                        updateFilesCardHeight();
+                        return;
+                    }
+
+                    QString actualFileName = newName;
+                    const QString oldSuffix = QFileInfo(oldFileName).suffix();
+                    if (QFileInfo(actualFileName).suffix().isEmpty()) {
+                        actualFileName += QLatin1Char('.') + oldSuffix;
+                    }
+                    const QString oldStem = QFileInfo(oldFileName).completeBaseName();
+                    const QString targetStem = QFileInfo(actualFileName).completeBaseName();
+                    const QString relativeDirectory = QFileInfo(oldFilePath).path();
+                    const QString oldExtension = oldSuffix.toLower();
+                    const bool packageFile = oldExtension == QStringLiteral("pak")
+                        || oldExtension == QStringLiteral("ucas")
+                        || oldExtension == QStringLiteral("utoc");
+                    for (const auto& fileLabel : *fileNameLabels) {
+                        const QFileInfo displayedFile(*fileLabel.first);
+                        const QString displayedExtension = displayedFile.suffix().toLower();
+                        const bool samePackageFileGroup = packageFile
+                            && displayedFile.path() == relativeDirectory
+                            && displayedFile.completeBaseName() == oldStem
+                            && (displayedExtension == QStringLiteral("pak")
+                                || displayedExtension == QStringLiteral("ucas")
+                                || displayedExtension == QStringLiteral("utoc"));
+                        if (samePackageFileGroup) {
+                            const QString newFileName = targetStem + QLatin1Char('.') + displayedFile.suffix();
+                            *fileLabel.first = relativeDirectory == QStringLiteral(".")
+                                ? newFileName
+                                : QDir(relativeDirectory).filePath(newFileName);
+                            fileLabel.second->setText(newFileName);
+                        } else if (*fileLabel.first == oldFilePath) {
+                            *fileLabel.first = relativeDirectory == QStringLiteral(".")
+                                ? actualFileName
+                                : QDir(relativeDirectory).filePath(actualFileName);
+                            fileLabel.second->setText(actualFileName);
+                        }
+                    }
+                    activityLabel_->setText(result.message);
+                    updateFilesCardHeight();
+                };
+                label->onDoubleClicked = [this, editor, nameStack, editing, currentFilePath, updateFilesCardHeight] {
+                    if (operationInProgress_ || *editing) {
+                        return;
+                    }
+                    *editing = true;
+                    editor->setText(QFileInfo(*currentFilePath).fileName());
+                    nameStack->setCurrentWidget(editor);
+                    editor->setFocus(Qt::MouseFocusReason);
+                    editor->selectAll();
+                    updateFilesCardHeight();
+                };
+                editor->onEscape = [finishRename] {
+                    finishRename(false);
+                };
+                QObject::connect(editor, &QLineEdit::editingFinished, editor, [finishRename] {
+                    finishRename(true);
+                });
+                parentLayout->addWidget(entryRow);
+            }
+        }
+    };
+    addEntries(mod.files, filesLayout, 0, {});
+    if (mod.files.isEmpty()) {
+        filesLayout->addWidget(new QLabel(QStringLiteral("文件夹为空"), filesCard));
+    }
+    updateFilesCardHeight();
+    header->onClicked = [setExpanded, expandedState] {
+        setExpanded(!*expandedState);
+    };
 
     modListLayout_->addWidget(row);
+    modListLayout_->addWidget(filesClip);
 }
 
 void MainWindow::importArchives(const QStringList& archivePaths)

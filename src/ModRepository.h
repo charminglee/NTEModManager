@@ -4,11 +4,20 @@
 #include <QList>
 #include <QString>
 
+struct ModFileEntry
+{
+    QString name;
+    qint64 sizeBytes = 0;
+    bool directory = false;
+    QList<ModFileEntry> children;
+};
+
 struct ModInfo
 {
     QString name;
     QString sourcePath;
     qint64 sizeBytes = 0;
+    QList<ModFileEntry> files;
     QDateTime importedAt;
     bool installed = false;
 };
@@ -35,6 +44,10 @@ public:
     [[nodiscard]] OperationResult install(const ModInfo& mod) const;
     [[nodiscard]] OperationResult uninstall(const ModInfo& mod) const;
     [[nodiscard]] OperationResult rename(const ModInfo& mod, const QString& newName) const;
+    [[nodiscard]] OperationResult renameFile(
+        const ModInfo& mod,
+        const QString& relativeFilePath,
+        const QString& newFileName) const;
     [[nodiscard]] OperationResult remove(const ModInfo& mod) const;
 
 private:

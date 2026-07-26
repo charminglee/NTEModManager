@@ -78,6 +78,12 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
 
         #modName { color: #000000; font-weight: 600; font-size: 18px; }
         #metadata { color: #606060; font-size: 14px; }
+        #modHeader { background: transparent; }
+        #modFilesCard { background: rgba(226, 242, 255, 105); border: 1px solid rgba(79, 145, 201, 90); border-radius: 12px; }
+        #modFolderEntry { color: #16466b; font-weight: 600; padding: 2px 0px; }
+        #modFileEntry, #modFileSize { color: #31506d; font-size: 13px; }
+        #modFileSize { color: #60758a; }
+        #modFileNameEditor { color: #102a43; background: rgba(255, 255, 255, 210); border: 1px solid #4f91c9; border-radius: 4px; padding: 1px 4px; }
 
         #categoryList { 
             background: transparent; 
@@ -153,6 +159,12 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
         QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
         QToolButton { background: rgba(236, 247, 255, 80); border: 1px solid rgba(255, 255, 255, 165); border-radius: 18px; color: #31506d; padding: 6px 9px; }
         QToolButton:hover:enabled { background: rgba(214, 238, 255, 185); }
+        #modFolderButton, #modFolderButton:hover, #modFolderButton:pressed, #modFolderButton:focus {
+            background: transparent;
+            border: none;
+            border-radius: 0px;
+            padding: 0px;
+        }
         QToolButton:disabled, #modListActionButton:disabled { color: #a6a6a6; }
         #emptyState { color: #ffffff; padding: 56px; font-size: 20px; }
         QMenu { background: #ffffff; color: #102a43; border: none; border-radius: 8px; padding: 6px; }
