@@ -15,6 +15,7 @@
 #include <QDropEvent>
 #include <QColor>
 #include <QEvent>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
@@ -820,22 +821,11 @@ void MainWindow::addModRow(const ModInfo& mod)
         repackageMod(mod);
     });
 
-    QAction* delAction = moreMenu->addAction(QStringLiteral("删除"));
-    connect(delAction, &QAction::triggered, this, [this, mod] {
-        QMessageBox confirmation(this);
-        confirmation.setWindowTitle(QStringLiteral("删除模组"));
-        confirmation.setIcon(QMessageBox::Warning);
-        confirmation.setText(QStringLiteral("将永久删除“%1”的备份文件及已安装的模组文件。此操作无法撤销。").arg(mod.name));
-        QPushButton* confirmDelete = confirmation.addButton(QStringLiteral("删除"), QMessageBox::DestructiveRole);
-        confirmation.addButton(QMessageBox::Cancel);
-        confirmation.exec();
-        if (confirmation.clickedButton() == confirmDelete) {
-            runAsyncOperation(QStringLiteral("正在删除 %1...").arg(mod.name), [repository = repository_, mod](const auto&) {
-                return repository.remove(mod);
-            });
-        }
+    QAction* replaceAction = moreMenu->addAction(QStringLiteral("更新/替换"));
+    connect(replaceAction, &QAction::triggered, this, [this, mod] {
+        replaceModFromArchive(mod);
     });
-    
+
     QAction* openAction = moreMenu->addAction(QStringLiteral("打开源文件位置"));
     connect(openAction, &QAction::triggered, this, [this, mod] {
         if (!QDesktopServices::openUrl(QUrl::fromLocalFile(mod.sourcePath))) {
@@ -852,6 +842,22 @@ void MainWindow::addModRow(const ModInfo& mod)
             }
         });
     }
+
+    QAction* delAction = moreMenu->addAction(QStringLiteral("删除"));
+    connect(delAction, &QAction::triggered, this, [this, mod] {
+        QMessageBox confirmation(this);
+        confirmation.setWindowTitle(QStringLiteral("删除模组"));
+        confirmation.setIcon(QMessageBox::Warning);
+        confirmation.setText(QStringLiteral("将永久删除“%1”的备份文件及已安装的模组文件。此操作无法撤销。").arg(mod.name));
+        QPushButton* confirmDelete = confirmation.addButton(QStringLiteral("删除"), QMessageBox::DestructiveRole);
+        confirmation.addButton(QMessageBox::Cancel);
+        confirmation.exec();
+        if (confirmation.clickedButton() == confirmDelete) {
+            runAsyncOperation(QStringLiteral("正在删除 %1...").arg(mod.name), [repository = repository_, mod](const auto&) {
+                return repository.remove(mod);
+            });
+        }
+    });
 
     moreButton->setMenu(moreMenu);
     moreButton->setPopupMode(QToolButton::InstantPopup);
@@ -1275,6 +1281,25 @@ void MainWindow::repackageMod(const ModInfo& mod)
                     return res;
                 }
             );
+        }
+    );
+}
+
+void MainWindow::replaceModFromArchive(const ModInfo& mod)
+{
+    const QString archivePath = QFileDialog::getOpenFileName(
+        this,
+        QStringLiteral("选择要替换/更新的压缩包"),
+        QString(),
+        QStringLiteral("压缩包 (*.zip *.rar *.7z)"));
+    if (archivePath.isEmpty()) {
+        return;
+    }
+
+    runAsyncOperation(
+        QStringLiteral("正在更新 %1...").arg(mod.name),
+        [repository = repository_, mod, archivePath](const auto&) {
+            return repository.replaceFromArchive(mod, archivePath);
         }
     );
 }

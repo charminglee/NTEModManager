@@ -41,6 +41,7 @@ public:
     [[nodiscard]] OperationResult importArchive(const QString& archivePath) const;
     [[nodiscard]] OperationResult importPackagedMod(const QString& modName, const QString& packageDirectory) const;
     [[nodiscard]] OperationResult replacePackagedMod(const ModInfo& mod, const QString& packageDirectory) const;
+    [[nodiscard]] OperationResult replaceFromArchive(const ModInfo& mod, const QString& archivePath) const;
     [[nodiscard]] OperationResult install(const ModInfo& mod) const;
     [[nodiscard]] OperationResult uninstall(const ModInfo& mod) const;
     [[nodiscard]] OperationResult rename(const ModInfo& mod, const QString& newName) const;

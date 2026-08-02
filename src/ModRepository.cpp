@@ -614,6 +614,109 @@ OperationResult ModRepository::replacePackagedMod(const ModInfo& mod, const QStr
     return {true, QStringLiteral("已重新打包并替换 %1 的源文件").arg(mod.name)};
 }
 
+OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QString& archivePath) const
+{
+    const QFileInfo archiveInfo(archivePath);
+    if (!archiveInfo.exists() || !archiveInfo.isFile()) {
+        return {false, QStringLiteral("找不到压缩包：%1").arg(archivePath)};
+    }
+    if (!isSupportedArchive(archivePath)) {
+        return {false, QStringLiteral("只支持 .zip、.rar 和 .7z 压缩包：%1").arg(archiveInfo.fileName())};
+    }
+    if (!QFileInfo(mod.sourcePath).isDir()) {
+        return {false, QStringLiteral("模组源文件夹不存在：%1").arg(mod.sourcePath)};
+    }
+
+    const OperationResult initialization = initialize();
+    if (!initialization.success) {
+        return initialization;
+    }
+
+    const QString extractor = find7ZipExecutable();
+    if (extractor.isEmpty()) {
+        return {false, QStringLiteral("未找到 7-Zip。请安装 7-Zip，或设置环境变量 NTE_7ZIP_PATH 指向 7z.exe。")};
+    }
+
+    const QDir backupRoot(backupsDirectory());
+    const QString stagingName = QStringLiteral(".replace-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+    const QString stagingPath = backupRoot.filePath(stagingName);
+    if (!QDir().mkpath(stagingPath)) {
+        return {false, QStringLiteral("无法创建临时解压目录。")};
+    }
+
+    QProcess extractorProcess;
+    extractorProcess.setProgram(extractor);
+    extractorProcess.setArguments({
+        QStringLiteral("x"),
+        QStringLiteral("-y"),
+        QStringLiteral("-aoa"),
+        QStringLiteral("-o%1").arg(QDir::toNativeSeparators(stagingPath)),
+        archiveInfo.absoluteFilePath(),
+    });
+    extractorProcess.start();
+    if (!extractorProcess.waitForStarted(10000)) {
+        QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("无法启动 7-Zip：%1").arg(extractorProcess.errorString())};
+    }
+    extractorProcess.waitForFinished(-1);
+    if (extractorProcess.exitStatus() != QProcess::NormalExit || extractorProcess.exitCode() != 0) {
+        const QByteArray output = extractorProcess.readAllStandardError() + extractorProcess.readAllStandardOutput();
+        QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("解压失败：%1").arg(QString::fromLocal8Bit(output).trimmed())};
+    }
+
+    const QFileInfoList extractedEntries = QDir(stagingPath).entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries);
+    if (extractedEntries.isEmpty()) {
+        QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("压缩包中没有可导入的文件。")};
+    }
+
+    QString extractedRoot = stagingPath;
+    if (extractedEntries.size() == 1 && extractedEntries.constFirst().isDir() && !extractedEntries.constFirst().isSymLink()) {
+        extractedRoot = extractedEntries.constFirst().absoluteFilePath();
+    }
+
+    // 替换模组源文件夹内容：先清空再移入解压结果。
+    if (!QDir(mod.sourcePath).removeRecursively()) {
+        QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("无法清空原模组源文件夹：%1").arg(mod.sourcePath)};
+    }
+    if (!QDir().mkpath(QFileInfo(mod.sourcePath).path())) {
+        QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("无法重建模组源文件夹：%1").arg(mod.sourcePath)};
+    }
+    const OperationResult moved = moveDirectory(extractedRoot, mod.sourcePath);
+    if (!moved.success) {
+        QDir(stagingPath).removeRecursively();
+        return moved;
+    }
+    if (extractedRoot != stagingPath) {
+        QDir(stagingPath).removeRecursively();
+    }
+
+    // 如已安装，同步替换安装目录中的模组文件。
+    if (mod.installed) {
+        const QString installPath = QDir(modsDirectory()).filePath(mod.name);
+        if (isDirectoryLink(installPath)) {
+            const OperationResult deletedLink = deleteDirectoryLink(installPath);
+            if (!deletedLink.success) {
+                return deletedLink;
+            }
+        } else if (pathExists(installPath)) {
+            const OperationResult deletedInstall = removeInstalledModDirectory(installPath);
+            if (!deletedInstall.success) {
+                return deletedInstall;
+            }
+        }
+        const OperationResult copied = copyDirectory(mod.sourcePath, installPath);
+        if (!copied.success) {
+            return copied;
+        }
+    }
+
+    return {true, QStringLiteral("已更新 %1 的源文件").arg(mod.name)};
+}
+
 OperationResult ModRepository::install(const ModInfo& mod) const
 {
     if (!QFileInfo(mod.sourcePath).isDir()) {
