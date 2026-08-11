@@ -19,7 +19,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()
 
 set(NTE_PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/python")
-set(NTE_PYTHON_VENV_DIR "${NTE_PYTHON_SOURCE_DIR}/.venv")
+set(NTE_PYTHON_VENV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.venv")
 set(NTE_ORIENTATION_MODEL_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/training/orientation/checkpoints/weighted_unfrozen/best.pt")
 if(NOT EXISTS "${NTE_PYTHON_VENV_DIR}/pyvenv.cfg")
     message(FATAL_ERROR "Python virtual environment is missing: ${NTE_PYTHON_VENV_DIR}")
@@ -37,12 +37,6 @@ file(TO_CMAKE_PATH "${NTE_PYTHON_BASE_DIR}" NTE_PYTHON_BASE_DIR)
 if(NOT EXISTS "${NTE_PYTHON_BASE_DIR}/python.exe")
     message(FATAL_ERROR "Base Python installation is missing: ${NTE_PYTHON_BASE_DIR}")
 endif()
-
-configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/NteModManager.ini"
-    "${CMAKE_CURRENT_BINARY_DIR}/NteModManager.ini"
-    COPYONLY
-)
 
 qt_add_executable(NteModManager WIN32
     src/AppConfig.cpp
@@ -72,7 +66,7 @@ set(NTE_PYTHON_PACKAGE_MARKER "${NTE_PYTHON_PACKAGE_DIR}/.package-complete")
 set(NTE_PYTHON_PACKAGE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
     "${NTE_PYTHON_VENV_DIR}/pyvenv.cfg"
-    "${NTE_PYTHON_SOURCE_DIR}/requirements.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt"
     "${NTE_PYTHON_SOURCE_DIR}/visual_region_detector.py"
     "${NTE_ORIENTATION_MODEL_SOURCE}"
 )
@@ -131,11 +125,4 @@ add_dependencies(NteModManager NteModManagerPythonPackage)
 target_compile_definitions(NteModManager PRIVATE
     UNICODE
     _UNICODE
-)
-
-add_custom_command(TARGET NteModManager POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_CURRENT_BINARY_DIR}/NteModManager.ini"
-        "$<TARGET_FILE_DIR:NteModManager>/NteModManager.ini"
-    VERBATIM
 )

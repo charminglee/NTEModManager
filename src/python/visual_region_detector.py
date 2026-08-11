@@ -301,29 +301,6 @@ def draw_detection_overlay(
             width=max(1, line_width // 2),
         )
 
-        orientation = person.get("orientation")
-        if orientation:
-            label = str(orientation)
-            label_color = ORIENTATION_LABEL_COLOR.get(label, (255, 255, 255))
-            label_padding = max(3, line_width // 2)
-            label_box = draw.textbbox((0, 0), label)
-            label_width = label_box[2] - label_box[0] + label_padding * 2
-            label_height = label_box[3] - label_box[1] + label_padding * 2
-            label_x = max(0, person_box["x"])
-            label_y = person_box["y"] - label_height
-            if label_y < 0:
-                label_y = person_box["y"]
-            label_x = min(label_x, max(0, image_size[0] - label_width))
-            draw.rectangle(
-                (label_x, label_y, label_x + label_width, label_y + label_height),
-                fill=(0, 0, 0, 190),
-            )
-            draw.text(
-                (label_x + label_padding, label_y + label_padding - label_box[1]),
-                label,
-                fill=label_color,
-            )
-
         for region_name, region_box in person.get("regions", {}).items():
             region_rectangle = (
                 region_box["x"],
@@ -354,6 +331,29 @@ def draw_detection_overlay(
                     (point["x"] - radius, point["y"] - radius, point["x"] + radius, point["y"] + radius),
                     fill=(255, 255, 255, 230),
                 )
+
+        orientation = person.get("orientation")
+        if orientation:
+            label = str(orientation)
+            label_color = ORIENTATION_LABEL_COLOR.get(label, (255, 255, 255))
+            label_padding = max(3, line_width // 2)
+            label_box = draw.textbbox((0, 0), label)
+            label_width = label_box[2] - label_box[0] + label_padding * 2
+            label_height = label_box[3] - label_box[1] + label_padding * 2
+            label_x = max(0, person_box["x"])
+            label_y = person_box["y"] - label_height
+            if label_y < 0:
+                label_y = person_box["y"]
+            label_x = min(label_x, max(0, image_size[0] - label_width))
+            draw.rectangle(
+                (label_x, label_y, label_x + label_width, label_y + label_height),
+                fill=(0, 0, 0, 190),
+            )
+            draw.text(
+                (label_x + label_padding, label_y + label_padding - label_box[1]),
+                label,
+                fill=label_color,
+            )
 
     return overlay
 

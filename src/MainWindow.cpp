@@ -359,8 +359,8 @@ void BackgroundWidget::switchBackground()
     if (backgroundImagePaths_.size() < 2 || transitionAnimation_.state() == QAbstractAnimation::Running) {
         return;
     }
-
-    const int nextIndex = (backgroundIndex_ + 1) % backgroundImagePaths_.size();
+    
+    const int nextIndex = QRandomGenerator::global()->bounded(backgroundImagePaths_.size());
     const BackgroundImage nextBackground = loadBackground(backgroundImagePaths_.at(nextIndex));
     if (nextBackground.pixmap.isNull()) {
         backgroundIndex_ = nextIndex;

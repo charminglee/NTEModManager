@@ -23,13 +23,13 @@ The production visual inference service is `src/python/visual_region_detector.py
 To batch-test the same YOLO26 pose, orientation classification, and background framing, run `src/python/test_images.py`. With no path options it reads `F:\pictures\test`, writes images annotated with person boxes, keypoints, skeletons, estimated chest/hip regions, and a yellow background crop frame to `F:\pictures\test_result`, and saves the responses in `results.json`. If only one shoulder keypoint is visible, the script creates the opposite shoulder as a horizontal virtual point inside the person box and marks it with `virtual: true`. The frame uses the default `1315x1000` manager window ratio, is as large as the source image allows, and is positioned according to the orientation priority described above. Its coordinates are stored as `background_crop`. Each result includes its elapsed time in seconds, and the terminal reports the total test time:
 
 ```powershell
-& .\src\python\.venv\Scripts\python.exe .\src\python\test_images.py --device cuda --model .\yolo26m-pose.pt
+& .\.venv\Scripts\python.exe .\src\python\test_images.py --device cuda --model .\yolo26m-pose.pt
 ```
 
 The standalone ConvNeXt-Tiny orientation training code and dataset layout are under `training/`, separate from the production Python modules. See [training/README.md](training/README.md) for the full labeling rules, directory structure, environment setup, training parameters, output format, and evaluation guidance. The short form from the repository root is:
 
 ```powershell
-& .\src\python\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --epochs 15 --batch-size 16 --device auto
+& .\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --epochs 15 --batch-size 16 --device auto
 ```
 
 The backup directory is created on first launch. The program creates `~mods` only when the parent game `Paks` directory already exists; it does not create a fake game installation tree.
@@ -40,7 +40,7 @@ The backup directory is created on first launch. The program creates `~mods` onl
 - CMake 3.21 or newer.
 - A C++20 compiler. Visual Studio 2022 Build Tools with the Desktop development with C++ workload is recommended.
 - Qt 6.5 or newer with the `Widgets` component, built for the same compiler and architecture as the project.
-- Python 3.12 and the project environment at `src/python/.venv`, with production dependencies installed from `src/python/requirements.txt`. The optional isolated training environment and its dependencies are documented in [training/README.md](training/README.md).
+- Python 3.12 and the project environment at `.venv`, with production dependencies installed from `requirements.txt`. The optional isolated training environment and its dependencies are documented in [training/README.md](training/README.md).
 - [7-Zip](https://www.7-zip.org/) for ZIP, RAR, and 7z extraction.
 
 The program finds `7z.exe` in this order:
