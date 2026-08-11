@@ -76,42 +76,51 @@ QStringList collectBackgroundImagePaths()
 
 void logStartupInformation(const QStringList& backgroundImagePaths)
 {
-    Logger& logger = Logger::instance();
-    logger.info(QStringLiteral("========== NTE 模组管理器启动 =========="));
-    logger.info(QStringLiteral("环境：操作系统=%1，内核=%2 %3，架构=%4，Qt=%5，ABI=%6")
-                    .arg(QSysInfo::prettyProductName())
-                    .arg(QSysInfo::kernelType())
-                    .arg(QSysInfo::kernelVersion())
-                    .arg(QSysInfo::currentCpuArchitecture())
-                    .arg(QString::fromLatin1(qVersion()))
-                    .arg(QSysInfo::buildAbi()));
-    logger.info(QStringLiteral("环境：应用目录=%1，当前目录=%2，日志文件=%3")
-                    .arg(QCoreApplication::applicationDirPath())
-                    .arg(QDir::currentPath())
-                    .arg(logger.logFilePath()));
-    logger.info(QStringLiteral("配置文件：%1")
-                    .arg(QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("NteModManager.ini"))));
-    logger.info(QStringLiteral("配置：mods_directory=%1")
-                    .arg(AppConfig::modsDirectory()));
-    logger.info(QStringLiteral("配置：backups_directory=%1")
-                    .arg(AppConfig::backupsDirectory()));
-    logger.info(QStringLiteral("配置：background_images_directory=%1，test_images=%2，已加载图片=%3")
-                    .arg(AppConfig::backgroundImagesDirectory())
-                    .arg(AppConfig::testImagesEnabled() ? QStringLiteral("1") : QStringLiteral("0"))
-                    .arg(backgroundImagePaths.size()));
-    logger.info(QStringLiteral("配置：python_executable=%1，visual_region_script=%2")
-                    .arg(AppConfig::pythonExecutable())
-                    .arg(AppConfig::visualRegionScript()));
-    logger.info(QStringLiteral("配置：orientation_model=%1，python_model_cache=%2")
-                    .arg(AppConfig::orientationModel())
-                    .arg(AppConfig::pythonModelCache()));
-    logger.info(QStringLiteral("配置：game_launcher=%1，packager_directory=%2")
-                    .arg(AppConfig::gameLauncherPath())
-                    .arg(AppConfig::packagerDirectory()));
-    logger.info(QStringLiteral("配置：mod_list_sort_order=%1，mod_categories=%2，mod_category_order=%3")
-                    .arg(AppConfig::modListSortOrder())
-                    .arg(AppConfig::modCategories().join(QStringLiteral(",")))
-                    .arg(AppConfig::modCategoryOrder().join(QStringLiteral(","))));
+    Log::info(QStringLiteral("========== NTE 模组管理器启动 =========="));
+    Log::info(QStringLiteral("环境：操作系统=%1，内核=%2 %3，架构=%4，Qt=%5，ABI=%6")
+        .arg(QSysInfo::prettyProductName())
+        .arg(QSysInfo::kernelType())
+        .arg(QSysInfo::kernelVersion())
+        .arg(QSysInfo::currentCpuArchitecture())
+        .arg(QString::fromLatin1(qVersion()))
+        .arg(QSysInfo::buildAbi())
+    );
+    Log::info(QStringLiteral("环境：应用目录=%1，当前目录=%2，日志文件=%3")
+        .arg(QCoreApplication::applicationDirPath())
+        .arg(QDir::currentPath())
+        .arg(Log::logFilePath())
+    );
+    Log::info(QStringLiteral("配置文件：%1")
+        .arg(QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("NteModManager.ini")))
+    );
+    Log::info(QStringLiteral("配置：mods_directory=%1")
+        .arg(AppConfig::modsDirectory())
+    );
+    Log::info(QStringLiteral("配置：backups_directory=%1")
+        .arg(AppConfig::backupsDirectory())
+    );
+    Log::info(QStringLiteral("配置：background_images_directory=%1，test_images=%2，已加载图片=%3")
+        .arg(AppConfig::backgroundImagesDirectory())
+        .arg(AppConfig::testImagesEnabled() ? QStringLiteral("1") : QStringLiteral("0"))
+        .arg(backgroundImagePaths.size())
+    );
+    Log::info(QStringLiteral("配置：python_executable=%1，visual_region_script=%2")
+        .arg(AppConfig::pythonExecutable())
+        .arg(AppConfig::visualRegionScript())
+    );
+    Log::info(QStringLiteral("配置：orientation_model=%1，python_model_cache=%2")
+        .arg(AppConfig::orientationModel())
+        .arg(AppConfig::pythonModelCache())
+    );
+    Log::info(QStringLiteral("配置：game_launcher=%1，packager_directory=%2")
+        .arg(AppConfig::gameLauncherPath())
+        .arg(AppConfig::packagerDirectory())
+    );
+    Log::info(QStringLiteral("配置：mod_list_sort_order=%1，mod_categories=%2，mod_category_order=%3")
+        .arg(AppConfig::modListSortOrder())
+        .arg(AppConfig::modCategories().join(QStringLiteral(",")))
+        .arg(AppConfig::modCategoryOrder().join(QStringLiteral(",")))
+    );
 }
 
 QString materialStyleSheet(Qt::ColorScheme colorScheme)
@@ -255,8 +264,8 @@ int main(int argc, char* argv[])
     application.setWindowIcon(QIcon(QStringLiteral(":/img/nte-mod-manager.ico")));
     application.setStyle(QStringLiteral("Fusion"));
     application.setFont(QFont(QStringLiteral("Segoe UI Variable"), 10));
-    Logger::instance().initialize();
-    qInstallMessageHandler(&Logger::qtMessageHandler);
+    Log::initialize();
+    qInstallMessageHandler(Log::getQtMessageHandler());
     const QStringList backgroundImagePaths = collectBackgroundImagePaths();
     logStartupInformation(backgroundImagePaths);
     applyMaterialTheme(application);

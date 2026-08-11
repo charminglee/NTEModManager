@@ -100,11 +100,11 @@ public:
         });
         QObject::connect(&process_, &QProcess::errorOccurred, &process_, [this](QProcess::ProcessError error) {
             processErrorLogged_ = true;
-            Logger::instance().error(QStringLiteral("Python 视觉识别进程错误（%1）：%2")
+            Log::error(QStringLiteral("Python 视觉识别进程错误（%1）：%2")
                                           .arg(static_cast<int>(error))
                                           .arg(process_.errorString()));
         });
-        Logger::instance().info(QStringLiteral("启动 Python 视觉识别进程：%1").arg(AppConfig::pythonExecutable()));
+        Log::info(QStringLiteral("启动 Python 视觉识别进程：%1").arg(AppConfig::pythonExecutable()));
         process_.start(
             AppConfig::pythonExecutable(),
             {
@@ -120,14 +120,14 @@ public:
         );
         if (!process_.waitForStarted(5000)) {
             if (!processErrorLogged_) {
-                Logger::instance().error(QStringLiteral("无法启动 Python 视觉识别进程：%1").arg(process_.errorString()));
+                Log::error(QStringLiteral("无法启动 Python 视觉识别进程：%1").arg(process_.errorString()));
             }
             return;
         }
 
         const QByteArray readyResponse = readLine(120000);
         if (readyResponse.isEmpty()) {
-            Logger::instance().error(QStringLiteral("Python 视觉识别进程未返回 ready 响应"));
+            Log::error(QStringLiteral("Python 视觉识别进程未返回 ready 响应"));
             stopProcess();
             return;
         }
@@ -135,9 +135,9 @@ public:
         const QJsonDocument document = QJsonDocument::fromJson(readyResponse);
         ready_ = document.isObject() && document.object().value(QStringLiteral("ready")).toBool();
         if (ready_) {
-            Logger::instance().info(QStringLiteral("Python 视觉识别进程已就绪"));
+            Log::info(QStringLiteral("Python 视觉识别进程已就绪"));
         } else {
-            Logger::instance().error(QStringLiteral("Python 视觉识别进程初始化失败：%1")
+            Log::error(QStringLiteral("Python 视觉识别进程初始化失败：%1")
                                           .arg(QString::fromUtf8(readyResponse).left(500)));
             stopProcess();
         }
@@ -180,7 +180,7 @@ public:
             QDir(QDir::tempPath()).filePath(QStringLiteral("NteModManager-XXXXXX.jpg")));
         temporaryFile.setAutoRemove(true);
         if (!temporaryFile.open() || !image.save(&temporaryFile, "JPG", 92)) {
-            Logger::instance().error(QStringLiteral("无法创建视觉识别临时图像"));
+            Log::error(QStringLiteral("无法创建视觉识别临时图像"));
             return {};
         }
         const QString imagePath = temporaryFile.fileName();
@@ -196,7 +196,7 @@ public:
         const QByteArray requestLine = QJsonDocument(request).toJson(QJsonDocument::Compact) + '\n';
         if (process_.write(requestLine) < 0 || !process_.waitForBytesWritten(5000)) {
             ready_ = false;
-            Logger::instance().error(QStringLiteral("无法向 Python 视觉识别进程发送图像路径：%1")
+            Log::error(QStringLiteral("无法向 Python 视觉识别进程发送图像路径：%1")
                                           .arg(process_.errorString()));
             return {};
         }
@@ -204,20 +204,20 @@ public:
         const QByteArray response = readLine(120000);
         if (response.isEmpty()) {
             ready_ = false;
-            Logger::instance().error(QStringLiteral("Python 视觉识别进程未返回检测结果"));
+            Log::error(QStringLiteral("Python 视觉识别进程未返回检测结果"));
             return {};
         }
 
         const QJsonDocument document = QJsonDocument::fromJson(response);
         if (!document.isObject()) {
-            Logger::instance().error(QStringLiteral("Python 视觉识别进程返回了无效 JSON：%1")
+            Log::error(QStringLiteral("Python 视觉识别进程返回了无效 JSON：%1")
                                           .arg(QString::fromUtf8(response).left(500)));
             return {};
         }
 
         const QJsonObject result = document.object();
         if (result.contains(QStringLiteral("error"))) {
-            Logger::instance().error(QStringLiteral("Python 视觉识别失败：%1")
+            Log::error(QStringLiteral("Python 视觉识别失败：%1")
                                           .arg(result.value(QStringLiteral("error")).toString()));
             return {};
         }
@@ -309,7 +309,7 @@ private:
     {
         const QString message = QString::fromUtf8(line).trimmed();
         if (!message.isEmpty()) {
-            Logger::instance().warning(QStringLiteral("Python stderr：%1").arg(message));
+            Log::warning(QStringLiteral("Python stderr：%1").arg(message));
         }
     }
 

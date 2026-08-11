@@ -8,6 +8,49 @@
 
 #include <QMutexLocker>
 
+namespace Log
+{
+void initialize()
+{
+    Logger::instance().initialize();
+}
+
+void debug(const QString& message)
+{
+    Logger::instance().debug(message);
+}
+
+void info(const QString& message)
+{
+    Logger::instance().info(message);
+}
+
+void warning(const QString& message)
+{
+    Logger::instance().warning(message);
+}
+
+void error(const QString& message)
+{
+    Logger::instance().error(message);
+}
+
+QStringList entries()
+{
+    return Logger::instance().entries();
+}
+
+QString logFilePath()
+{
+    return Logger::instance().logFilePath();
+}
+
+QtMessageHandler getQtMessageHandler() 
+{
+    return &Logger::qtMessageHandler;
+}
+}
+
 namespace
 {
 constexpr qsizetype kMaximumInMemoryEntries = 2000;
@@ -111,7 +154,8 @@ void Logger::append(Level level, const QString& message)
 
     const QString entry = QStringLiteral("[%1] [%2] %3")
         .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss.zzz")))
-        .arg(levelName(level), message);
+        .arg(levelName(level))
+        .arg(message);
 
     {
         QMutexLocker locker(&mutex_);

@@ -3,6 +3,19 @@
 #include <QObject>
 #include <QMutex>
 #include <QStringList>
+#include <QtGlobal>
+
+namespace Log
+{
+void initialize();
+void debug(const QString& message);
+void info(const QString& message);
+void warning(const QString& message);
+void error(const QString& message);
+QStringList entries();
+QString logFilePath();
+QtMessageHandler getQtMessageHandler();
+}
 
 class Logger final : public QObject
 {
@@ -18,20 +31,15 @@ public:
     };
 
     static Logger& instance();
+    static void qtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& message);
 
     void initialize();
     void debug(const QString& message);
     void info(const QString& message);
     void warning(const QString& message);
     void error(const QString& message);
-
     [[nodiscard]] QStringList entries() const;
     [[nodiscard]] QString logFilePath() const;
-
-    static void qtMessageHandler(
-        QtMsgType type,
-        const QMessageLogContext& context,
-        const QString& message);
 
 signals:
     void entriesChanged();
@@ -39,8 +47,9 @@ signals:
 private:
     Logger();
 
-    void append(Level level, const QString& message);
     [[nodiscard]] static QString levelName(Level level);
+
+    void append(Level level, const QString& message);
 
     mutable QMutex mutex_;
     QStringList entries_;

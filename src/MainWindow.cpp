@@ -199,27 +199,27 @@ OperationResult runPackager(const QString& batchPath, const QString& packageDire
 {
     QProcess process;
     process.setWorkingDirectory(packageDirectory);
-    Logger::instance().info(QStringLiteral("启动打包脚本：%1").arg(batchPath));
+    Log::info(QStringLiteral("启动打包脚本：%1").arg(batchPath));
     process.start(QStringLiteral("cmd.exe"), {QStringLiteral("/c"), QDir::toNativeSeparators(batchPath)});
     if (!process.waitForStarted(10000)) {
-        Logger::instance().error(QStringLiteral("无法启动打包脚本：%1").arg(process.errorString()));
+        Log::error(QStringLiteral("无法启动打包脚本：%1").arg(process.errorString()));
         return {false, QStringLiteral("无法启动打包脚本：%1").arg(process.errorString())};
     }
     process.waitForFinished(-1);
     const QString output = QString::fromLocal8Bit(
         process.readAllStandardError() + process.readAllStandardOutput()).trimmed();
     if (!output.isEmpty()) {
-        Logger::instance().debug(QStringLiteral("打包脚本输出：%1").arg(output));
+        Log::debug(QStringLiteral("打包脚本输出：%1").arg(output));
     }
     if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 2) {
-        Logger::instance().warning(QStringLiteral("打包脚本已取消"));
+        Log::warning(QStringLiteral("打包脚本已取消"));
         return {false, {}, true};
     }
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        Logger::instance().error(QStringLiteral("打包脚本失败，退出码：%1").arg(process.exitCode()));
+        Log::error(QStringLiteral("打包脚本失败，退出码：%1").arg(process.exitCode()));
         return {false, QStringLiteral("打包失败：%1").arg(output.isEmpty() ? QStringLiteral("打包脚本异常退出。") : output)};
     }
-    Logger::instance().info(QStringLiteral("打包脚本执行完成"));
+    Log::info(QStringLiteral("打包脚本执行完成"));
     return {true, {}};
 }
 }
@@ -230,12 +230,12 @@ void BackgroundDetectionWorker::prepareModel()
         return;
     }
 
-    Logger::instance().info(QStringLiteral("开始加载视觉识别模型"));
+    Log::info(QStringLiteral("开始加载视觉识别模型"));
     const bool ready = detector_.warmup();
     if (ready) {
-        Logger::instance().info(QStringLiteral("视觉识别模型加载完成"));
+        Log::info(QStringLiteral("视觉识别模型加载完成"));
     } else {
-        Logger::instance().error(QStringLiteral("视觉识别模型加载失败"));
+        Log::error(QStringLiteral("视觉识别模型加载失败"));
     }
     if (!QThread::currentThread()->isInterruptionRequested()) {
         emit modelReady(ready);
@@ -248,7 +248,7 @@ void BackgroundDetectionWorker::detect(const QString& imagePath, const QSize& vi
         return;
     }
 
-    Logger::instance().debug(QStringLiteral("开始识别背景：%1").arg(imagePath));
+    Log::debug(QStringLiteral("开始识别背景：%1").arg(imagePath));
     const QImage image(imagePath);
     const VisualRegion region = detector_.detect(image, viewportSize);
     if (QThread::currentThread()->isInterruptionRequested()) {
@@ -261,16 +261,16 @@ BackgroundWidget::BackgroundWidget(const QStringList& backgroundImagePaths, QWid
     : QWidget(parent)
     , backgroundImagePaths_(backgroundImagePaths)
 {
-    Logger::instance().info(QStringLiteral("开始创建背景组件，背景图数量：%1").arg(backgroundImagePaths_.size()));
+    Log::info(QStringLiteral("开始创建背景组件，背景图数量：%1").arg(backgroundImagePaths_.size()));
     qRegisterMetaType<VisualRegion>();
     if (backgroundImagePaths_.isEmpty()) {
-        Logger::instance().info(QStringLiteral("背景图为空，跳过背景组件初始化"));
+        Log::info(QStringLiteral("背景图为空，跳过背景组件初始化"));
         return;
     }
 
     backgroundIndex_ = QRandomGenerator::global()->bounded(backgroundImagePaths_.size());
     background_ = loadBackground(backgroundImagePaths_.at(backgroundIndex_));
-    Logger::instance().info(QStringLiteral("背景图已加载：%1").arg(background_.path));
+    Log::info(QStringLiteral("背景图已加载：%1").arg(background_.path));
 
     detectionThread_ = new QThread(this);
     detectionWorker_ = new BackgroundDetectionWorker();
@@ -293,7 +293,7 @@ BackgroundWidget::BackgroundWidget(const QStringList& backgroundImagePaths, QWid
     detectionThread_->start();
     QMetaObject::invokeMethod(detectionWorker_, "prepareModel", Qt::QueuedConnection);
     requestDetection(background_.path);
-    Logger::instance().info(QStringLiteral("背景识别线程已启动"));
+    Log::info(QStringLiteral("背景识别线程已启动"));
 
     resizeDetectionTimer_.setSingleShot(true);
     resizeDetectionTimer_.setInterval(120);
@@ -479,13 +479,13 @@ MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
 
     buildUi();
     qApp->installEventFilter(this);
-    Logger::instance().info(QStringLiteral("主窗口已创建，背景图数量：%1").arg(backgroundImagePaths_.size()));
+    Log::info(QStringLiteral("主窗口已创建，背景图数量：%1").arg(backgroundImagePaths_.size()));
     const OperationResult initialization = repository_.initialize();
     if (!initialization.success) {
-        Logger::instance().error(QStringLiteral("模组仓库初始化失败：%1").arg(initialization.message));
+        Log::error(QStringLiteral("模组仓库初始化失败：%1").arg(initialization.message));
         notifyStatus(initialization.message);
     } else {
-        Logger::instance().info(QStringLiteral("模组仓库初始化完成"));
+        Log::info(QStringLiteral("模组仓库初始化完成"));
     }
     refreshCategories();
 }
@@ -603,7 +603,7 @@ void MainWindow::updateLogBottomButtonVisibility()
 
 void MainWindow::buildUi()
 {
-    Logger::instance().info(QStringLiteral("开始构建主窗口界面"));
+    Log::info(QStringLiteral("开始构建主窗口界面"));
 
     auto* central = new QWidget(this);
     central->setObjectName(QStringLiteral("central"));
@@ -647,16 +647,16 @@ void MainWindow::buildUi()
     connect(launchGameButton, &QPushButton::clicked, this, [this] {
         const QString launcherPath = AppConfig::gameLauncherPath();
         if (!QFileInfo::exists(launcherPath)) {
-            Logger::instance().warning(QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
+            Log::warning(QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
             QMessageBox::warning(this, QStringLiteral("无法启动游戏"), QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
             return;
         }
         if (!QProcess::startDetached(launcherPath)) {
-            Logger::instance().error(QStringLiteral("无法启动游戏启动器：%1").arg(launcherPath));
+            Log::error(QStringLiteral("无法启动游戏启动器：%1").arg(launcherPath));
             QMessageBox::warning(this, QStringLiteral("无法启动游戏"), QStringLiteral("无法启动游戏启动器。"));
             return;
         }
-        Logger::instance().info(QStringLiteral("已启动游戏启动器：%1").arg(launcherPath));
+        Log::info(QStringLiteral("已启动游戏启动器：%1").arg(launcherPath));
         notifyStatus(QStringLiteral("已启动游戏启动器"));
     });
     headerLayout->addWidget(launchGameButton);
@@ -974,15 +974,15 @@ void MainWindow::buildUi()
     });
     setCentralWidget(central);
     central->installEventFilter(this);
-    Logger::instance().info(QStringLiteral("主窗口界面构建完成"));
+    Log::info(QStringLiteral("主窗口界面构建完成"));
 }
 
 void MainWindow::refreshCategories()
 {
-    Logger::instance().info(QStringLiteral("开始扫描模组目录"));
+    Log::info(QStringLiteral("开始扫描模组目录"));
     const QList<ModInfo> mods = repository_.scan();
-    Logger::instance().info(QStringLiteral("模组目录扫描完成，数量：%1").arg(mods.size()));
-    Logger::instance().debug(QStringLiteral("刷新模组分类，扫描到 %1 个模组").arg(mods.size()));
+    Log::info(QStringLiteral("模组目录扫描完成，数量：%1").arg(mods.size()));
+    Log::debug(QStringLiteral("刷新模组分类，扫描到 %1 个模组").arg(mods.size()));
     categoryOrder_ = ModListLogic::orderedCategories(categories_, categoryOrder_);
     const QHash<QString, int> categoryCounts = ModListLogic::countByCategory(mods, categories_);
 
@@ -1019,7 +1019,7 @@ void MainWindow::refreshLogView()
     const bool followTail = logFollowTail_ || logView_->verticalScrollBar()->value() >= logView_->verticalScrollBar()->maximum();
     const int verticalScrollPosition = logView_->verticalScrollBar()->value();
     const int horizontalScrollPosition = logView_->horizontalScrollBar()->value();
-    const QStringList entries = Logger::instance().entries();
+    const QStringList entries = Log::entries();
     logScrollUpdateInProgress_ = true;
     logView_->setPlainText(entries.isEmpty() ? QStringLiteral("暂无日志") : entries.join(QLatin1Char('\n')));
     logScrollUpdateInProgress_ = false;
@@ -1526,10 +1526,10 @@ void MainWindow::importArchives(const QStringList& archivePaths)
 
         const OperationResult result = repository_.importArchive(archivePath);
         if (!result.success) {
-            Logger::instance().warning(QStringLiteral("导入压缩包失败：%1：%2").arg(fileName, result.message));
+            Log::warning(QStringLiteral("导入压缩包失败：%1：%2").arg(fileName, result.message));
             failures.append(QStringLiteral("%1：%2").arg(fileName, result.message));
         } else {
-            Logger::instance().info(QStringLiteral("导入压缩包完成：%1").arg(fileName));
+            Log::info(QStringLiteral("导入压缩包完成：%1").arg(fileName));
             notifyStatus(result.message);
             const QString importedName = result.message.mid(QStringLiteral("已导入 ").size());
             const QList<ModInfo> importedMods = repository_.scan();
@@ -1548,10 +1548,10 @@ void MainWindow::importArchives(const QStringList& archivePaths)
                 if (accepted && newName != importedMod->name) {
                     const OperationResult renamed = repository_.rename(*importedMod, newName);
                     if (!renamed.success) {
-                        Logger::instance().warning(QStringLiteral("导入后重命名失败：%1").arg(renamed.message));
+                        Log::warning(QStringLiteral("导入后重命名失败：%1").arg(renamed.message));
                         failures.append(QStringLiteral("%1：%2").arg(fileName, renamed.message));
                     } else {
-                        Logger::instance().info(QStringLiteral("导入后重命名完成：%1").arg(renamed.message));
+                        Log::info(QStringLiteral("导入后重命名完成：%1").arg(renamed.message));
                         notifyStatus(renamed.message);
                     }
                 }
@@ -1565,7 +1565,7 @@ void MainWindow::importArchives(const QStringList& archivePaths)
         refreshMods();
     }
     if (!failures.isEmpty()) {
-        Logger::instance().warning(QStringLiteral("有 %1 个压缩包导入未完成").arg(failures.size()));
+        Log::warning(QStringLiteral("有 %1 个压缩包导入未完成").arg(failures.size()));
         notifyStatus(QStringLiteral("%1 个压缩包未能导入").arg(failures.size()));
         QMessageBox::warning(this, QStringLiteral("导入未完成"), failures.join(QLatin1Char('\n')));
     }
@@ -1692,12 +1692,12 @@ void MainWindow::handleOperation(const OperationResult& result)
         refreshMods();
     }
     if (result.success) {
-        Logger::instance().info(QStringLiteral("操作完成：%1").arg(result.message));
+        Log::info(QStringLiteral("操作完成：%1").arg(result.message));
         notifyStatus(result.message);
         return;
     }
 
-    Logger::instance().error(QStringLiteral("操作失败：%1").arg(result.message));
+    Log::error(QStringLiteral("操作失败：%1").arg(result.message));
     notifyStatus(QStringLiteral("操作未完成"));
     QMessageBox::warning(this, QStringLiteral("操作未完成"), result.message);
 }
@@ -1752,7 +1752,7 @@ void MainWindow::runAsyncOperation(
 
     setOperationInProgress(true);
     notifyStatus(activity);
-    Logger::instance().info(QStringLiteral("开始异步操作：%1").arg(activity));
+    Log::info(QStringLiteral("开始异步操作：%1").arg(activity));
 
     QPointer<MainWindow> window(this);
     auto* worker = QThread::create([window, operation = std::move(operation), completion = std::move(completion)]() mutable {
