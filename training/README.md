@@ -94,10 +94,33 @@ training/orientation/dataset/val/uncertain/person_0101.png
 
 ## 开始训练
 
-从仓库根目录执行。脚本默认读取 `training/orientation/dataset`，默认把结果写到 `training/orientation/checkpoints`：
+从仓库根目录执行，进行两轮训练。脚本默认读取 `training/orientation/dataset`，默认把结果写到 `training/orientation/checkpoints`：
+
+第一轮：
 
 ```powershell
-& .\src\python\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --epochs 15 --batch-size 128 --device cuda
+$python = '.\src\python\.venv\Scripts\python.exe'
+
+& $python .\training\orientation\train_orientation.py `
+--output .\training\orientation\checkpoints\weighted_head `
+--epochs 20 `
+--batch-size 128 `
+--learning-rate 1e-4 `
+--class-weighting `
+--device cuda
+```
+
+第二轮：
+
+```powershell
+& $python .\training\orientation\train_orientation.py `
+--output .\training\orientation\checkpoints\weighted_unfrozen `
+--epochs 20 `
+--batch-size 128 `
+--learning-rate 1e-5 `
+--class-weighting `
+--no-freeze-backbone `
+--device cuda
 ```
 
 常用参数：
