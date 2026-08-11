@@ -16,6 +16,22 @@ Windows desktop mod manager for Neverness To Everness. It is written in C++20 wi
 
 The `[Categories] names` setting contains the normal mod categories as a comma-separated list. A mod is assigned to the first matching name prefix; unmatched mods are shown under `其他`. The special categories `全部` and `其他` are always available and must not be added to this setting.
 
+Set `[Debug] test_images=1` to ignore `Paths/background_images_directory` and load background images directly from `F:\pictures\test`. The default is `0`.
+
+The production visual inference service is `src/python/visual_region_detector.py`. The C++ manager starts it with `--server` and sends one image path per line; it returns JSON with the final `background_crop` frame, detection state, keypoints, estimated chest/hip regions, and each person's `orientation`. The service loads the ConvNeXt-Tiny checkpoint from `python/orientation-model/best.pt`; a front or back result below confidence `0.50` is treated as `uncertain`. For front and uncertain people, the frame keeps the chest as the priority region when chest and hip cannot both fit; for back people, the hip is the priority region. The service uses `auto` device selection and falls back to the existing crop behavior when the orientation checkpoint is unavailable. The build packages this script and checkpoint with the standalone Python runtime under `build\Release\python`.
+
+To batch-test the same YOLO26 pose, orientation classification, and background framing, run `src/python/test_images.py`. With no path options it reads `F:\pictures\test`, writes images annotated with person boxes, keypoints, skeletons, estimated chest/hip regions, and a yellow background crop frame to `F:\pictures\test_result`, and saves the responses in `results.json`. If only one shoulder keypoint is visible, the script creates the opposite shoulder as a horizontal virtual point inside the person box and marks it with `virtual: true`. The frame uses the default `1315x1000` manager window ratio, is as large as the source image allows, and is positioned according to the orientation priority described above. Its coordinates are stored as `background_crop`. Each result includes its elapsed time in seconds, and the terminal reports the total test time:
+
+```powershell
+& .\src\python\.venv\Scripts\python.exe .\src\python\test_images.py --device cuda --model .\yolo26m-pose.pt
+```
+
+The standalone ConvNeXt-Tiny orientation training code and dataset layout are under `training/`, separate from the production Python modules. See [training/README.md](training/README.md) for the full labeling rules, directory structure, environment setup, training parameters, output format, and evaluation guidance. The short form from the repository root is:
+
+```powershell
+& .\src\python\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --epochs 15 --batch-size 16 --device auto
+```
+
 The backup directory is created on first launch. The program creates `~mods` only when the parent game `Paks` directory already exists; it does not create a fake game installation tree.
 
 ## Requirements
@@ -24,6 +40,7 @@ The backup directory is created on first launch. The program creates `~mods` onl
 - CMake 3.21 or newer.
 - A C++20 compiler. Visual Studio 2022 Build Tools with the Desktop development with C++ workload is recommended.
 - Qt 6.5 or newer with the `Widgets` component, built for the same compiler and architecture as the project.
+- Python 3.12 and the project environment at `src/python/.venv`, with production dependencies installed from `src/python/requirements.txt`. The optional isolated training environment and its dependencies are documented in [training/README.md](training/README.md).
 - [7-Zip](https://www.7-zip.org/) for ZIP, RAR, and 7z extraction.
 
 The program finds `7z.exe` in this order:
@@ -41,6 +58,8 @@ From this directory, configure CMake with the path to the Qt kit installed on th
 cmake -S . -B build -G "Visual Studio 18 2026" -A x64 -DCMAKE_PREFIX_PATH="C:\Qt\6.11.1\msvc2022_64"
 cmake --build build --config Release
 ```
+
+The build copies a standalone Python runtime, the environment packages, the detector script, the trained orientation checkpoint, and any cached YOLO files into `build\Release\python`. The executable locates them relative to itself, so no Python path is stored in `NteModManager.ini`. If the YOLO model is not present in the cache, Python downloads it on first use. The YOLO pose detector estimates chest and hip regions from keypoints; the orientation checkpoint then controls which region receives priority when the fixed-ratio background frame cannot contain both.
 
 The executable will be under `build\Release\NteModManager.exe`. Deploy Qt runtime DLLs before moving the executable to another computer, for example:
 

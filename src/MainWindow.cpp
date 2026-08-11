@@ -2,7 +2,9 @@
 
 #include "AppConfig.h"
 #include "CategoryListWidget.h"
+#include "Logger.h"
 #include "ModListLogic.h"
+#include "VisualRegionDetector.h"
 
 #include <QAbstractButton>
 #include <QAbstractItemView>
@@ -19,8 +21,10 @@
 #include <QFileInfo>
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QImage>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QLabel>
@@ -34,6 +38,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPixmap>
+#include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
 #include <QProcess>
@@ -41,6 +46,7 @@
 #include <QRandomGenerator>
 #include <QSignalBlocker>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QSizePolicy>
 #include <QStyle>
 #include <QThread>
@@ -57,9 +63,13 @@
 #include <array>
 #include <algorithm>
 #include <memory>
+#include <utility>
 
 namespace
 {
+
+bool debugMode = false;
+
 class ClickableFrame final : public QFrame
 {
 public:
@@ -124,91 +134,6 @@ protected:
     }
 };
 
-class BackgroundWidget final : public QWidget
-{
-public:
-    explicit BackgroundWidget(const QStringList& backgroundImagePaths, QWidget* parent = nullptr)
-        : QWidget(parent)
-        , backgroundImagePaths_(backgroundImagePaths)
-    {
-        if (backgroundImagePaths_.isEmpty()) {
-            return;
-        }
-
-        backgroundIndex_ = QRandomGenerator::global()->bounded(backgroundImagePaths_.size());
-        background_ = QPixmap(backgroundImagePaths_.at(backgroundIndex_));
-
-        connect(&rotationTimer_, &QTimer::timeout, this, &BackgroundWidget::switchBackground);
-        rotationTimer_.start(10000);
-
-        connect(&transitionAnimation_, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
-            transitionProgress_ = value.toReal();
-            update();
-        });
-        connect(&transitionAnimation_, &QVariantAnimation::finished, this, [this] {
-            background_ = nextBackground_;
-            nextBackground_ = QPixmap();
-            transitionProgress_ = 0.0;
-            update();
-        });
-    }
-
-protected:
-    void paintEvent(QPaintEvent*) override
-    {
-        QPainter painter(this);
-        painter.fillRect(rect(), QColor(QStringLiteral("#08111d")));
-        drawBackground(painter, background_, 1.0 - transitionProgress_);
-        drawBackground(painter, nextBackground_, transitionProgress_);
-    }
-
-private:
-    void switchBackground()
-    {
-        if (backgroundImagePaths_.size() < 2 || transitionAnimation_.state() == QAbstractAnimation::Running) {
-            return;
-        }
-
-        const int nextIndex = (backgroundIndex_ + 1) % backgroundImagePaths_.size();
-        const QPixmap nextBackground(backgroundImagePaths_.at(nextIndex));
-        if (nextBackground.isNull()) {
-            backgroundIndex_ = nextIndex;
-            return;
-        }
-
-        backgroundIndex_ = nextIndex;
-        nextBackground_ = nextBackground;
-        transitionAnimation_.setStartValue(0.0);
-        transitionAnimation_.setEndValue(1.0);
-        transitionAnimation_.setDuration(900);
-        transitionAnimation_.setEasingCurve(QEasingCurve::InOutCubic);
-        transitionAnimation_.start();
-    }
-
-    void drawBackground(QPainter& painter, const QPixmap& background, qreal opacity) const
-    {
-        if (background.isNull() || opacity <= 0.0) {
-            return;
-        }
-
-        const QSize scaledSize = background.size().scaled(size(), Qt::KeepAspectRatioByExpanding);
-        const QPoint topLeft((width() - scaledSize.width()) / 2, (height() - scaledSize.height()) / 2);
-        painter.save();
-        painter.setOpacity(opacity);
-        painter.setRenderHint(QPainter::SmoothPixmapTransform);
-        painter.drawPixmap(QRect(topLeft, scaledSize), background);
-        painter.restore();
-    }
-
-    QStringList backgroundImagePaths_;
-    int backgroundIndex_ = 0;
-    QPixmap background_;
-    QPixmap nextBackground_;
-    QTimer rotationTimer_;
-    QVariantAnimation transitionAnimation_;
-    qreal transitionProgress_ = 0.0;
-};
-
 class BusyIndicator final : public QWidget
 {
 public:
@@ -249,8 +174,8 @@ QToolButton* createActionButton(
     QWidget* parent,
     const QString& text,
     const QIcon& icon,
-    const QString& tooltip)
-{
+    const QString& tooltip
+) {
     auto* button = new QToolButton(parent);
     button->setText(text);
     button->setIcon(icon);
@@ -274,21 +199,270 @@ OperationResult runPackager(const QString& batchPath, const QString& packageDire
 {
     QProcess process;
     process.setWorkingDirectory(packageDirectory);
+    Logger::instance().info(QStringLiteral("启动打包脚本：%1").arg(batchPath));
     process.start(QStringLiteral("cmd.exe"), {QStringLiteral("/c"), QDir::toNativeSeparators(batchPath)});
     if (!process.waitForStarted(10000)) {
+        Logger::instance().error(QStringLiteral("无法启动打包脚本：%1").arg(process.errorString()));
         return {false, QStringLiteral("无法启动打包脚本：%1").arg(process.errorString())};
     }
     process.waitForFinished(-1);
+    const QString output = QString::fromLocal8Bit(
+        process.readAllStandardError() + process.readAllStandardOutput()).trimmed();
+    if (!output.isEmpty()) {
+        Logger::instance().debug(QStringLiteral("打包脚本输出：%1").arg(output));
+    }
     if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 2) {
+        Logger::instance().warning(QStringLiteral("打包脚本已取消"));
         return {false, {}, true};
     }
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        const QString output = QString::fromLocal8Bit(
-            process.readAllStandardError() + process.readAllStandardOutput()).trimmed();
+        Logger::instance().error(QStringLiteral("打包脚本失败，退出码：%1").arg(process.exitCode()));
         return {false, QStringLiteral("打包失败：%1").arg(output.isEmpty() ? QStringLiteral("打包脚本异常退出。") : output)};
     }
+    Logger::instance().info(QStringLiteral("打包脚本执行完成"));
     return {true, {}};
 }
+}
+
+void BackgroundDetectionWorker::prepareModel()
+{
+    if (QThread::currentThread()->isInterruptionRequested()) {
+        return;
+    }
+
+    Logger::instance().info(QStringLiteral("开始加载视觉识别模型"));
+    const bool ready = detector_.warmup();
+    if (ready) {
+        Logger::instance().info(QStringLiteral("视觉识别模型加载完成"));
+    } else {
+        Logger::instance().error(QStringLiteral("视觉识别模型加载失败"));
+    }
+    if (!QThread::currentThread()->isInterruptionRequested()) {
+        emit modelReady(ready);
+    }
+}
+
+void BackgroundDetectionWorker::detect(const QString& imagePath, const QSize& viewportSize)
+{
+    if (QThread::currentThread()->isInterruptionRequested()) {
+        return;
+    }
+
+    Logger::instance().debug(QStringLiteral("开始识别背景：%1").arg(imagePath));
+    const QImage image(imagePath);
+    const VisualRegion region = detector_.detect(image, viewportSize);
+    if (QThread::currentThread()->isInterruptionRequested()) {
+        return;
+    }
+    emit detectionFinished(imagePath, region);
+}
+
+BackgroundWidget::BackgroundWidget(const QStringList& backgroundImagePaths, QWidget* parent)
+    : QWidget(parent)
+    , backgroundImagePaths_(backgroundImagePaths)
+{
+    Logger::instance().info(QStringLiteral("开始创建背景组件，背景图数量：%1").arg(backgroundImagePaths_.size()));
+    qRegisterMetaType<VisualRegion>();
+    if (backgroundImagePaths_.isEmpty()) {
+        Logger::instance().info(QStringLiteral("背景图为空，跳过背景组件初始化"));
+        return;
+    }
+
+    backgroundIndex_ = QRandomGenerator::global()->bounded(backgroundImagePaths_.size());
+    background_ = loadBackground(backgroundImagePaths_.at(backgroundIndex_));
+    Logger::instance().info(QStringLiteral("背景图已加载：%1").arg(background_.path));
+
+    detectionThread_ = new QThread(this);
+    detectionWorker_ = new BackgroundDetectionWorker();
+    detectionWorker_->moveToThread(detectionThread_);
+    connect(detectionThread_, &QThread::finished, detectionWorker_, &QObject::deleteLater);
+    connect(
+        detectionWorker_,
+        &BackgroundDetectionWorker::detectionFinished,
+        this,
+        &BackgroundWidget::handleDetection,
+        Qt::QueuedConnection
+    );
+    connect(
+        detectionWorker_,
+        &BackgroundDetectionWorker::modelReady,
+        this,
+        &BackgroundWidget::handleModelReady,
+        Qt::QueuedConnection
+    );
+    detectionThread_->start();
+    QMetaObject::invokeMethod(detectionWorker_, "prepareModel", Qt::QueuedConnection);
+    requestDetection(background_.path);
+    Logger::instance().info(QStringLiteral("背景识别线程已启动"));
+
+    resizeDetectionTimer_.setSingleShot(true);
+    resizeDetectionTimer_.setInterval(120);
+    connect(&resizeDetectionTimer_, &QTimer::timeout, this, [this] {
+        requestDetection(background_.path);
+        requestDetection(nextBackground_.path);
+    });
+
+    connect(&rotationTimer_, &QTimer::timeout, this, &BackgroundWidget::switchBackground);
+    rotationTimer_.setInterval(10000);
+    rotationTimer_.start();
+
+    connect(&transitionAnimation_, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        transitionProgress_ = value.toReal();
+        update();
+    });
+    connect(&transitionAnimation_, &QVariantAnimation::finished, this, [this] {
+        background_ = nextBackground_;
+        nextBackground_ = {};
+        transitionProgress_ = 0.0;
+        update();
+    });
+}
+
+BackgroundWidget::~BackgroundWidget()
+{
+    if (detectionThread_) {
+        detectionThread_->requestInterruption();
+        detectionThread_->quit();
+        detectionThread_->wait();
+    }
+}
+
+void BackgroundWidget::setStatusCallback(std::function<void(const QString&)> callback)
+{
+    notifyStatus_ = std::move(callback);
+    if (!notifyStatus_) {
+        return;
+    }
+    if (modelReady_) {
+        notifyStatus_(QStringLiteral("就绪"));
+    } else if (detectionInProgress_) {
+        notifyStatus_(QStringLiteral("正在加载视觉识别模型..."));
+    }
+}
+
+void BackgroundWidget::paintEvent(QPaintEvent*)
+{
+    QPainter painter(this);
+    painter.fillRect(rect(), QColor(QStringLiteral("#08111d")));
+    drawBackground(painter, background_, 1.0 - transitionProgress_);
+    drawBackground(painter, nextBackground_, transitionProgress_);
+}
+
+void BackgroundWidget::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    resizeDetectionTimer_.start();
+}
+
+void BackgroundWidget::switchBackground()
+{
+    if (backgroundImagePaths_.size() < 2 || transitionAnimation_.state() == QAbstractAnimation::Running) {
+        return;
+    }
+
+    const int nextIndex = (backgroundIndex_ + 1) % backgroundImagePaths_.size();
+    const BackgroundImage nextBackground = loadBackground(backgroundImagePaths_.at(nextIndex));
+    if (nextBackground.pixmap.isNull()) {
+        backgroundIndex_ = nextIndex;
+        return;
+    }
+
+    rotationTimer_.start();
+    backgroundIndex_ = nextIndex;
+    nextBackground_ = nextBackground;
+    requestDetection(nextBackground_.path);
+    transitionAnimation_.setStartValue(0.0);
+    transitionAnimation_.setEndValue(1.0);
+    transitionAnimation_.setDuration(900);
+    transitionAnimation_.setEasingCurve(QEasingCurve::InOutCubic);
+    transitionAnimation_.start();
+}
+
+BackgroundWidget::BackgroundImage BackgroundWidget::loadBackground(const QString& path) const
+{
+    BackgroundImage image;
+    image.path = path;
+    image.pixmap = QPixmap(path);
+    return image;
+}
+
+void BackgroundWidget::requestDetection(const QString& path)
+{
+    if (path.isEmpty() || !detectionWorker_) {
+        return;
+    }
+
+    if (detectionInProgress_) {
+        if (!pendingDetectionPaths_.contains(path)) {
+            pendingDetectionPaths_.append(path);
+        }
+        return;
+    }
+
+    detectionInProgress_ = true;
+    if (!modelReady_ && notifyStatus_) {
+        notifyStatus_(QStringLiteral("正在加载视觉识别模型..."));
+    }
+    QMetaObject::invokeMethod(
+        detectionWorker_,
+        "detect",
+        Qt::QueuedConnection,
+        Q_ARG(QString, path),
+        Q_ARG(QSize, size())
+    );
+}
+
+void BackgroundWidget::handleDetection(const QString& path, const VisualRegion& region)
+{
+    detectionInProgress_ = false;
+    if (background_.path == path) {
+        background_.visualRegion = region;
+    }
+    if (nextBackground_.path == path) {
+        nextBackground_.visualRegion = region;
+    }
+    if (debugMode && region.debugOverlay.isNull() && notifyStatus_) {
+        if (region.debugOverlayStatus.isEmpty()) {
+            notifyStatus_(QStringLiteral("调试线框加载失败：未知错误"));
+        } else {
+            notifyStatus_(QStringLiteral("调试线框加载失败：%1").arg(region.debugOverlayStatus));
+        }
+    }
+    update();
+
+    if (!pendingDetectionPaths_.isEmpty()) {
+        const QString nextPath = pendingDetectionPaths_.takeFirst();
+        requestDetection(nextPath);
+    }
+}
+
+void BackgroundWidget::handleModelReady(bool ready)
+{
+    modelReady_ = ready;
+    if (notifyStatus_) {
+        notifyStatus_(ready ? QStringLiteral("就绪") : QStringLiteral("视觉识别模型加载失败"));
+    }
+}
+
+void BackgroundWidget::drawBackground(QPainter& painter, const BackgroundImage& background, qreal opacity) const
+{
+    if (background.pixmap.isNull() || opacity <= 0.0) {
+        return;
+    }
+
+    const QRect sourceRect = VisualRegionDetector::cropForViewport(
+        background.pixmap.size(),
+        background.visualRegion,
+        size()
+    );
+    painter.save();
+    painter.setOpacity(opacity);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    painter.drawPixmap(rect(), background.pixmap, sourceRect);
+    if (debugMode && !background.visualRegion.debugOverlay.isNull()) {
+        painter.drawImage(rect(), background.visualRegion.debugOverlay, sourceRect);
+    }
+    painter.restore();
 }
 
 MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
@@ -304,11 +478,32 @@ MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
     resize(1315, 1000);
 
     buildUi();
+    qApp->installEventFilter(this);
+    Logger::instance().info(QStringLiteral("主窗口已创建，背景图数量：%1").arg(backgroundImagePaths_.size()));
     const OperationResult initialization = repository_.initialize();
     if (!initialization.success) {
-        activityLabel_->setText(initialization.message);
+        Logger::instance().error(QStringLiteral("模组仓库初始化失败：%1").arg(initialization.message));
+        notifyStatus(initialization.message);
+    } else {
+        Logger::instance().info(QStringLiteral("模组仓库初始化完成"));
     }
     refreshCategories();
+}
+
+void MainWindow::toggleDebugMode()
+{
+    debugMode = !debugMode;
+    const bool overlayLoaded = !backgroundWidget_->background_.visualRegion.debugOverlay.isNull()
+        || !backgroundWidget_->nextBackground_.visualRegion.debugOverlay.isNull();
+    notifyStatus(debugMode ? QStringLiteral("调试模式已开启") : QStringLiteral("调试模式已关闭"));
+    update();
+}
+
+void MainWindow::notifyStatus(const QString& statusText)
+{
+    if (!operationInProgress_) {
+        activityLabel_->setText(statusText);
+    }
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
@@ -346,8 +541,41 @@ void MainWindow::dropEvent(QDropEvent* event)
     importArchives(archivePaths);
 }
 
+void MainWindow::keyPressEvent(QKeyEvent* event)
+{
+    if (event->modifiers() == Qt::NoModifier) {
+        switch (event->key()) {
+        case Qt::Key_F12:
+            toggleDebugMode();
+            event->accept();
+            return;
+        case Qt::Key_F11:
+            root_->setVisible(!root_->isVisible());
+            event->accept();
+            return;
+        case Qt::Key_Down:
+            backgroundWidget_->switchBackground();
+            event->accept();
+            return;
+        }
+    }
+    QMainWindow::keyPressEvent(event);
+}
+
 bool MainWindow::eventFilter(QObject* watched, QEvent* event)
 {
+    if (event->type() == QEvent::KeyPress) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_F12 && keyEvent->modifiers() == Qt::NoModifier) {
+            toggleDebugMode();
+            return true;
+        }
+        if (keyEvent->key() == Qt::Key_Down) {
+            backgroundWidget_->switchBackground();
+            return true;
+        }
+    }
+
     if (watched == centralWidget()) {
         switch (event->type()) {
         case QEvent::DragEnter:
@@ -366,30 +594,45 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
     return QMainWindow::eventFilter(watched, event);
 }
 
+void MainWindow::updateLogBottomButtonVisibility()
+{
+    logBottomButton_->setVisible(
+        logView_->verticalScrollBar()->value() < logView_->verticalScrollBar()->maximum()
+    );
+}
+
 void MainWindow::buildUi()
 {
-    auto* root = new BackgroundWidget(backgroundImagePaths_, this);
-    root->setObjectName(QStringLiteral("root"));
-    root->setAcceptDrops(true);
-    auto* rootLayout = new QVBoxLayout(root);
-    rootLayout->setContentsMargins(24, 20, 24, 20);
+    Logger::instance().info(QStringLiteral("开始构建主窗口界面"));
 
-    auto* glassPanel = new QFrame(root);
-    glassPanel->setObjectName(QStringLiteral("glassPanel"));
-    auto* contentLayout = new QVBoxLayout(glassPanel);
-    contentLayout->setContentsMargins(34, 28, 34, 28);
+    auto* central = new QWidget(this);
+    central->setObjectName(QStringLiteral("central"));
+
+    backgroundWidget_ = new BackgroundWidget(backgroundImagePaths_, central);
+    backgroundWidget_->setObjectName(QStringLiteral("backgroundWidget"));
+
+    root_ = new QWidget(central);
+    root_->setObjectName(QStringLiteral("root"));
+
+    auto* centralLayout = new QGridLayout(central);
+    centralLayout->setContentsMargins(0, 0, 0, 0);
+    centralLayout->setSpacing(0);
+    centralLayout->addWidget(backgroundWidget_, 0, 0);
+    centralLayout->addWidget(root_, 0, 0);
+
+    auto* contentLayout = new QVBoxLayout(root_);
+    contentLayout->setContentsMargins(58, 48, 58, 48);
     contentLayout->setSpacing(18);
-    rootLayout->addWidget(glassPanel);
 
     auto* headerLayout = new QHBoxLayout();
     headerLayout->setSpacing(12);
 
     auto* titleLayout = new QVBoxLayout();
     titleLayout->setSpacing(2);
-    auto* title = new QLabel(QStringLiteral("NTE 模组管理器"), root);
+    auto* title = new QLabel(QStringLiteral("NTE 模组管理器"), root_);
     title->setObjectName(QStringLiteral("title"));
     addTextShadow(title);
-    auto* subtitle = new QLabel(QStringLiteral("Neverness to Everness Mod Manager - by Nuoyan"), root);
+    auto* subtitle = new QLabel(QStringLiteral("Neverness to Everness Mod Manager - by Nuoyan"), root_);
     subtitle->setObjectName(QStringLiteral("subtitle"));
     addTextShadow(subtitle);
     titleLayout->addWidget(title);
@@ -397,25 +640,28 @@ void MainWindow::buildUi()
     headerLayout->addLayout(titleLayout);
     headerLayout->addStretch();
 
-    auto* launchGameButton = new QPushButton(style()->standardIcon(QStyle::SP_MediaPlay), QStringLiteral("启动游戏"), root);
+    auto* launchGameButton = new QPushButton(style()->standardIcon(QStyle::SP_MediaPlay), QStringLiteral("启动游戏"), root_);
     launchGameButton->setObjectName(QStringLiteral("modListActionButton"));
     launchGameButton->setToolTip(QStringLiteral("启动异环"));
     launchGameButton->setCursor(Qt::PointingHandCursor);
     connect(launchGameButton, &QPushButton::clicked, this, [this] {
         const QString launcherPath = AppConfig::gameLauncherPath();
         if (!QFileInfo::exists(launcherPath)) {
+            Logger::instance().warning(QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
             QMessageBox::warning(this, QStringLiteral("无法启动游戏"), QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
             return;
         }
         if (!QProcess::startDetached(launcherPath)) {
+            Logger::instance().error(QStringLiteral("无法启动游戏启动器：%1").arg(launcherPath));
             QMessageBox::warning(this, QStringLiteral("无法启动游戏"), QStringLiteral("无法启动游戏启动器。"));
             return;
         }
-        activityLabel_->setText(QStringLiteral("已启动游戏启动器"));
+        Logger::instance().info(QStringLiteral("已启动游戏启动器：%1").arg(launcherPath));
+        notifyStatus(QStringLiteral("已启动游戏启动器"));
     });
     headerLayout->addWidget(launchGameButton);
 
-    auto* packageModButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogSaveButton), QStringLiteral("打包模组"), root);
+    auto* packageModButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogSaveButton), QStringLiteral("打包模组"), root_);
     packageModButton->setObjectName(QStringLiteral("modListActionButton"));
     packageModButton->setToolTip(QStringLiteral("使用傻瓜打包器生成并导入模组文件"));
     packageModButton->setCursor(Qt::PointingHandCursor);
@@ -423,7 +669,7 @@ void MainWindow::buildUi()
     headerLayout->addWidget(packageModButton);
     contentLayout->addLayout(headerLayout);
 
-    auto* dropZone = new QFrame(root);
+    auto* dropZone = new QFrame(root_);
     dropZone->setObjectName(QStringLiteral("dropZone"));
     dropZone->setFrameShape(QFrame::StyledPanel);
     dropZone->setMinimumHeight(104);
@@ -449,7 +695,7 @@ void MainWindow::buildUi()
     dropLayout->addStretch();
     contentLayout->addWidget(dropZone);
 
-    contentStack_ = new QStackedWidget(root);
+    contentStack_ = new QStackedWidget(root_);
 
     auto* categoryPage = new QWidget(contentStack_);
     auto* categoryPageLayout = new QVBoxLayout(categoryPage);
@@ -503,7 +749,7 @@ void MainWindow::buildUi()
     listHeader->setContentsMargins(0, 8, 0, 8);
     auto* backButton = new QPushButton(style()->standardIcon(QStyle::SP_ArrowBack), {}, modsPage);
     backButton->setObjectName(QStringLiteral("modListActionButton"));
-    backButton->setToolTip(QStringLiteral("返回模组分类"));
+    backButton->setToolTip(QStringLiteral("返回"));
     backButton->setCursor(Qt::PointingHandCursor);
     connect(backButton, &QPushButton::clicked, this, &MainWindow::showCategoryOverview);
     listHeader->addWidget(backButton);
@@ -512,18 +758,16 @@ void MainWindow::buildUi()
     modCategoryLabel_->setMinimumHeight(32);
     modCategoryLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     addTextShadow(modCategoryLabel_);
-    modCountLabel_ = new QLabel(root);
+    modCountLabel_ = new QLabel(root_);
     modCountLabel_->setObjectName(QStringLiteral("count"));
     modCountLabel_->setMinimumHeight(32);
     modCountLabel_->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     addTextShadow(modCountLabel_);
     listHeader->addWidget(modCategoryLabel_);
-    listHeader->setAlignment(modCategoryLabel_, Qt::AlignTop);
     listHeader->addWidget(modCountLabel_);
-    listHeader->setAlignment(modCountLabel_, Qt::AlignTop);
     listHeader->addStretch();
 
-    auto* sortButton = new QPushButton(style()->standardIcon(QStyle::SP_FileDialogDetailedView), {}, root);
+    auto* sortButton = new QPushButton(style()->standardIcon(QStyle::SP_FileDialogDetailedView), {}, root_);
     sortButton->setObjectName(QStringLiteral("modListActionButton"));
     sortButton->setToolTip(QStringLiteral("选择模组列表排序方式"));
     sortButton->setCursor(Qt::PointingHandCursor);
@@ -550,7 +794,7 @@ void MainWindow::buildUi()
     addSortAction(QStringLiteral("文件大小：从小到大"), ModSortOrder::SizeSmallestFirst);
     sortButton->setMenu(sortMenu);
 
-    auto* installAllButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogApplyButton), QStringLiteral("全部安装"), root);
+    auto* installAllButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogApplyButton), QStringLiteral("全部安装"), root_);
     installAllButton->setObjectName(QStringLiteral("modListActionButton"));
     installAllButton->setToolTip(QStringLiteral("将当前分类中所有未安装模组复制到游戏的 ~mods 文件夹"));
     installAllButton->setCursor(Qt::PointingHandCursor);
@@ -559,7 +803,7 @@ void MainWindow::buildUi()
     });
     listHeader->addWidget(installAllButton);
 
-    auto* uninstallAllButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogCancelButton), QStringLiteral("全部卸载"), root);
+    auto* uninstallAllButton = new QPushButton(style()->standardIcon(QStyle::SP_DialogCancelButton), QStringLiteral("全部卸载"), root_);
     uninstallAllButton->setObjectName(QStringLiteral("modListActionButton"));
     uninstallAllButton->setToolTip(QStringLiteral("从游戏的 ~mods 文件夹中删除当前分类的所有已安装模组文件"));
     uninstallAllButton->setCursor(Qt::PointingHandCursor);
@@ -568,7 +812,7 @@ void MainWindow::buildUi()
     });
     listHeader->addWidget(uninstallAllButton);
 
-    auto* refreshButton = new QPushButton(style()->standardIcon(QStyle::SP_BrowserReload), {}, root);
+    auto* refreshButton = new QPushButton(style()->standardIcon(QStyle::SP_BrowserReload), {}, root_);
     refreshButton->setObjectName(QStringLiteral("modListActionButton"));
     refreshButton->setToolTip(QStringLiteral("重新扫描模组备份目录"));
     refreshButton->setCursor(Qt::PointingHandCursor);
@@ -577,7 +821,7 @@ void MainWindow::buildUi()
     listHeader->addWidget(sortButton);
     modsPageLayout->addLayout(listHeader);
 
-    auto* scrollArea = new QScrollArea(root);
+    auto* scrollArea = new QScrollArea(root_);
     scrollArea->setObjectName(QStringLiteral("modScrollArea"));
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
@@ -592,29 +836,153 @@ void MainWindow::buildUi()
     scrollArea->setWidget(listContainer);
     modsPageLayout->addWidget(scrollArea, 1);
     contentStack_->addWidget(modsPage);
+
+    logPage_ = new QWidget(contentStack_);
+
+    auto* logBackButton = new QPushButton(
+        style()->standardIcon(QStyle::SP_ArrowBack), 
+        {}, 
+        logPage_
+    );
+    logBackButton->setObjectName(QStringLiteral("modListActionButton"));
+    logBackButton->setToolTip(QStringLiteral("返回"));
+    logBackButton->setCursor(Qt::PointingHandCursor);
+    connect(logBackButton, &QPushButton::clicked, this, [this] {
+        contentStack_->setCurrentIndex(std::clamp(previousContentIndex_, 0, contentStack_->count() - 1));
+    });
+
+    auto* logTitle = new QLabel(
+        QStringLiteral("运行日志"), 
+        logPage_
+    );
+    logTitle->setObjectName(QStringLiteral("sectionTitle"));
+    logTitle->setMinimumHeight(32);
+    logTitle->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    addTextShadow(logTitle);
+
+    auto* refreshLogButton = new QPushButton(
+        style()->standardIcon(QStyle::SP_BrowserReload), 
+        {}, 
+        logPage_
+    );
+    refreshLogButton->setObjectName(QStringLiteral("modListActionButton"));
+    refreshLogButton->setToolTip(QStringLiteral("刷新日志"));
+    refreshLogButton->setCursor(Qt::PointingHandCursor);
+    connect(refreshLogButton, &QPushButton::clicked, this, &MainWindow::refreshLogView);
+
+    auto* logHeader = new QHBoxLayout();
+    logHeader->setContentsMargins(0, 8, 0, 8);
+    logHeader->addWidget(logBackButton);
+    logHeader->addWidget(logTitle);
+    logHeader->addStretch();
+    logHeader->addWidget(refreshLogButton);
+
+    logView_ = new QPlainTextEdit(logPage_);
+    logView_->setObjectName(QStringLiteral("logView"));
+    logView_->setReadOnly(true);
+    logView_->setLineWrapMode(QPlainTextEdit::NoWrap);
+    logView_->viewport()->installEventFilter(this);
+    connect(logView_->verticalScrollBar(), &QScrollBar::valueChanged, this, [this](int value) {
+        if (logView_ && !logScrollUpdateInProgress_) {
+            logFollowTail_ = value >= logView_->verticalScrollBar()->maximum();
+            updateLogBottomButtonVisibility();
+        }
+    });
+
+    logBottomButton_ = new QPushButton(
+        style()->standardIcon(QStyle::SP_ArrowDown), 
+        {}, 
+        logPage_
+    );
+    logBottomButton_->setObjectName(QStringLiteral("modListActionButton"));
+    logBottomButton_->setToolTip(QStringLiteral("滚动到底部"));
+    logBottomButton_->setCursor(Qt::PointingHandCursor);
+    logBottomButton_->setFixedSize(40, 32);
+    updateLogBottomButtonVisibility();
+    connect(logBottomButton_, &QPushButton::clicked, this, [this] {
+        if (logView_) {
+            logFollowTail_ = true;
+            logView_->verticalScrollBar()->setValue(logView_->verticalScrollBar()->maximum());
+        }
+    });
+
+    auto* logBodyLayout = new QGridLayout();
+    logBodyLayout->setContentsMargins(0, 0, 0, 0);
+    logBodyLayout->addWidget(logView_, 0, 0);
+    auto* logButtonLayout = new QGridLayout();
+    logButtonLayout->setContentsMargins(0, 0, 32, 32);
+    logButtonLayout->addWidget(logBottomButton_, 0, 0, Qt::AlignRight | Qt::AlignBottom);
+    logBodyLayout->addLayout(logButtonLayout, 0, 0);
+
+    auto* logPageLayout = new QVBoxLayout(logPage_);
+    logPageLayout->setContentsMargins(0, 0, 0, 0);
+    logPageLayout->addLayout(logHeader);
+    logPageLayout->addLayout(logBodyLayout);
+
+    connect(&Logger::instance(), &Logger::entriesChanged, this, [this] {
+        if (contentStack_->currentWidget() != logPage_ || logRefreshPending_) {
+            return;
+        }
+        logRefreshPending_ = true;
+        QTimer::singleShot(100, this, [this] {
+            logRefreshPending_ = false;
+            if (contentStack_->currentWidget() == logPage_) {
+                refreshLogView();
+            }
+        });
+    }, Qt::QueuedConnection);
+
+    contentStack_->addWidget(logPage_);
     contentLayout->addWidget(contentStack_, 1);
 
     auto* activityLayout = new QHBoxLayout();
     activityLayout->setContentsMargins(0, 0, 0, 0);
     activityLayout->setSpacing(8);
-    activitySpinner_ = new BusyIndicator(root);
+    activitySpinner_ = new BusyIndicator(root_);
     activitySpinner_->hide();
     activityLayout->addWidget(activitySpinner_);
-    activityLabel_ = new QLabel(root);
+    activityLabel_ = new QLabel(root_);
     activityLabel_->setObjectName(QStringLiteral("activity"));
     activityLabel_->setText(QStringLiteral("就绪"));
     addTextShadow(activityLabel_);
     activityLayout->addWidget(activityLabel_);
     activityLayout->addStretch();
+    logButton_ = new QPushButton(
+        style()->standardIcon(QStyle::SP_MessageBoxInformation),
+        QStringLiteral("日志"),
+        root_
+    );
+    logButton_->setObjectName(QStringLiteral("modListActionButton"));
+    logButton_->setToolTip(QStringLiteral("打开运行日志"));
+    logButton_->setCursor(Qt::PointingHandCursor);
+    connect(logButton_, &QPushButton::clicked, this, [this] {
+        if (contentStack_->currentWidget() != logPage_) {
+            previousContentIndex_ = contentStack_->currentIndex();
+            logFollowTail_ = logView_->verticalScrollBar()->value() >= logView_->verticalScrollBar()->maximum();
+            refreshLogView();
+            contentStack_->setCurrentWidget(logPage_);
+            updateLogBottomButtonVisibility();
+        } else {
+            contentStack_->setCurrentIndex(std::clamp(previousContentIndex_, 0, contentStack_->count() - 1));
+        }
+    });
+    activityLayout->addWidget(logButton_);
     contentLayout->addLayout(activityLayout);
 
-    setCentralWidget(root);
-    root->installEventFilter(this);
+    backgroundWidget_->setStatusCallback([this](const QString& status) {
+        notifyStatus(status);
+    });
+    setCentralWidget(central);
+    central->installEventFilter(this);
+    Logger::instance().info(QStringLiteral("主窗口界面构建完成"));
 }
 
 void MainWindow::refreshCategories()
 {
+    Logger::instance().info(QStringLiteral("开始扫描模组目录"));
     const QList<ModInfo> mods = repository_.scan();
+    Logger::instance().info(QStringLiteral("模组目录扫描完成，数量：%1").arg(mods.size()));
+    Logger::instance().debug(QStringLiteral("刷新模组分类，扫描到 %1 个模组").arg(mods.size()));
     categoryOrder_ = ModListLogic::orderedCategories(categories_, categoryOrder_);
     const QHash<QString, int> categoryCounts = ModListLogic::countByCategory(mods, categories_);
 
@@ -640,6 +1008,36 @@ void MainWindow::showCategoryOverview()
     currentCategory_.clear();
     contentStack_->setCurrentIndex(0);
     refreshCategories();
+}
+
+void MainWindow::refreshLogView()
+{
+    if (!logView_) {
+        return;
+    }
+
+    const bool followTail = logFollowTail_ || logView_->verticalScrollBar()->value() >= logView_->verticalScrollBar()->maximum();
+    const int verticalScrollPosition = logView_->verticalScrollBar()->value();
+    const int horizontalScrollPosition = logView_->horizontalScrollBar()->value();
+    const QStringList entries = Logger::instance().entries();
+    logScrollUpdateInProgress_ = true;
+    logView_->setPlainText(entries.isEmpty() ? QStringLiteral("暂无日志") : entries.join(QLatin1Char('\n')));
+    logScrollUpdateInProgress_ = false;
+    logFollowTail_ = followTail;
+    QTimer::singleShot(0, this, [this, verticalScrollPosition, horizontalScrollPosition] {
+        if (!logView_) {
+            return;
+        }
+
+        logScrollUpdateInProgress_ = true;
+        if (logFollowTail_) {
+            logView_->verticalScrollBar()->setValue(logView_->verticalScrollBar()->maximum());
+        } else {
+            logView_->verticalScrollBar()->setValue(verticalScrollPosition);
+        }
+        logView_->horizontalScrollBar()->setValue(horizontalScrollPosition);
+        logScrollUpdateInProgress_ = false;
+    });
 }
 
 void MainWindow::showCategory(const QString& category)
@@ -703,11 +1101,11 @@ void MainWindow::refreshModsWithFeedback()
     }
 
     setOperationInProgress(true);
-    activityLabel_->setText(QStringLiteral("正在刷新模组列表..."));
+    notifyStatus(QStringLiteral("正在刷新模组列表..."));
     QTimer::singleShot(100, this, [this] {
         refreshMods();
         setOperationInProgress(false);
-        activityLabel_->setText(QStringLiteral("模组列表已刷新"));
+        notifyStatus(QStringLiteral("模组列表已刷新"));
     });
 }
 
@@ -766,29 +1164,6 @@ void MainWindow::addModRow(const ModInfo& mod)
     });
     headerLayout->addWidget(installButton);
 
-    // auto* deleteButton = createActionButton(
-    //     row,
-    //     {},
-    //     style()->standardIcon(QStyle::SP_TrashIcon),
-    //     QStringLiteral("删除已安装的模组文件及其备份文件")
-    // );
-    // deleteButton->setObjectName(QStringLiteral("deleteButton"));
-    // connect(deleteButton, &QToolButton::clicked, this, [this, mod] {
-    //     QMessageBox confirmation(this);
-    //     confirmation.setWindowTitle(QStringLiteral("删除模组"));
-    //     confirmation.setIcon(QMessageBox::Warning);
-    //     confirmation.setText(QStringLiteral("将永久删除“%1”的备份文件及已安装的模组文件。此操作无法撤销。").arg(mod.name));
-    //     QPushButton* confirmDelete = confirmation.addButton(QStringLiteral("删除"), QMessageBox::DestructiveRole);
-    //     confirmation.addButton(QMessageBox::Cancel);
-    //     confirmation.exec();
-    //     if (confirmation.clickedButton() == confirmDelete) {
-    //         runAsyncOperation(QStringLiteral("正在删除 %1...").arg(mod.name), [repository = repository_, mod](const auto&) {
-    //             return repository.remove(mod);
-    //         });
-    //     }
-    // });
-    // layout->addWidget(deleteButton);
-
     auto* moreButton = createActionButton(
         row,
         QStringLiteral("•••"),
@@ -816,12 +1191,12 @@ void MainWindow::addModRow(const ModInfo& mod)
         }
     });
 
-    QAction* repackageAction = moreMenu->addAction(QStringLiteral("重新打包"));
+    QAction* repackageAction = moreMenu->addAction(QStringLiteral("重新打包..."));
     connect(repackageAction, &QAction::triggered, this, [this, mod] {
         repackageMod(mod);
     });
 
-    QAction* replaceAction = moreMenu->addAction(QStringLiteral("更新/替换"));
+    QAction* replaceAction = moreMenu->addAction(QStringLiteral("更新/替换..."));
     connect(replaceAction, &QAction::triggered, this, [this, mod] {
         replaceModFromArchive(mod);
     });
@@ -1065,7 +1440,7 @@ void MainWindow::addModRow(const ModInfo& mod)
                     nameStack->setCurrentWidget(label);
                     editor->clearFocus();
                     if (!result.success) {
-                        activityLabel_->setText(QStringLiteral("操作未完成"));
+                        notifyStatus(QStringLiteral("操作未完成"));
                         QMessageBox::warning(this, QStringLiteral("操作未完成"), result.message);
                         updateFilesCardHeight();
                         return;
@@ -1105,7 +1480,7 @@ void MainWindow::addModRow(const ModInfo& mod)
                             fileLabel.second->setText(actualFileName);
                         }
                     }
-                    activityLabel_->setText(result.message);
+                    notifyStatus(result.message);
                     updateFilesCardHeight();
                 };
                 label->onDoubleClicked = [this, editor, nameStack, editing, currentFilePath, updateFilesCardHeight] {
@@ -1147,13 +1522,15 @@ void MainWindow::importArchives(const QStringList& archivePaths)
     QStringList failures;
     for (const QString& archivePath : archivePaths) {
         const QString fileName = QFileInfo(archivePath).fileName();
-        activityLabel_->setText(QStringLiteral("正在导入 %1...").arg(fileName));
+        notifyStatus(QStringLiteral("正在导入 %1...").arg(fileName));
 
         const OperationResult result = repository_.importArchive(archivePath);
         if (!result.success) {
+            Logger::instance().warning(QStringLiteral("导入压缩包失败：%1：%2").arg(fileName, result.message));
             failures.append(QStringLiteral("%1：%2").arg(fileName, result.message));
         } else {
-            activityLabel_->setText(result.message);
+            Logger::instance().info(QStringLiteral("导入压缩包完成：%1").arg(fileName));
+            notifyStatus(result.message);
             const QString importedName = result.message.mid(QStringLiteral("已导入 ").size());
             const QList<ModInfo> importedMods = repository_.scan();
             const auto importedMod = std::find_if(importedMods.cbegin(), importedMods.cend(), [&importedName](const ModInfo& mod) {
@@ -1171,9 +1548,11 @@ void MainWindow::importArchives(const QStringList& archivePaths)
                 if (accepted && newName != importedMod->name) {
                     const OperationResult renamed = repository_.rename(*importedMod, newName);
                     if (!renamed.success) {
+                        Logger::instance().warning(QStringLiteral("导入后重命名失败：%1").arg(renamed.message));
                         failures.append(QStringLiteral("%1：%2").arg(fileName, renamed.message));
                     } else {
-                        activityLabel_->setText(renamed.message);
+                        Logger::instance().info(QStringLiteral("导入后重命名完成：%1").arg(renamed.message));
+                        notifyStatus(renamed.message);
                     }
                 }
             }
@@ -1186,7 +1565,8 @@ void MainWindow::importArchives(const QStringList& archivePaths)
         refreshMods();
     }
     if (!failures.isEmpty()) {
-        activityLabel_->setText(QStringLiteral("%1 个压缩包未能导入").arg(failures.size()));
+        Logger::instance().warning(QStringLiteral("有 %1 个压缩包导入未完成").arg(failures.size()));
+        notifyStatus(QStringLiteral("%1 个压缩包未能导入").arg(failures.size()));
         QMessageBox::warning(this, QStringLiteral("导入未完成"), failures.join(QLatin1Char('\n')));
     }
 }
@@ -1208,7 +1588,7 @@ void MainWindow::packageMod()
         [this, packageDirectory](const OperationResult& result) {
             if (!result.success) {
                 if (result.cancelled) {
-                    activityLabel_->setText(QStringLiteral("已取消打包模组"));
+                    notifyStatus(QStringLiteral("已取消打包模组"));
                 } else {
                     handleOperation(result);
                 }
@@ -1224,7 +1604,7 @@ void MainWindow::packageMod()
                 {},
                 &accepted);
             if (!accepted) {
-                activityLabel_->setText(QStringLiteral("已取消导入打包模组"));
+                notifyStatus(QStringLiteral("已取消导入打包模组"));
                 return;
             }
 
@@ -1253,7 +1633,7 @@ void MainWindow::repackageMod(const ModInfo& mod)
         [this, mod, packageDirectory](const OperationResult& result) {
             if (!result.success) {
                 if (result.cancelled) {
-                    activityLabel_->setText(QStringLiteral("已取消重新打包"));
+                    notifyStatus(QStringLiteral("已取消重新打包"));
                 } else {
                     handleOperation(result);
                 }
@@ -1312,11 +1692,13 @@ void MainWindow::handleOperation(const OperationResult& result)
         refreshMods();
     }
     if (result.success) {
-        activityLabel_->setText(result.message);
+        Logger::instance().info(QStringLiteral("操作完成：%1").arg(result.message));
+        notifyStatus(result.message);
         return;
     }
 
-    activityLabel_->setText(QStringLiteral("操作未完成"));
+    Logger::instance().error(QStringLiteral("操作失败：%1").arg(result.message));
+    notifyStatus(QStringLiteral("操作未完成"));
     QMessageBox::warning(this, QStringLiteral("操作未完成"), result.message);
 }
 
@@ -1369,7 +1751,8 @@ void MainWindow::runAsyncOperation(
     }
 
     setOperationInProgress(true);
-    activityLabel_->setText(activity);
+    notifyStatus(activity);
+    Logger::instance().info(QStringLiteral("开始异步操作：%1").arg(activity));
 
     QPointer<MainWindow> window(this);
     auto* worker = QThread::create([window, operation = std::move(operation), completion = std::move(completion)]() mutable {
@@ -1379,7 +1762,7 @@ void MainWindow::runAsyncOperation(
             }
             QMetaObject::invokeMethod(window, [window, message] {
                 if (window) {
-                    window->activityLabel_->setText(message);
+                    window->notifyStatus(message);
                 }
             }, Qt::QueuedConnection);
         };
@@ -1409,7 +1792,9 @@ void MainWindow::setOperationInProgress(bool inProgress)
     activitySpinner_->setVisible(inProgress);
     categoryList_->setEnabled(!inProgress);
     for (QAbstractButton* button : centralWidget()->findChildren<QAbstractButton*>()) {
-        button->setEnabled(!inProgress);
+        if (button != logButton_) {
+            button->setEnabled(!inProgress);
+        }
     }
 }
 

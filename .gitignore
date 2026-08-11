@@ -1,6 +1,11 @@
-/build/*
-/.vs/*
-/.vscode/*
+build/
+.vs/
+.vscode/
 CMakeUserPresets.json
-/傻瓜打包器/xg/HT/Content/*
-/傻瓜打包器/LastImportFolder.txt
+傻瓜打包器/xg/HT/Content/
+傻瓜打包器/LastImportFolder.txt
+img/
+__pycache__/
+training/orientation/checkpoints/
+training/orientation/dataset/
+*.pt

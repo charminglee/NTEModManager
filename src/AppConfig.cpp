@@ -65,6 +65,36 @@ QString AppConfig::backgroundImagesDirectory()
         true);
 }
 
+bool AppConfig::testImagesEnabled()
+{
+    QSettings settings(configFilePath(), QSettings::IniFormat);
+    return settings.value(QStringLiteral("Debug/test_images"), 0).toInt() == 1;
+}
+
+QString AppConfig::pythonExecutable()
+{
+    return QDir(QCoreApplication::applicationDirPath()).filePath(
+        QStringLiteral("python/python.exe"));
+}
+
+QString AppConfig::visualRegionScript()
+{
+    return QDir(QCoreApplication::applicationDirPath()).filePath(
+        QStringLiteral("python/visual_region_detector.py"));
+}
+
+QString AppConfig::orientationModel()
+{
+    return QDir(QCoreApplication::applicationDirPath()).filePath(
+        QStringLiteral("python/orientation-model/best.pt"));
+}
+
+QString AppConfig::pythonModelCache()
+{
+    return QDir(QCoreApplication::applicationDirPath()).filePath(
+        QStringLiteral("python/model-cache"));
+}
+
 QString AppConfig::gameLauncherPath()
 {
     return configuredPath(
