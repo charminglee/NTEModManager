@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
+#include <QIcon>
 #include <QSysInfo>
 #include <QStyleHints>
 
@@ -251,6 +252,7 @@ int main(int argc, char* argv[])
 
     QApplication application(argc, argv);
     application.setApplicationName(QStringLiteral("NteModManager"));
+    application.setWindowIcon(QIcon(QStringLiteral(":/img/nte-mod-manager.ico")));
     application.setStyle(QStringLiteral("Fusion"));
     application.setFont(QFont(QStringLiteral("Segoe UI Variable"), 10));
     Logger::instance().initialize();

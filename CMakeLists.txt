@@ -57,6 +57,12 @@ qt_add_executable(NteModManager WIN32
     src/main.cpp
     src/VisualRegionDetector.cpp
     src/VisualRegionDetector.h
+    NteModManager.rc
+)
+
+qt_add_resources(NteModManager "branding"
+    PREFIX "/"
+    FILES img/nte-mod-manager.ico
 )
 
 target_link_libraries(NteModManager PRIVATE Qt6::Widgets)
