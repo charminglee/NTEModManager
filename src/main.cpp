@@ -131,9 +131,17 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
         #subtitle { color: #ffffff; font-size: 20px; }
         #activity { color: #ffffff; }
 
-        #dropZone { background: rgba(226, 242, 255, 145); border: 1px dashed #4f91c9; border-radius: 16px; }
-        #dropTitle { color: #000000; font-weight: 600; font-size: 18px; }
-        #dropHint { color: #606060; font-size: 14px; }
+        #dropZone { background: rgba(255, 255, 255, 195); border: 1px solid rgba(255, 255, 255, 220); border-radius: 16px; }
+        #dropZone:hover { border: 1px solid rgba(139, 192, 232, 235); }
+        #dropTitle { color: #102a43; font-weight: 700; font-size: 18px; }
+        #dropHint { color: #60758a; font-size: 14px; }
+        #importDivider { background: rgba(79, 145, 201, 100); }
+        #importFileButton {
+            background: #0067b1; border: 1px solid #0067b1; border-radius: 10px;
+            color: #ffffff; padding: 0px 14px; font-weight: 600;
+        }
+        #importFileButton:hover { background: #00558f; border-color: #00558f; }
+        #importFileButton:pressed { background: #003b6f; border-color: #003b6f; }
 
         #sectionTitle { color: #ffffff; font-weight: 600; font-size: 20px; padding: 0px; }
         #count { color: #ffffff; font-size: 14px; }
@@ -203,9 +211,16 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
         #modRow { background: rgba(255, 255, 255, 155); border: 1px solid rgba(255, 255, 255, 145); border-radius: 16px; }
         #modRow:hover { background: rgba(240, 247, 255, 225); }
 
-        #stateInstalled, #stateUninstalled { border-radius: 12px; font-size: 12px; padding: 4px 8px; }
+        #stateInstalled, #stateUninstalled {
+            border: 1px solid transparent; border-radius: 12px; font-size: 12px;
+            padding: 4px 8px; min-height: 24px;
+        }
         #stateInstalled { background: #00ec76; color: #00533e; }
+        #stateInstalled:hover { background: #00d86c; }
+        #stateInstalled:pressed { background: #00b85a; color: #003b2f; }
         #stateUninstalled { background: #e5eef7; color: #52677d; }
+        #stateUninstalled:hover { background: #d4e4f2; color: #31506d; }
+        #stateUninstalled:pressed { background: #bdd3e5; color: #243b53; }
 
         #deleteButton { color: #c42b1c; }
         #deleteButton:hover { background: #ffdad6; }

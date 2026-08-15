@@ -672,10 +672,10 @@ void MainWindow::buildUi()
     auto* dropZone = new QFrame(root_);
     dropZone->setObjectName(QStringLiteral("dropZone"));
     dropZone->setFrameShape(QFrame::StyledPanel);
-    dropZone->setMinimumHeight(104);
+    dropZone->setMinimumHeight(116);
     auto* dropLayout = new QHBoxLayout(dropZone);
-    dropLayout->setContentsMargins(24, 18, 24, 18);
-    dropLayout->setSpacing(16);
+    dropLayout->setContentsMargins(22, 16, 22, 16);
+    dropLayout->setSpacing(18);
 
     auto* importIcon = new QLabel(dropZone);
     importIcon->setPixmap(style()->standardIcon(QStyle::SP_DialogOpenButton).pixmap(32, 32));
@@ -693,6 +693,37 @@ void MainWindow::buildUi()
     importTextLayout->addWidget(importHint);
     dropLayout->addLayout(importTextLayout);
     dropLayout->addStretch();
+
+    auto* importDivider = new QFrame(dropZone);
+    importDivider->setObjectName(QStringLiteral("importDivider"));
+    importDivider->setFrameShape(QFrame::VLine);
+    importDivider->setFrameShadow(QFrame::Plain);
+    importDivider->setFixedWidth(1);
+    dropLayout->addWidget(importDivider);
+
+    auto* chooseImportButton = new QPushButton(
+        style()->standardIcon(QStyle::SP_DialogOpenButton),
+        QStringLiteral("选择文件"),
+        dropZone
+    );
+    chooseImportButton->setObjectName(QStringLiteral("importFileButton"));
+    chooseImportButton->setToolTip(QStringLiteral("选择压缩包文件并导入模组"));
+    chooseImportButton->setAccessibleName(QStringLiteral("选择文件导入"));
+    chooseImportButton->setCursor(Qt::PointingHandCursor);
+    chooseImportButton->setIconSize(QSize(20, 20));
+    chooseImportButton->setFixedSize(100, 48);
+    connect(chooseImportButton, &QPushButton::clicked, this, [this] {
+        const QString archivePath = QFileDialog::getOpenFileName(
+            this,
+            QStringLiteral("选择要导入的压缩包"),
+            QString(),
+            QStringLiteral("压缩包 (*.zip *.rar *.7z)")
+        );
+        if (!archivePath.isEmpty()) {
+            importArchives({archivePath});
+        }
+    });
+    dropLayout->addWidget(chooseImportButton);
     contentLayout->addWidget(dropZone);
 
     contentStack_ = new QStackedWidget(root_);
@@ -1141,20 +1172,15 @@ void MainWindow::addModRow(const ModInfo& mod)
     detailsLayout->addWidget(metadata);
     headerLayout->addLayout(detailsLayout, 1);
 
-    auto* state = new QLabel(mod.installed ? QStringLiteral("已安装") : QStringLiteral("未安装"), row);
+    auto* state = new QPushButton(mod.installed ? QStringLiteral("已安装") : QStringLiteral("未安装"), row);
     state->setObjectName(mod.installed ? QStringLiteral("stateInstalled") : QStringLiteral("stateUninstalled"));
-    state->setAttribute(Qt::WA_TransparentForMouseEvents);
-    state->setAlignment(Qt::AlignCenter);
-    state->setMinimumWidth(58);
-    headerLayout->addWidget(state);
-
-    auto* installButton = createActionButton(
-        row,
-        {},
-        style()->standardIcon(mod.installed ? QStyle::SP_DialogCancelButton : QStyle::SP_DialogApplyButton),
-        mod.installed ? QStringLiteral("从游戏的 ~mods 文件夹中删除此模组的文件") : QStringLiteral("将此模组的文件复制到游戏的 ~mods 文件夹")
-    );
-    connect(installButton, &QToolButton::clicked, this, [this, mod] {
+    state->setToolTip(mod.installed
+        ? QStringLiteral("点击卸载此模组")
+        : QStringLiteral("点击安装此模组"));
+    state->setCursor(Qt::PointingHandCursor);
+    state->setFlat(true);
+    state->setMinimumWidth(68);
+    connect(state, &QPushButton::clicked, this, [this, mod] {
         runAsyncOperation(
             mod.installed ? QStringLiteral("正在卸载 %1...").arg(mod.name) : QStringLiteral("正在安装 %1...").arg(mod.name),
             [repository = repository_, mod](const auto&) {
@@ -1162,7 +1188,7 @@ void MainWindow::addModRow(const ModInfo& mod)
             }
         );
     });
-    headerLayout->addWidget(installButton);
+    headerLayout->addWidget(state);
 
     auto* moreButton = createActionButton(
         row,

@@ -59,6 +59,14 @@ cmake -S . -B build -G "Visual Studio 18 2026" -A x64 -DCMAKE_PREFIX_PATH="C:\Qt
 cmake --build build --config Release
 ```
 
+If 7-Zip is installed, set `NTE_7ZIP_PATH` to its executable before configuring so the Release build copies it beside `NteModManager.exe`:
+
+```powershell
+$env:NTE_7ZIP_PATH = "C:\Program Files\7-Zip\7z.exe"
+cmake --fresh -S . -B build -G "Visual Studio 18 2026" -A x64 -DCMAKE_PREFIX_PATH="C:\Qt\6.11.1\msvc2022_64"
+cmake --build build --config Release
+```
+
 The build copies a standalone Python runtime, the environment packages, the detector script, the trained orientation checkpoint, and any cached YOLO files into `build\Release\python`. The executable locates them relative to itself, so no Python path is stored in `NteModManager.ini`. If the YOLO model is not present in the cache, Python downloads it on first use. The YOLO pose detector estimates chest and hip regions from keypoints; the orientation checkpoint then controls which region receives priority when the fixed-ratio background frame cannot contain both.
 
 The executable will be under `build\Release\NteModManager.exe`. Deploy Qt runtime DLLs before moving the executable to another computer, for example:

@@ -16,16 +16,58 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
 
+get_filename_component(NTE_QT_ROOT "${Qt6_DIR}/../../.." ABSOLUTE)
+find_program(NTE_WINDEPLOYQT_EXECUTABLE
+    NAMES windeployqt windeployqt6
+    HINTS "${NTE_QT_ROOT}/bin"
+    REQUIRED
+)
+
+set(NTE_7ZIP_SOURCE "")
+if(DEFINED ENV{NTE_7ZIP_PATH} AND EXISTS "$ENV{NTE_7ZIP_PATH}")
+    set(NTE_7ZIP_SOURCE "$ENV{NTE_7ZIP_PATH}")
+elseif(EXISTS "C:/7-Zip/7z.exe")
+    set(NTE_7ZIP_SOURCE "C:/7-Zip/7z.exe")
+else()
+    find_program(NTE_7ZIP_SOURCE
+        NAMES 7z.exe 7zz.exe 7z 7zz
+        HINTS
+            "$ENV{ProgramFiles}/7-Zip"
+            "$ENV{ProgramW6432}/7-Zip"
+            "C:/Program Files (x86)/7-Zip"
+    )
+endif()
+set(NTE_7ZIP_DEPLOY_COMMAND)
+if(NTE_7ZIP_SOURCE)
+    get_filename_component(NTE_7ZIP_FILE_NAME "${NTE_7ZIP_SOURCE}" NAME)
+    get_filename_component(NTE_7ZIP_SOURCE_DIR "${NTE_7ZIP_SOURCE}" DIRECTORY)
+    list(APPEND NTE_7ZIP_DEPLOY_COMMAND
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${NTE_7ZIP_SOURCE}"
+            "$<TARGET_FILE_DIR:NteModManager>/${NTE_7ZIP_FILE_NAME}")
+    if(EXISTS "${NTE_7ZIP_SOURCE_DIR}/7z.dll")
+        list(APPEND NTE_7ZIP_DEPLOY_COMMAND
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${NTE_7ZIP_SOURCE_DIR}/7z.dll"
+                "$<TARGET_FILE_DIR:NteModManager>/7z.dll")
+    endif()
+else()
+    message(WARNING "7-Zip was not found; it will not be copied to the Release directory. Set NTE_7ZIP_PATH to 7z.exe or 7zz.exe to deploy it.")
+endif()
+
 qt_standard_project_setup()
 
 set(NTE_PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/python")
 set(NTE_PYTHON_VENV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.venv")
 set(NTE_ORIENTATION_MODEL_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/training/orientation/checkpoints/weighted_unfrozen/best.pt")
+set(NTE_ORIENTATION_MODEL_AVAILABLE OFF)
+if(EXISTS "${NTE_ORIENTATION_MODEL_SOURCE}")
+    set(NTE_ORIENTATION_MODEL_AVAILABLE ON)
+else()
+    message(WARNING "Orientation model is missing; continuing with fallback visual detection: ${NTE_ORIENTATION_MODEL_SOURCE}")
+endif()
 if(NOT EXISTS "${NTE_PYTHON_VENV_DIR}/pyvenv.cfg")
     message(FATAL_ERROR "Python virtual environment is missing: ${NTE_PYTHON_VENV_DIR}")
-endif()
-if(NOT EXISTS "${NTE_ORIENTATION_MODEL_SOURCE}")
-    message(FATAL_ERROR "Orientation model is missing: ${NTE_ORIENTATION_MODEL_SOURCE}")
 endif()
 
 file(STRINGS "${NTE_PYTHON_VENV_DIR}/pyvenv.cfg" NTE_PYTHON_HOME_LINE REGEX "^home[ ]*=")
@@ -68,8 +110,15 @@ set(NTE_PYTHON_PACKAGE_DEPENDS
     "${NTE_PYTHON_VENV_DIR}/pyvenv.cfg"
     "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt"
     "${NTE_PYTHON_SOURCE_DIR}/visual_region_detector.py"
-    "${NTE_ORIENTATION_MODEL_SOURCE}"
 )
+set(NTE_ORIENTATION_MODEL_COPY_COMMAND)
+if(NTE_ORIENTATION_MODEL_AVAILABLE)
+    list(APPEND NTE_PYTHON_PACKAGE_DEPENDS "${NTE_ORIENTATION_MODEL_SOURCE}")
+    set(NTE_ORIENTATION_MODEL_COPY_COMMAND
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${NTE_ORIENTATION_MODEL_SOURCE}"
+            "${NTE_PYTHON_PACKAGE_DIR}/orientation-model/best.pt")
+endif()
 
 add_custom_command(
     OUTPUT "${NTE_PYTHON_PACKAGE_MARKER}"
@@ -111,9 +160,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${NTE_PYTHON_SOURCE_DIR}/visual_region_detector.py"
         "${NTE_PYTHON_PACKAGE_DIR}/visual_region_detector.py"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${NTE_ORIENTATION_MODEL_SOURCE}"
-        "${NTE_PYTHON_PACKAGE_DIR}/orientation-model/best.pt"
+    ${NTE_ORIENTATION_MODEL_COPY_COMMAND}
     COMMAND ${CMAKE_COMMAND} -E touch "${NTE_PYTHON_PACKAGE_MARKER}"
     DEPENDS ${NTE_PYTHON_PACKAGE_DEPENDS}
     VERBATIM
@@ -121,6 +168,16 @@ add_custom_command(
 
 add_custom_target(NteModManagerPythonPackage DEPENDS "${NTE_PYTHON_PACKAGE_MARKER}")
 add_dependencies(NteModManager NteModManagerPythonPackage)
+
+add_custom_command(TARGET NteModManager POST_BUILD
+    COMMAND "${NTE_WINDEPLOYQT_EXECUTABLE}"
+        --release
+        --no-translations
+        "$<TARGET_FILE:NteModManager>"
+    ${NTE_7ZIP_DEPLOY_COMMAND}
+    COMMENT "Deploying Qt runtime libraries"
+    VERBATIM
+)
 
 target_compile_definitions(NteModManager PRIVATE
     UNICODE

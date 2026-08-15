@@ -2,6 +2,7 @@
 
 #include "AppConfig.h"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
@@ -217,11 +218,38 @@ QString uniqueDirectoryName(const QString& preferredName)
     return candidate;
 }
 
+OperationResult ensureWritableDirectory(const QString& directoryPath, const QString& displayName)
+{
+    if (!QDir().mkpath(directoryPath)) {
+        return {false, QStringLiteral("无法创建%1：%2").arg(displayName, directoryPath)};
+    }
+
+    const QString probePath = QDir(directoryPath).filePath(
+        QStringLiteral(".nte-write-test-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces)));
+    if (!QDir().mkpath(probePath)) {
+        return {false,
+                QStringLiteral("无法写入%1：%2。请修改 NteModManager.ini 中的 Paths/backups_directory，"
+                               "或以管理员身份运行程序。")
+                    .arg(displayName, directoryPath)};
+    }
+    if (!QDir(probePath).removeRecursively()) {
+        return {false, QStringLiteral("无法清理%1的写入测试目录：%2").arg(displayName, probePath)};
+    }
+    return {true, {}};
+}
+
 QString find7ZipExecutable()
 {
     const QString configuredPath = qEnvironmentVariable("NTE_7ZIP_PATH");
     if (!configuredPath.isEmpty() && QFileInfo::exists(configuredPath)) {
         return configuredPath;
+    }
+
+    for (const QString& fileName : {QStringLiteral("7z.exe"), QStringLiteral("7zz.exe")}) {
+        const QString bundledExecutable = QDir(QCoreApplication::applicationDirPath()).filePath(fileName);
+        if (QFileInfo::exists(bundledExecutable)) {
+            return bundledExecutable;
+        }
     }
 
     for (const QString& command : {QStringLiteral("7z"), QStringLiteral("7z.exe"), QStringLiteral("7zz"), QStringLiteral("7zz.exe")}) {
@@ -232,6 +260,7 @@ QString find7ZipExecutable()
     }
 
     for (const QString& candidate : {
+             QStringLiteral("C:/7-Zip/7z.exe"),
              QStringLiteral("C:/Program Files/7-Zip/7z.exe"),
              QStringLiteral("C:/Program Files (x86)/7-Zip/7z.exe")}) {
         if (QFileInfo::exists(candidate)) {
@@ -347,8 +376,11 @@ bool ModRepository::isSupportedArchive(const QString& archivePath)
 
 OperationResult ModRepository::initialize() const
 {
-    if (!QDir().mkpath(backupsDirectory())) {
-        return {false, QStringLiteral("无法创建模组备份目录：%1").arg(backupsDirectory())};
+    const OperationResult backupDirectory = ensureWritableDirectory(
+        backupsDirectory(),
+        QStringLiteral("模组备份目录"));
+    if (!backupDirectory.success) {
+        return backupDirectory;
     }
 
     const QFileInfo installDirectory(modsDirectory());
@@ -436,7 +468,7 @@ OperationResult ModRepository::importArchive(const QString& archivePath) const
     const QString stagingName = QStringLiteral(".import-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
     const QString stagingPath = backupRoot.filePath(stagingName);
     if (!QDir().mkpath(stagingPath)) {
-        return {false, QStringLiteral("无法创建临时解压目录。")};
+        return {false, QStringLiteral("无法创建临时解压目录：%1").arg(stagingPath)};
     }
 
     QProcess extractorProcess;
@@ -641,7 +673,7 @@ OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QStr
     const QString stagingName = QStringLiteral(".replace-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
     const QString stagingPath = backupRoot.filePath(stagingName);
     if (!QDir().mkpath(stagingPath)) {
-        return {false, QStringLiteral("无法创建临时解压目录。")};
+        return {false, QStringLiteral("无法创建临时解压目录：%1").arg(stagingPath)};
     }
 
     QProcess extractorProcess;

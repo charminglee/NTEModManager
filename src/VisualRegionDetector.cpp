@@ -7,11 +7,13 @@
 #include <QColor>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QPointF>
 #include <QProcess>
+#include <QStringList>
 #include <QTemporaryFile>
 #include <QThread>
 
@@ -105,19 +107,22 @@ public:
                                           .arg(process_.errorString()));
         });
         Log::info(QStringLiteral("启动 Python 视觉识别进程：%1").arg(AppConfig::pythonExecutable()));
-        process_.start(
-            AppConfig::pythonExecutable(),
-            {
-                AppConfig::visualRegionScript(),
-                QStringLiteral("--server"),
-                QStringLiteral("--device"),
-                QStringLiteral("auto"),
-                QStringLiteral("--cache-dir"),
-                AppConfig::pythonModelCache(),
-                QStringLiteral("--orientation-model"),
-                AppConfig::orientationModel(),
-            }
-        );
+        const QString orientationModelPath = AppConfig::orientationModel();
+        QStringList arguments{
+            AppConfig::visualRegionScript(),
+            QStringLiteral("--server"),
+            QStringLiteral("--device"),
+            QStringLiteral("auto"),
+            QStringLiteral("--cache-dir"),
+            AppConfig::pythonModelCache(),
+        };
+        if (QFileInfo(orientationModelPath).isFile()) {
+            arguments << QStringLiteral("--orientation-model") << orientationModelPath;
+        } else {
+            Log::warning(QStringLiteral("方向模型不存在，跳过模型并使用 fallback 视觉检测：%1")
+                             .arg(orientationModelPath));
+        }
+        process_.start(AppConfig::pythonExecutable(), arguments);
         if (!process_.waitForStarted(5000)) {
             if (!processErrorLogged_) {
                 Log::error(QStringLiteral("无法启动 Python 视觉识别进程：%1").arg(process_.errorString()));
@@ -346,6 +351,10 @@ VisualRegionDetector::~VisualRegionDetector() = default;
 
 bool VisualRegionDetector::warmup() const
 {
+    if (!QFileInfo(AppConfig::orientationModel()).isFile()) {
+        Log::warning(QStringLiteral("方向模型不存在，使用 fallback 视觉检测"));
+        return true;
+    }
     if (!pythonBridge_) {
         pythonBridge_ = std::make_unique<PythonBridge>();
     }
@@ -356,6 +365,10 @@ VisualRegion VisualRegionDetector::detect(const QImage& image, const QSize& view
 {
     if (image.isNull() || image.size().isEmpty()) {
         return {};
+    }
+
+    if (!QFileInfo(AppConfig::orientationModel()).isFile()) {
+        return fallbackDetect(image);
     }
 
     if (!pythonBridge_) {
