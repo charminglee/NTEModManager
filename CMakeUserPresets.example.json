@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "NTEMM-Release",
+      "inherits": "NTEMM-Release-Base",
+      "cacheVariables": {
+        "NTE_QT_ROOT": "C:/Qt/6.11.1/msvc2022_64",
+        "NTE_7ZIP_PATH": "C:/7-Zip/7z.exe"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "NTEMM-Release",
+      "configurePreset": "NTEMM-Release",
+      "configuration": "Release"
+    }
+  ]
+}

@@ -14,6 +14,11 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
+set(NTE_QT_ROOT "" CACHE PATH "Root directory of the Qt kit")
+if(NTE_QT_ROOT)
+    list(PREPEND CMAKE_PREFIX_PATH "${NTE_QT_ROOT}")
+endif()
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
 
 get_filename_component(NTE_QT_ROOT "${Qt6_DIR}/../../.." ABSOLUTE)
@@ -23,8 +28,11 @@ find_program(NTE_WINDEPLOYQT_EXECUTABLE
     REQUIRED
 )
 
+set(NTE_7ZIP_PATH "" CACHE FILEPATH "Path to the 7-Zip executable")
 set(NTE_7ZIP_SOURCE "")
-if(DEFINED ENV{NTE_7ZIP_PATH} AND EXISTS "$ENV{NTE_7ZIP_PATH}")
+if(NTE_7ZIP_PATH AND EXISTS "${NTE_7ZIP_PATH}")
+    set(NTE_7ZIP_SOURCE "${NTE_7ZIP_PATH}")
+elseif(DEFINED ENV{NTE_7ZIP_PATH} AND EXISTS "$ENV{NTE_7ZIP_PATH}")
     set(NTE_7ZIP_SOURCE "$ENV{NTE_7ZIP_PATH}")
 elseif(EXISTS "C:/7-Zip/7z.exe")
     set(NTE_7ZIP_SOURCE "C:/7-Zip/7z.exe")
