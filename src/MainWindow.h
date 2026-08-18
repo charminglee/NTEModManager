@@ -14,6 +14,7 @@
 #include <QThread>
 
 class QLabel;
+class QCloseEvent;
 class QDragEnterEvent;
 class QDragMoveEvent;
 class QDropEvent;
@@ -103,6 +104,7 @@ public:
     explicit MainWindow(const QStringList& backgroundImagePaths, QWidget* parent = nullptr);
 
 protected:
+    void closeEvent(QCloseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;

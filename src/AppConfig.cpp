@@ -74,6 +74,7 @@ void createDefaultConfig(const QString& filePath)
         QStringLiteral("Paths/packager_directory"),
         QStringLiteral("E:/Neverness To Everness/Mods/ModManager/傻瓜打包器"));
     settings.setValue(QStringLiteral("Categories/names"), defaultModCategories());
+    settings.setValue(QStringLiteral("Preferences/window_size"), QSize(1315, 1000));
     settings.setValue(QStringLiteral("Preferences/mod_list_sort_order"), 1);
     settings.setValue(QStringLiteral("Preferences/mod_category_order"), defaultModCategoryOrder());
     settings.setValue(QStringLiteral("Debug/test_images"), 0);
@@ -184,6 +185,19 @@ QString AppConfig::packagerDirectory()
     return configuredPath(
         QStringLiteral("Paths/packager_directory"),
         QStringLiteral("E:/Neverness To Everness/Mods/ModManager/傻瓜打包器"));
+}
+
+QSize AppConfig::windowSize()
+{
+    QSettings settings(configFilePath(), QSettings::IniFormat);
+    return settings.value(QStringLiteral("Preferences/window_size"), QSize(1315, 1000)).toSize();
+}
+
+void AppConfig::setWindowSize(const QSize& size)
+{
+    QSettings settings(configFilePath(), QSettings::IniFormat);
+    settings.setValue(QStringLiteral("Preferences/window_size"), size);
+    settings.sync();
 }
 
 int AppConfig::modListSortOrder()

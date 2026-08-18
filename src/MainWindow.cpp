@@ -10,6 +10,7 @@
 #include <QAbstractItemView>
 #include <QActionGroup>
 #include <QApplication>
+#include <QCloseEvent>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
@@ -475,7 +476,7 @@ MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
     setAcceptDrops(true);
     setWindowTitle(QStringLiteral("NTE 模组管理器"));
     setMinimumSize(820, 560);
-    resize(1315, 1000);
+    resize(AppConfig::windowSize());
 
     buildUi();
     qApp->installEventFilter(this);
@@ -488,6 +489,15 @@ MainWindow::MainWindow(const QStringList& backgroundImagePaths, QWidget* parent)
         Log::info(QStringLiteral("模组仓库初始化完成"));
     }
     refreshCategories();
+}
+
+void MainWindow::closeEvent(QCloseEvent* event)
+{
+    const QSize sizeToSave = isMaximized() ? normalGeometry().size() : size();
+    if (sizeToSave.isValid()) {
+        AppConfig::setWindowSize(sizeToSave);
+    }
+    QMainWindow::closeEvent(event);
 }
 
 void MainWindow::toggleDebugMode()
