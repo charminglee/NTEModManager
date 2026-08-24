@@ -36,6 +36,36 @@ bool compareSizeSmallestFirst(const ModInfo& left, const ModInfo& right)
 {
     return left.sizeBytes < right.sizeBytes;
 }
+
+bool parseModName(
+    const ModInfo& mod,
+    const QStringList& categories,
+    QString* categoryName,
+    QString* secondaryName)
+{
+    const QStringList nameParts = mod.name.split(QLatin1Char('-'), Qt::KeepEmptyParts);
+    if (nameParts.size() != 2 && nameParts.size() != 3) {
+        return false;
+    }
+    for (const QString& namePart : nameParts) {
+        if (namePart.trimmed().isEmpty()) {
+            return false;
+        }
+    }
+
+    const QString parsedCategory = nameParts.constFirst().trimmed();
+    if (!categories.contains(parsedCategory)) {
+        return false;
+    }
+
+    if (categoryName != nullptr) {
+        *categoryName = parsedCategory;
+    }
+    if (secondaryName != nullptr) {
+        *secondaryName = nameParts.at(1).trimmed();
+    }
+    return true;
+}
 }
 
 namespace ModListLogic
@@ -73,13 +103,15 @@ QStringList orderedCategories(const QStringList& categories, const QStringList& 
 
 QString categoryForMod(const ModInfo& mod, const QStringList& categories)
 {
-    QString matchedCategory;
-    for (const QString& category : categories) {
-        if (mod.name.startsWith(category) && category.size() > matchedCategory.size()) {
-            matchedCategory = category;
-        }
-    }
-    return matchedCategory.isEmpty() ? kOtherCategory : matchedCategory;
+    QString categoryName;
+    return parseModName(mod, categories, &categoryName, nullptr) ? categoryName : kOtherCategory;
+}
+
+QString secondaryNameForMod(const ModInfo& mod, const QStringList& categories)
+{
+    QString secondaryName;
+    parseModName(mod, categories, nullptr, &secondaryName);
+    return secondaryName;
 }
 
 QHash<QString, int> countByCategory(const QList<ModInfo>& mods, const QStringList& categories)

@@ -20,6 +20,7 @@ struct ModInfo
     QList<ModFileEntry> files;
     QDateTime importedAt;
     bool installed = false;
+    bool invalid = false;
 };
 
 struct OperationResult
@@ -49,6 +50,7 @@ public:
         const ModInfo& mod,
         const QString& relativeFilePath,
         const QString& newFileName) const;
+    [[nodiscard]] OperationResult setInvalid(const ModInfo& mod, bool invalid) const;
     [[nodiscard]] OperationResult remove(const ModInfo& mod) const;
 
 private:

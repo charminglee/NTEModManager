@@ -436,6 +436,7 @@ QList<ModInfo> ModRepository::scan() const
         }
         const QFileInfo installedDirectory(QDir(modsDirectory()).filePath(mod.name));
         mod.installed = installedDirectory.isDir();
+        mod.invalid = metadata.value(QStringLiteral("invalid")).toBool();
         result.append(mod);
     }
     std::stable_sort(result.begin(), result.end(), [](const ModInfo& left, const ModInfo& right) {
@@ -803,6 +804,28 @@ OperationResult ModRepository::uninstall(const ModInfo& mod) const
     return {true, QStringLiteral("已卸载 %1").arg(mod.name)};
 }
 
+OperationResult ModRepository::setInvalid(const ModInfo& mod, bool invalid) const
+{
+    QJsonObject manifest = loadManifest(manifestPath());
+    QJsonObject mods = manifest.value(QStringLiteral("mods")).toObject();
+    QJsonObject metadata = mods.value(mod.name).toObject();
+    metadata.insert(QStringLiteral("invalid"), invalid);
+    mods.insert(mod.name, metadata);
+    manifest.insert(QStringLiteral("version"), 1);
+    manifest.insert(QStringLiteral("mods"), mods);
+
+    const OperationResult saved = saveManifest(manifestPath(), manifest);
+    if (!saved.success) {
+        return saved;
+    }
+    return {
+        true,
+        invalid
+            ? QStringLiteral("已将 %1 标记为失效").arg(mod.name)
+            : QStringLiteral("已取消 %1 的失效标记").arg(mod.name)
+    };
+}
+
 OperationResult ModRepository::rename(const ModInfo& mod, const QString& newName) const
 {
     if (newName.trimmed().isEmpty()) {
@@ -935,6 +958,7 @@ OperationResult ModRepository::renameFile(
             }
             relativeRenames.append({oldRelativePath, relativePathForName(targetStem + QLatin1Char('.') + extension)});
         }
+
     } else {
         relativeRenames.append({cleanRelativeFilePath, relativePathForName(targetFileName)});
     }

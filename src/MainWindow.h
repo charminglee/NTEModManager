@@ -21,12 +21,14 @@ class QDropEvent;
 class QEvent;
 class QKeyEvent;
 class QMimeData;
+class QMouseEvent;
 class QObject;
 class QListWidget;
 class QListWidgetItem;
 class QPlainTextEdit;
 class QPushButton;
 class QResizeEvent;
+class QScrollArea;
 class QStackedWidget;
 class QVBoxLayout;
 class QWidget;
@@ -69,6 +71,8 @@ public:
     void setStatusCallback(std::function<void(const QString&)> callback);
     void switchBackground();
 
+    std::function<void()> onDoubleClicked;
+
     BackgroundImage background_;
     BackgroundImage nextBackground_;
     int backgroundIndex_ = 0;
@@ -78,6 +82,7 @@ public:
 protected:
     void paintEvent(QPaintEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 private:
     void requestDetection(const QString& path);
@@ -115,6 +120,7 @@ private:
     using ModSortOrder = ModListLogic::SortOrder;
 
     void toggleDebugMode();
+    void toggleUiVisibility();
     void notifyStatus(const QString& statusText);
     void updateLogBottomButtonVisibility();
     void buildUi();
@@ -153,6 +159,7 @@ private:
     QPushButton* logBottomButton_ = nullptr;
     QListWidget* categoryList_ = nullptr;
     QVBoxLayout* modListLayout_ = nullptr;
+    QScrollArea* modScrollArea_ = nullptr;
     QLabel* modCategoryLabel_ = nullptr;
     QLabel* modCountLabel_ = nullptr;
     QLabel* activityLabel_ = nullptr;

@@ -145,6 +145,7 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
 
         #sectionTitle { color: #ffffff; font-weight: 600; font-size: 20px; padding: 0px; }
         #count { color: #ffffff; font-size: 14px; }
+        #modGroupTitle { color: #ffffff; font-weight: 600; font-size: 17px; padding: 8px 8px 0px; }
 
         #modName { color: #000000; font-weight: 600; font-size: 18px; }
         #metadata { color: #606060; font-size: 14px; }

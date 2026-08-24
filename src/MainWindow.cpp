@@ -12,6 +12,8 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDateTime>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDesktopServices>
 #include <QDir>
 #include <QDragEnterEvent>
@@ -23,6 +25,7 @@
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
 #include <QGridLayout>
+#include <QHash>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QImage>
@@ -196,6 +199,98 @@ void addTextShadow(QLabel* label)
     label->setGraphicsEffect(shadow);
 }
 
+void localizeDialogButtons(QDialog* dialog)
+{
+    auto* buttonBox = dialog->findChild<QDialogButtonBox*>();
+    if (buttonBox == nullptr) {
+        return;
+    }
+
+    const std::array<std::pair<QDialogButtonBox::StandardButton, QString>, 18> buttonTexts = {{
+        {QDialogButtonBox::Ok, QStringLiteral("确定")},
+        {QDialogButtonBox::Open, QStringLiteral("打开")},
+        {QDialogButtonBox::Save, QStringLiteral("保存")},
+        {QDialogButtonBox::SaveAll, QStringLiteral("全部保存")},
+        {QDialogButtonBox::Cancel, QStringLiteral("取消")},
+        {QDialogButtonBox::Close, QStringLiteral("关闭")},
+        {QDialogButtonBox::Yes, QStringLiteral("是")},
+        {QDialogButtonBox::YesToAll, QStringLiteral("全部是")},
+        {QDialogButtonBox::No, QStringLiteral("否")},
+        {QDialogButtonBox::NoToAll, QStringLiteral("全部否")},
+        {QDialogButtonBox::Abort, QStringLiteral("中止")},
+        {QDialogButtonBox::Retry, QStringLiteral("重试")},
+        {QDialogButtonBox::Ignore, QStringLiteral("忽略")},
+        {QDialogButtonBox::Discard, QStringLiteral("不保存")},
+        {QDialogButtonBox::Help, QStringLiteral("帮助")},
+        {QDialogButtonBox::Apply, QStringLiteral("应用")},
+        {QDialogButtonBox::Reset, QStringLiteral("重置")},
+        {QDialogButtonBox::RestoreDefaults, QStringLiteral("恢复默认")},
+    }};
+    for (const auto& [standardButton, text] : buttonTexts) {
+        if (QPushButton* button = buttonBox->button(standardButton)) {
+            button->setText(text);
+        }
+    }
+}
+
+void showWarning(QWidget* parent, const QString& title, const QString& text)
+{
+    QMessageBox messageBox(parent);
+    messageBox.setWindowTitle(title);
+    messageBox.setIcon(QMessageBox::Warning);
+    messageBox.setText(text);
+    messageBox.setStandardButtons(QMessageBox::Ok);
+    localizeDialogButtons(&messageBox);
+    messageBox.exec();
+}
+
+bool askQuestion(QWidget* parent, const QString& title, const QString& text)
+{
+    QMessageBox messageBox(parent);
+    messageBox.setWindowTitle(title);
+    messageBox.setIcon(QMessageBox::Question);
+    messageBox.setText(text);
+    messageBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    messageBox.setDefaultButton(QMessageBox::No);
+    localizeDialogButtons(&messageBox);
+    return messageBox.exec() == QMessageBox::Yes;
+}
+
+QString getTextInput(
+    QWidget* parent,
+    const QString& title,
+    const QString& label,
+    const QString& initialValue,
+    bool* accepted)
+{
+    QInputDialog dialog(parent);
+    dialog.setWindowTitle(title);
+    dialog.setLabelText(label);
+    dialog.setTextValue(initialValue);
+    dialog.setTextEchoMode(QLineEdit::Normal);
+    localizeDialogButtons(&dialog);
+    const bool result = dialog.exec() == QDialog::Accepted;
+    if (accepted != nullptr) {
+        *accepted = result;
+    }
+    return dialog.textValue();
+}
+
+// QString getOpenFileName(
+//     QWidget* parent,
+//     const QString& title,
+//     const QString& nameFilter)
+// {
+//     QFileDialog dialog(parent);
+//     dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+//     dialog.setWindowTitle(title);
+//     dialog.setFileMode(QFileDialog::ExistingFile);
+//     dialog.setAcceptMode(QFileDialog::AcceptOpen);
+//     dialog.setNameFilter(nameFilter);
+//     localizeDialogButtons(&dialog);
+//     return dialog.exec() == QDialog::Accepted ? dialog.selectedFiles().value(0) : QString();
+// }
+
 OperationResult runPackager(const QString& batchPath, const QString& packageDirectory)
 {
     QProcess process;
@@ -222,6 +317,41 @@ OperationResult runPackager(const QString& batchPath, const QString& packageDire
     }
     Log::info(QStringLiteral("打包脚本执行完成"));
     return {true, {}};
+}
+
+OperationResult installModExclusively(
+    const ModRepository& repository,
+    const ModInfo& mod,
+    const QStringList& categories,
+    const std::function<void(const QString&)>& updateActivity)
+{
+    const QString categoryName = ModListLogic::categoryForMod(mod, categories);
+    const QString secondaryName = ModListLogic::secondaryNameForMod(mod, categories);
+    if (secondaryName.isEmpty()) {
+        return repository.install(mod);
+    }
+
+    const QList<ModInfo> installedMods = repository.scan();
+    for (const ModInfo& installedMod : installedMods) {
+        if (!installedMod.installed
+            || installedMod.name == mod.name
+            || ModListLogic::categoryForMod(installedMod, categories) != categoryName
+            || ModListLogic::secondaryNameForMod(installedMod, categories) != secondaryName) {
+            continue;
+        }
+
+        updateActivity(QStringLiteral("正在卸载同组模组 %1...").arg(installedMod.name));
+        const OperationResult uninstalled = repository.uninstall(installedMod);
+        if (!uninstalled.success) {
+            return {
+                false,
+                QStringLiteral("无法自动卸载同组模组 %1：%2").arg(installedMod.name, uninstalled.message)
+            };
+        }
+    }
+
+    updateActivity(QStringLiteral("正在安装 %1...").arg(mod.name));
+    return repository.install(mod);
 }
 }
 
@@ -353,6 +483,16 @@ void BackgroundWidget::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
     resizeDetectionTimer_.start();
+}
+
+void BackgroundWidget::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton && onDoubleClicked) {
+        onDoubleClicked();
+        event->accept();
+        return;
+    }
+    QWidget::mouseDoubleClickEvent(event);
 }
 
 void BackgroundWidget::switchBackground()
@@ -509,6 +649,11 @@ void MainWindow::toggleDebugMode()
     update();
 }
 
+void MainWindow::toggleUiVisibility()
+{
+    root_->setVisible(!root_->isVisible());
+}
+
 void MainWindow::notifyStatus(const QString& statusText)
 {
     if (!operationInProgress_) {
@@ -560,7 +705,7 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
             event->accept();
             return;
         case Qt::Key_F11:
-            root_->setVisible(!root_->isVisible());
+            toggleUiVisibility();
             event->accept();
             return;
         case Qt::Key_Down:
@@ -599,6 +744,13 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
             return event->isAccepted();
         default:
             break;
+        }
+    }
+    if (event->type() == QEvent::MouseButtonDblClick && watched == root_) {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            toggleUiVisibility();
+            return true;
         }
     }
     return QMainWindow::eventFilter(watched, event);
@@ -658,12 +810,12 @@ void MainWindow::buildUi()
         const QString launcherPath = AppConfig::gameLauncherPath();
         if (!QFileInfo::exists(launcherPath)) {
             Log::warning(QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
-            QMessageBox::warning(this, QStringLiteral("无法启动游戏"), QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
+            showWarning(this, QStringLiteral("无法启动游戏"), QStringLiteral("找不到游戏启动器：%1").arg(launcherPath));
             return;
         }
         if (!QProcess::startDetached(launcherPath)) {
             Log::error(QStringLiteral("无法启动游戏启动器：%1").arg(launcherPath));
-            QMessageBox::warning(this, QStringLiteral("无法启动游戏"), QStringLiteral("无法启动游戏启动器。"));
+            showWarning(this, QStringLiteral("无法启动游戏"), QStringLiteral("无法启动游戏启动器。"));
             return;
         }
         Log::info(QStringLiteral("已启动游戏启动器：%1").arg(launcherPath));
@@ -726,7 +878,6 @@ void MainWindow::buildUi()
         const QString archivePath = QFileDialog::getOpenFileName(
             this,
             QStringLiteral("选择要导入的压缩包"),
-            QString(),
             QStringLiteral("压缩包 (*.zip *.rar *.7z)")
         );
         if (!archivePath.isEmpty()) {
@@ -863,6 +1014,7 @@ void MainWindow::buildUi()
     modsPageLayout->addLayout(listHeader);
 
     auto* scrollArea = new QScrollArea(root_);
+    modScrollArea_ = scrollArea;
     scrollArea->setObjectName(QStringLiteral("modScrollArea"));
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
@@ -1013,6 +1165,10 @@ void MainWindow::buildUi()
     backgroundWidget_->setStatusCallback([this](const QString& status) {
         notifyStatus(status);
     });
+    backgroundWidget_->onDoubleClicked = [this] {
+        toggleUiVisibility();
+    };
+    root_->installEventFilter(this);
     setCentralWidget(central);
     central->installEventFilter(this);
     Log::info(QStringLiteral("主窗口界面构建完成"));
@@ -1107,6 +1263,13 @@ void MainWindow::updateCategoryOrderFromList()
 
 void MainWindow::refreshMods()
 {
+    const int verticalScrollPosition = modScrollArea_
+        ? modScrollArea_->verticalScrollBar()->value()
+        : 0;
+    const int horizontalScrollPosition = modScrollArea_
+        ? modScrollArea_->horizontalScrollBar()->value()
+        : 0;
+
     while (QLayoutItem* item = modListLayout_->takeAt(0)) {
         if (QWidget* widget = item->widget()) {
             widget->deleteLater();
@@ -1127,12 +1290,44 @@ void MainWindow::refreshMods()
         emptyState->setAlignment(Qt::AlignCenter);
         addTextShadow(emptyState);
         modListLayout_->addWidget(emptyState);
+    } else if (sortOrder_ == ModSortOrder::InstalledFirst
+               || sortOrder_ == ModSortOrder::NameAscending
+               || sortOrder_ == ModSortOrder::NameDescending) {
+        QHash<QString, QList<ModInfo>> modsBySecondaryName;
+        QStringList secondaryNameOrder;
+        for (const ModInfo& mod : mods) {
+            QString secondaryName = ModListLogic::secondaryNameForMod(mod, categories_);
+            if (secondaryName.isEmpty()) {
+                secondaryName = QStringLiteral("其他");
+            }
+            if (!modsBySecondaryName.contains(secondaryName)) {
+                secondaryNameOrder.append(secondaryName);
+            }
+            modsBySecondaryName[secondaryName].append(mod);
+        }
+
+        for (const QString& secondaryName : secondaryNameOrder) {
+            auto* groupTitle = new QLabel(secondaryName, centralWidget());
+            groupTitle->setObjectName(QStringLiteral("modGroupTitle"));
+            groupTitle->setMinimumHeight(32);
+            groupTitle->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            addTextShadow(groupTitle);
+            modListLayout_->addWidget(groupTitle);
+            for (const ModInfo& mod : modsBySecondaryName.value(secondaryName)) {
+                addModRow(mod);
+            }
+        }
     } else {
         for (const ModInfo& mod : mods) {
             addModRow(mod);
         }
     }
     modListLayout_->addStretch();
+
+    if (modScrollArea_) {
+        modScrollArea_->verticalScrollBar()->setValue(verticalScrollPosition);
+        modScrollArea_->horizontalScrollBar()->setValue(horizontalScrollPosition);
+    }
 }
 
 void MainWindow::refreshModsWithFeedback()
@@ -1167,6 +1362,16 @@ void MainWindow::addModRow(const ModInfo& mod)
 
     auto* detailsLayout = new QVBoxLayout();
     detailsLayout->setSpacing(4);
+    auto* nameLayout = new QHBoxLayout();
+    nameLayout->setContentsMargins(0, 0, 0, 0);
+    nameLayout->setSpacing(6);
+    if (mod.invalid) {
+        auto* invalidIcon = new QLabel(row);
+        invalidIcon->setPixmap(style()->standardIcon(QStyle::SP_MessageBoxWarning).pixmap(18, 18));
+        invalidIcon->setToolTip(QStringLiteral("此模组已标记为失效"));
+        invalidIcon->setAccessibleName(QStringLiteral("失效模组"));
+        nameLayout->addWidget(invalidIcon, 0, Qt::AlignVCenter);
+    }
     auto* name = new QLabel(mod.name, row);
     name->setObjectName(QStringLiteral("modName"));
     name->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -1178,7 +1383,8 @@ void MainWindow::addModRow(const ModInfo& mod)
     );
     metadata->setObjectName(QStringLiteral("metadata"));
     metadata->setAttribute(Qt::WA_TransparentForMouseEvents);
-    detailsLayout->addWidget(name);
+    nameLayout->addWidget(name, 1);
+    detailsLayout->addLayout(nameLayout);
     detailsLayout->addWidget(metadata);
     headerLayout->addLayout(detailsLayout, 1);
 
@@ -1191,10 +1397,28 @@ void MainWindow::addModRow(const ModInfo& mod)
     state->setFlat(true);
     state->setMinimumWidth(68);
     connect(state, &QPushButton::clicked, this, [this, mod] {
+        if (mod.installed) {
+            runAsyncOperation(
+                QStringLiteral("正在卸载 %1...").arg(mod.name),
+                [repository = repository_, mod](const auto&) {
+                    return repository.uninstall(mod);
+                }
+            );
+            return;
+        }
+
+        if (mod.invalid && !askQuestion(
+                this,
+                QStringLiteral("安装失效模组"),
+                QStringLiteral("“%1”已标记为失效，可能无法正常工作。是否仍要安装？").arg(mod.name))) {
+            return;
+        }
+
+        const QStringList categories = categories_;
         runAsyncOperation(
-            mod.installed ? QStringLiteral("正在卸载 %1...").arg(mod.name) : QStringLiteral("正在安装 %1...").arg(mod.name),
-            [repository = repository_, mod](const auto&) {
-                return mod.installed ? repository.uninstall(mod) : repository.install(mod);
+            QStringLiteral("正在安装 %1...").arg(mod.name),
+            [repository = repository_, mod, categories](const auto& updateActivity) {
+                return installModExclusively(repository, mod, categories, updateActivity);
             }
         );
     });
@@ -1214,11 +1438,10 @@ void MainWindow::addModRow(const ModInfo& mod)
     QAction* renameAction = moreMenu->addAction(QStringLiteral("重命名"));
     connect(renameAction, &QAction::triggered, this, [this, mod] {
         bool accepted = false;
-        const QString newName = QInputDialog::getText(
+        const QString newName = getTextInput(
             this,
             QStringLiteral("重命名模组"),
             QStringLiteral("模组名称："),
-            QLineEdit::Normal,
             mod.name,
             &accepted
         );
@@ -1237,10 +1460,31 @@ void MainWindow::addModRow(const ModInfo& mod)
         replaceModFromArchive(mod);
     });
 
+    QAction* invalidAction = moreMenu->addAction(
+        mod.invalid ? QStringLiteral("取消失效标记") : QStringLiteral("标记为失效"));
+    connect(invalidAction, &QAction::triggered, this, [this, mod] {
+        const bool markInvalid = !mod.invalid;
+        runAsyncOperation(
+            markInvalid
+                ? QStringLiteral("正在标记 %1 为失效...").arg(mod.name)
+                : QStringLiteral("正在取消 %1 的失效标记...").arg(mod.name),
+            [repository = repository_, mod, markInvalid](const auto& updateActivity) {
+                if (markInvalid && mod.installed) {
+                    updateActivity(QStringLiteral("正在卸载失效模组 %1...").arg(mod.name));
+                    const OperationResult uninstalled = repository.uninstall(mod);
+                    if (!uninstalled.success) {
+                        return uninstalled;
+                    }
+                }
+                return repository.setInvalid(mod, markInvalid);
+            }
+        );
+    });
+
     QAction* openAction = moreMenu->addAction(QStringLiteral("打开源文件位置"));
     connect(openAction, &QAction::triggered, this, [this, mod] {
         if (!QDesktopServices::openUrl(QUrl::fromLocalFile(mod.sourcePath))) {
-            QMessageBox::warning(this, QStringLiteral("无法打开文件夹"), QStringLiteral("无法在资源管理器中打开：%1").arg(mod.sourcePath));
+            showWarning(this, QStringLiteral("无法打开文件夹"), QStringLiteral("无法在资源管理器中打开：%1").arg(mod.sourcePath));
         }
     });
 
@@ -1249,7 +1493,7 @@ void MainWindow::addModRow(const ModInfo& mod)
         connect(openInstallLocationAction, &QAction::triggered, this, [this, mod] {
             const QString installPath = QStringLiteral("%1/%2").arg(ModRepository::modsDirectory()).arg(mod.name);
             if (!QDesktopServices::openUrl(QUrl::fromLocalFile(installPath))) {
-                QMessageBox::warning(this, QStringLiteral("无法打开文件夹"), QStringLiteral("无法在资源管理器中打开：%1").arg(installPath));
+                showWarning(this, QStringLiteral("无法打开文件夹"), QStringLiteral("无法在资源管理器中打开：%1").arg(installPath));
             }
         });
     }
@@ -1261,7 +1505,8 @@ void MainWindow::addModRow(const ModInfo& mod)
         confirmation.setIcon(QMessageBox::Warning);
         confirmation.setText(QStringLiteral("将永久删除“%1”的备份文件及已安装的模组文件。此操作无法撤销。").arg(mod.name));
         QPushButton* confirmDelete = confirmation.addButton(QStringLiteral("删除"), QMessageBox::DestructiveRole);
-        confirmation.addButton(QMessageBox::Cancel);
+        // confirmation.addButton(QMessageBox::Cancel);
+        confirmation.addButton(QStringLiteral("取消"), QMessageBox::RejectRole);
         confirmation.exec();
         if (confirmation.clickedButton() == confirmDelete) {
             runAsyncOperation(QStringLiteral("正在删除 %1...").arg(mod.name), [repository = repository_, mod](const auto&) {
@@ -1477,7 +1722,7 @@ void MainWindow::addModRow(const ModInfo& mod)
                     editor->clearFocus();
                     if (!result.success) {
                         notifyStatus(QStringLiteral("操作未完成"));
-                        QMessageBox::warning(this, QStringLiteral("操作未完成"), result.message);
+                        showWarning(this, QStringLiteral("操作未完成"), result.message);
                         updateFilesCardHeight();
                         return;
                     }
@@ -1574,11 +1819,10 @@ void MainWindow::importArchives(const QStringList& archivePaths)
             });
             if (importedMod != importedMods.cend()) {
                 bool accepted = false;
-                const QString newName = QInputDialog::getText(
+                const QString newName = getTextInput(
                     this,
                     QStringLiteral("重命名模组"),
                     QStringLiteral("模组名称："),
-                    QLineEdit::Normal,
                     QFileInfo(archivePath).completeBaseName(),
                     &accepted);
                 if (accepted && newName != importedMod->name) {
@@ -1603,7 +1847,7 @@ void MainWindow::importArchives(const QStringList& archivePaths)
     if (!failures.isEmpty()) {
         Log::warning(QStringLiteral("有 %1 个压缩包导入未完成").arg(failures.size()));
         notifyStatus(QStringLiteral("%1 个压缩包未能导入").arg(failures.size()));
-        QMessageBox::warning(this, QStringLiteral("导入未完成"), failures.join(QLatin1Char('\n')));
+        showWarning(this, QStringLiteral("导入未完成"), failures.join(QLatin1Char('\n')));
     }
 }
 
@@ -1612,7 +1856,7 @@ void MainWindow::packageMod()
     const QString packageDirectory = AppConfig::packagerDirectory();
     const QString batchPath = QDir(packageDirectory).filePath(QStringLiteral("傻瓜打包器.bat"));
     if (!QFileInfo(batchPath).isFile()) {
-        QMessageBox::warning(this, QStringLiteral("无法打包模组"), QStringLiteral("找不到打包脚本：%1").arg(batchPath));
+        showWarning(this, QStringLiteral("无法打包模组"), QStringLiteral("找不到打包脚本：%1").arg(batchPath));
         return;
     }
 
@@ -1632,11 +1876,10 @@ void MainWindow::packageMod()
             }
 
             bool accepted = false;
-            const QString modName = QInputDialog::getText(
+            const QString modName = getTextInput(
                 this,
                 QStringLiteral("导入已打包模组"),
                 QStringLiteral("模组名称："),
-                QLineEdit::Normal,
                 {},
                 &accepted);
             if (!accepted) {
@@ -1657,7 +1900,7 @@ void MainWindow::repackageMod(const ModInfo& mod)
     const QString packageDirectory = AppConfig::packagerDirectory();
     const QString batchPath = QDir(packageDirectory).filePath(QStringLiteral("傻瓜打包器.bat"));
     if (!QFileInfo(batchPath).isFile()) {
-        QMessageBox::warning(this, QStringLiteral("无法重新打包模组"), QStringLiteral("找不到打包脚本：%1").arg(batchPath));
+        showWarning(this, QStringLiteral("无法重新打包模组"), QStringLiteral("找不到打包脚本：%1").arg(batchPath));
         return;
     }
 
@@ -1706,7 +1949,6 @@ void MainWindow::replaceModFromArchive(const ModInfo& mod)
     const QString archivePath = QFileDialog::getOpenFileName(
         this,
         QStringLiteral("选择要替换/更新的压缩包"),
-        QString(),
         QStringLiteral("压缩包 (*.zip *.rar *.7z)"));
     if (archivePath.isEmpty()) {
         return;
@@ -1735,7 +1977,7 @@ void MainWindow::handleOperation(const OperationResult& result)
 
     Log::error(QStringLiteral("操作失败：%1").arg(result.message));
     notifyStatus(QStringLiteral("操作未完成"));
-    QMessageBox::warning(this, QStringLiteral("操作未完成"), result.message);
+    showWarning(this, QStringLiteral("操作未完成"), result.message);
 }
 
 void MainWindow::changeInstallationForAll(bool install)
@@ -1744,6 +1986,27 @@ void MainWindow::changeInstallationForAll(bool install)
     const QString category = currentCategory_;
     const QStringList categories = categories_;
     const ModSortOrder sortOrder = sortOrder_;
+    if (install) {
+        const QList<ModInfo> mods = ModListLogic::filterAndSort(
+            repository_.scan(),
+            category,
+            categories,
+            sortOrder);
+        QStringList invalidMods;
+        for (const ModInfo& mod : mods) {
+            if (!mod.installed && mod.invalid) {
+                invalidMods.append(mod.name);
+            }
+        }
+        if (!invalidMods.isEmpty() && !askQuestion(
+                this,
+                QStringLiteral("安装失效模组"),
+                QStringLiteral("当前操作包含 %1 个已标记为失效的模组：\n%2\n可能无法正常工作，是否仍要继续？")
+                    .arg(invalidMods.size())
+                    .arg(invalidMods.join(QLatin1Char('\n'))))) {
+            return;
+        }
+    }
     runAsyncOperation(QStringLiteral("正在批量%1模组...").arg(action), [repository = repository_, install, action, category, categories, sortOrder](const auto& updateActivity) {
         const QList<ModInfo> mods = ModListLogic::filterAndSort(repository.scan(), category, categories, sortOrder);
         QList<ModInfo> pendingMods;
@@ -1762,7 +2025,9 @@ void MainWindow::changeInstallationForAll(bool install)
                                .arg(action, mod.name)
                                .arg(index + 1)
                                .arg(pendingMods.size()));
-            const OperationResult result = install ? repository.install(mod) : repository.uninstall(mod);
+            const OperationResult result = install
+                ? installModExclusively(repository, mod, categories, updateActivity)
+                : repository.uninstall(mod);
             if (result.success) {
                 ++changedCount;
             } else {
@@ -1827,6 +2092,12 @@ void MainWindow::setOperationInProgress(bool inProgress)
     operationInProgress_ = inProgress;
     activitySpinner_->setVisible(inProgress);
     categoryList_->setEnabled(!inProgress);
+    if (inProgress && modScrollArea_ && logButton_) {
+        QWidget* focusedWidget = QApplication::focusWidget();
+        if (focusedWidget && modScrollArea_->isAncestorOf(focusedWidget)) {
+            logButton_->setFocus(Qt::OtherFocusReason);
+        }
+    }
     for (QAbstractButton* button : centralWidget()->findChildren<QAbstractButton*>()) {
         if (button != logButton_) {
             button->setEnabled(!inProgress);

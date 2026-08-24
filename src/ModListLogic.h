@@ -25,6 +25,7 @@ enum class SortOrder
     const QStringList& categories,
     const QStringList& requestedOrder);
 [[nodiscard]] QString categoryForMod(const ModInfo& mod, const QStringList& categories);
+[[nodiscard]] QString secondaryNameForMod(const ModInfo& mod, const QStringList& categories);
 [[nodiscard]] QHash<QString, int> countByCategory(
     const QList<ModInfo>& mods,
     const QStringList& categories);
