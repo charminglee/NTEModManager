@@ -50,26 +50,6 @@ bool pathExists(const QString& path)
     return GetFileAttributesW(reinterpret_cast<LPCWSTR>(path.utf16())) != INVALID_FILE_ATTRIBUTES;
 }
 
-bool isDirectoryLink(const QString& path)
-{
-    const DWORD attributes = GetFileAttributesW(reinterpret_cast<LPCWSTR>(path.utf16()));
-    return attributes != INVALID_FILE_ATTRIBUTES
-        && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0
-        && (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
-}
-
-OperationResult deleteDirectoryLink(const QString& linkPath)
-{
-    if (!isDirectoryLink(linkPath)) {
-        return {false, QStringLiteral("目标不是可安全删除的目录符号链接：%1").arg(linkPath)};
-    }
-
-    if (!RemoveDirectoryW(reinterpret_cast<LPCWSTR>(linkPath.utf16()))) {
-        return {false, QStringLiteral("删除符号链接失败：%1").arg(windowsErrorMessage(GetLastError()))};
-    }
-    return {true, {}};
-}
-
 OperationResult copyDirectory(const QString& sourcePath, const QString& targetPath)
 {
     static const QSet<QString> ignoredExtensions = {
@@ -99,10 +79,6 @@ OperationResult copyDirectory(const QString& sourcePath, const QString& targetPa
         if (!sourceInfo.isDir() && ignoredExtensions.contains(sourceInfo.suffix().toLower())) {
             continue;
         }
-        if (sourceInfo.isSymLink()) {
-            QDir(targetPath).removeRecursively();
-            return {false, QStringLiteral("模组包含不支持复制的符号链接：%1").arg(relativePath)};
-        }
         if (sourceInfo.isDir()) {
             if (!QDir().mkpath(targetEntryPath)) {
                 QDir(targetPath).removeRecursively();
@@ -119,11 +95,52 @@ OperationResult copyDirectory(const QString& sourcePath, const QString& targetPa
     return {true, {}};
 }
 
+OperationResult mergeDirectory(const QString& sourcePath, const QString& targetPath)
+{
+    const QDir sourceDirectory(sourcePath);
+    if (!sourceDirectory.exists()) {
+        return {false, QStringLiteral("解压后的模组文件夹不存在：%1").arg(sourcePath)};
+    }
+    if (!QDir().mkpath(targetPath)) {
+        return {false, QStringLiteral("无法创建模组源文件夹：%1").arg(targetPath)};
+    }
+
+    QDirIterator iterator(sourcePath, QDir::AllEntries | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    while (iterator.hasNext()) {
+        iterator.next();
+        const QFileInfo sourceInfo = iterator.fileInfo();
+        const QString relativePath = sourceDirectory.relativeFilePath(sourceInfo.absoluteFilePath());
+        const QString targetEntryPath = QDir(targetPath).filePath(relativePath);
+
+        if (sourceInfo.isDir()) {
+            if (QFileInfo::exists(targetEntryPath) && !QFileInfo(targetEntryPath).isDir()) {
+                return {false, QStringLiteral("无法创建目录：目标已是文件 %1").arg(relativePath)};
+            }
+            if (!QDir().mkpath(targetEntryPath)) {
+                return {false, QStringLiteral("无法创建目录：%1").arg(relativePath)};
+            }
+            continue;
+        }
+
+        if (!QDir().mkpath(QFileInfo(targetEntryPath).path())) {
+            return {false, QStringLiteral("无法创建目录：%1").arg(relativePath)};
+        }
+        if (QFileInfo::exists(targetEntryPath) && !QFileInfo(targetEntryPath).isFile()) {
+            return {false, QStringLiteral("无法覆盖目录：%1").arg(relativePath)};
+        }
+        if (QFileInfo::exists(targetEntryPath) && !QFile::remove(targetEntryPath)) {
+            return {false, QStringLiteral("无法覆盖文件：%1").arg(relativePath)};
+        }
+        if (!QFile::copy(sourceInfo.absoluteFilePath(), targetEntryPath)) {
+            return {false, QStringLiteral("无法复制文件：%1").arg(relativePath)};
+        }
+        QFile::setPermissions(targetEntryPath, sourceInfo.permissions());
+    }
+    return {true, {}};
+}
+
 OperationResult removeInstalledModDirectory(const QString& installPath)
 {
-    if (isDirectoryLink(installPath)) {
-        return deleteDirectoryLink(installPath);
-    }
     if (!QFileInfo(installPath).isDir()) {
         return {false, QStringLiteral("目标不是可删除的模组目录：%1").arg(installPath)};
     }
@@ -140,9 +157,7 @@ qint64 directorySize(const QString& path)
     while (iterator.hasNext()) {
         iterator.next();
         const QFileInfo fileInfo = iterator.fileInfo();
-        if (!fileInfo.isSymLink()) {
-            totalSize += fileInfo.size();
-        }
+        totalSize += fileInfo.size();
     }
     return totalSize;
 }
@@ -156,11 +171,9 @@ ModFileEntry scanDirectoryEntry(const QFileInfo& directoryInfo)
     const QDir directory(directoryInfo.absoluteFilePath());
     const QFileInfoList entries = directory.entryInfoList(
         QDir::AllEntries | QDir::NoDotAndDotDot,
-        QDir::DirsFirst | QDir::Name | QDir::IgnoreCase);
+        QDir::DirsFirst | QDir::Name | QDir::IgnoreCase
+    );
     for (const QFileInfo& childInfo : entries) {
-        if (childInfo.isSymLink()) {
-            continue;
-        }
         if (childInfo.isDir()) {
             ModFileEntry child = scanDirectoryEntry(childInfo);
             entry.sizeBytes += child.sizeBytes;
@@ -405,7 +418,7 @@ QList<ModInfo> ModRepository::scan() const
     QList<ModInfo> result;
     result.reserve(directories.size());
     for (const QFileInfo& directory : directories) {
-        if (directory.fileName().startsWith(QLatin1Char('.')) || directory.isSymLink()) {
+        if (directory.fileName().startsWith(QLatin1Char('.'))) {
             continue;
         }
 
@@ -418,9 +431,6 @@ QList<ModInfo> ModRepository::scan() const
             QDir::AllEntries | QDir::NoDotAndDotDot,
             QDir::DirsFirst | QDir::Name | QDir::IgnoreCase);
         for (const QFileInfo& entryInfo : entries) {
-            if (entryInfo.isSymLink()) {
-                continue;
-            }
             if (entryInfo.isDir()) {
                 mod.files.append(scanDirectoryEntry(entryInfo));
             } else if (entryInfo.isFile()) {
@@ -502,7 +512,7 @@ OperationResult ModRepository::importArchive(const QString& archivePath) const
     const QString modName = uniqueDirectoryName(sanitizeDirectoryName(archiveInfo.completeBaseName()));
     const QString targetPath = backupRoot.filePath(modName);
     QString extractedRoot = stagingPath;
-    if (extractedEntries.size() == 1 && extractedEntries.constFirst().isDir() && !extractedEntries.constFirst().isSymLink()) {
+    if (extractedEntries.size() == 1 && extractedEntries.constFirst().isDir()) {
         extractedRoot = extractedEntries.constFirst().absoluteFilePath();
     }
 
@@ -647,7 +657,7 @@ OperationResult ModRepository::replacePackagedMod(const ModInfo& mod, const QStr
     return {true, QStringLiteral("已重新打包并替换 %1 的源文件").arg(mod.name)};
 }
 
-OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QString& archivePath) const
+OperationResult ModRepository::addFromArchive(const ModInfo& mod, const QString& archivePath) const
 {
     const QFileInfo archiveInfo(archivePath);
     if (!archiveInfo.exists() || !archiveInfo.isFile()) {
@@ -671,7 +681,7 @@ OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QStr
     }
 
     const QDir backupRoot(backupsDirectory());
-    const QString stagingName = QStringLiteral(".replace-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+    const QString stagingName = QStringLiteral(".add-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
     const QString stagingPath = backupRoot.filePath(stagingName);
     if (!QDir().mkpath(stagingPath)) {
         return {false, QStringLiteral("无法创建临时解压目录：%1").arg(stagingPath)};
@@ -701,11 +711,102 @@ OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QStr
     const QFileInfoList extractedEntries = QDir(stagingPath).entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries);
     if (extractedEntries.isEmpty()) {
         QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("压缩包中没有可添加的文件。")};
+    }
+
+    QString extractedRoot = stagingPath;
+    if (extractedEntries.size() == 1 && extractedEntries.constFirst().isDir()) {
+        extractedRoot = extractedEntries.constFirst().absoluteFilePath();
+    }
+
+    const OperationResult merged = mergeDirectory(extractedRoot, mod.sourcePath);
+    QDir(stagingPath).removeRecursively();
+    if (!merged.success) {
+        return merged;
+    }
+
+    if (mod.installed) {
+        const QString installPath = QDir(modsDirectory()).filePath(mod.name);
+        if (pathExists(installPath)) {
+            const OperationResult deletedInstall = removeInstalledModDirectory(installPath);
+            if (!deletedInstall.success) {
+                return deletedInstall;
+            }
+        }
+        const OperationResult copied = copyDirectory(mod.sourcePath, installPath);
+        if (!copied.success) {
+            return copied;
+        }
+    }
+
+    if (!QFile::remove(archiveInfo.absoluteFilePath())) {
+        return {false, QStringLiteral("模组已添加文件，但无法永久删除原压缩包：%1").arg(archiveInfo.fileName())};
+    }
+
+    return {true, QStringLiteral("已向 %1 添加文件").arg(mod.name)};
+}
+
+OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QString& archivePath) const
+{
+    const QFileInfo archiveInfo(archivePath);
+    if (!archiveInfo.exists() || !archiveInfo.isFile()) {
+        return {false, QStringLiteral("找不到压缩包：%1").arg(archivePath)};
+    }
+    QString archiveName = archiveInfo.fileName();
+    if (!isSupportedArchive(archivePath)) {
+        return {false, QStringLiteral("只支持 .zip、.rar 和 .7z 压缩包：%1").arg(archiveName)};
+    }
+    if (!QFileInfo(mod.sourcePath).isDir()) {
+        return {false, QStringLiteral("模组源文件夹不存在：%1").arg(mod.sourcePath)};
+    }
+
+    const OperationResult initialization = initialize();
+    if (!initialization.success) {
+        return initialization;
+    }
+
+    const QString extractor = find7ZipExecutable();
+    if (extractor.isEmpty()) {
+        return {false, QStringLiteral("未找到 7-Zip。请安装 7-Zip，或设置环境变量 NTE_7ZIP_PATH 指向 7z.exe。")};
+    }
+
+    const QDir backupRoot(backupsDirectory());
+    const QString stagingName = QStringLiteral(".replace-%1").arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+    const QString stagingPath = backupRoot.filePath(stagingName);
+    if (!QDir().mkpath(stagingPath)) {
+        return {false, QStringLiteral("无法创建临时解压目录：%1").arg(stagingPath)};
+    }
+
+    QProcess extractorProcess;
+    QString archiveAbsPath = archiveInfo.absoluteFilePath();
+    extractorProcess.setProgram(extractor);
+    extractorProcess.setArguments({
+        QStringLiteral("x"),
+        QStringLiteral("-y"),
+        QStringLiteral("-aoa"),
+        QStringLiteral("-o%1").arg(QDir::toNativeSeparators(stagingPath)),
+        archiveAbsPath,
+    });
+    extractorProcess.start();
+    if (!extractorProcess.waitForStarted(10000)) {
+        QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("无法启动 7-Zip：%1").arg(extractorProcess.errorString())};
+    }
+    extractorProcess.waitForFinished(-1);
+    if (extractorProcess.exitStatus() != QProcess::NormalExit || extractorProcess.exitCode() != 0) {
+        const QByteArray output = extractorProcess.readAllStandardError() + extractorProcess.readAllStandardOutput();
+        QDir(stagingPath).removeRecursively();
+        return {false, QStringLiteral("解压失败：%1").arg(QString::fromLocal8Bit(output).trimmed())};
+    }
+
+    const QFileInfoList extractedEntries = QDir(stagingPath).entryInfoList(QDir::NoDotAndDotDot | QDir::AllEntries);
+    if (extractedEntries.isEmpty()) {
+        QDir(stagingPath).removeRecursively();
         return {false, QStringLiteral("压缩包中没有可导入的文件。")};
     }
 
     QString extractedRoot = stagingPath;
-    if (extractedEntries.size() == 1 && extractedEntries.constFirst().isDir() && !extractedEntries.constFirst().isSymLink()) {
+    if (extractedEntries.size() == 1 && extractedEntries.constFirst().isDir()) {
         extractedRoot = extractedEntries.constFirst().absoluteFilePath();
     }
 
@@ -730,12 +831,7 @@ OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QStr
     // 如已安装，同步替换安装目录中的模组文件。
     if (mod.installed) {
         const QString installPath = QDir(modsDirectory()).filePath(mod.name);
-        if (isDirectoryLink(installPath)) {
-            const OperationResult deletedLink = deleteDirectoryLink(installPath);
-            if (!deletedLink.success) {
-                return deletedLink;
-            }
-        } else if (pathExists(installPath)) {
+        if (pathExists(installPath)) {
             const OperationResult deletedInstall = removeInstalledModDirectory(installPath);
             if (!deletedInstall.success) {
                 return deletedInstall;
@@ -745,6 +841,11 @@ OperationResult ModRepository::replaceFromArchive(const ModInfo& mod, const QStr
         if (!copied.success) {
             return copied;
         }
+    }
+
+
+    if (!QFile::remove(archiveAbsPath)) {
+        return {false, QStringLiteral("模组已更新，但无法永久删除原压缩包：%1").arg(archiveName)};
     }
 
     return {true, QStringLiteral("已更新 %1 的源文件").arg(mod.name)};
@@ -763,12 +864,7 @@ OperationResult ModRepository::install(const ModInfo& mod) const
 
     const QString installPath = QDir(modsDirectory()).filePath(mod.name);
     if (pathExists(installPath)) {
-        if (isDirectoryLink(installPath)) {
-            const OperationResult deletedLink = deleteDirectoryLink(installPath);
-            if (!deletedLink.success) {
-                return deletedLink;
-            }
-        } else if (QFileInfo(installPath).isDir()) {
+        if (QFileInfo(installPath).isDir()) {
             return {true, QStringLiteral("模组已经安装。")};
         } else {
             return {false, QStringLiteral("安装目录中存在同名文件，已停止以保护该文件：%1").arg(mod.name)};
@@ -863,17 +959,7 @@ OperationResult ModRepository::rename(const ModInfo& mod, const QString& newName
     }
 
     if (mod.installed) {
-        OperationResult movedInstallation;
-        if (isDirectoryLink(oldInstallPath)) {
-            const OperationResult deletedLink = deleteDirectoryLink(oldInstallPath);
-            if (deletedLink.success) {
-                movedInstallation = copyDirectory(targetPath, newInstallPath);
-            } else {
-                movedInstallation = deletedLink;
-            }
-        } else {
-            movedInstallation = moveDirectory(oldInstallPath, newInstallPath);
-        }
+        OperationResult movedInstallation = moveDirectory(oldInstallPath, newInstallPath);
         if (!movedInstallation.success) {
             moveDirectory(targetPath, mod.sourcePath);
             return {false, QStringLiteral("重命名模组失败：无法更新已安装文件：%1").arg(movedInstallation.message)};

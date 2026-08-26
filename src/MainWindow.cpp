@@ -10,6 +10,7 @@
 #include <QAbstractItemView>
 #include <QActionGroup>
 #include <QApplication>
+#include <QCoreApplication>
 #include <QCloseEvent>
 #include <QDateTime>
 #include <QDialog>
@@ -878,6 +879,7 @@ void MainWindow::buildUi()
         const QString archivePath = QFileDialog::getOpenFileName(
             this,
             QStringLiteral("选择要导入的压缩包"),
+            QString(),
             QStringLiteral("压缩包 (*.zip *.rar *.7z)")
         );
         if (!archivePath.isEmpty()) {
@@ -1192,6 +1194,11 @@ void MainWindow::refreshCategories()
         auto* item = new QListWidgetItem(categoryList_);
         item->setData(Qt::UserRole, category);
         item->setData(Qt::UserRole + 1, QStringLiteral("%1 个模组").arg(categoryCounts.value(category)));
+        const QString backgroundPath = QDir(QCoreApplication::applicationDirPath()).filePath(
+            QStringLiteral("img/bg/%1.png").arg(category));
+        if (QFileInfo::exists(backgroundPath)) {
+            item->setData(CategoryListItemRole::BackgroundPath, backgroundPath);
+        }
         Qt::ItemFlags itemFlags = item->flags() | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
         if (category == QStringLiteral("全部") || category == QStringLiteral("其他")) {
             itemFlags &= ~Qt::ItemIsDragEnabled;
@@ -1435,7 +1442,7 @@ void MainWindow::addModRow(const ModInfo& mod)
     moreButton->setFixedSize(32, 32);
 
     auto* moreMenu = new QMenu(moreButton);
-    QAction* renameAction = moreMenu->addAction(QStringLiteral("重命名"));
+    QAction* renameAction = moreMenu->addAction(QStringLiteral("重命名..."));
     connect(renameAction, &QAction::triggered, this, [this, mod] {
         bool accepted = false;
         const QString newName = getTextInput(
@@ -1453,6 +1460,11 @@ void MainWindow::addModRow(const ModInfo& mod)
     QAction* repackageAction = moreMenu->addAction(QStringLiteral("重新打包..."));
     connect(repackageAction, &QAction::triggered, this, [this, mod] {
         repackageMod(mod);
+    });
+
+    QAction* addAction = moreMenu->addAction(QStringLiteral("添加..."));
+    connect(addAction, &QAction::triggered, this, [this, mod] {
+        addModFromArchive(mod);
     });
 
     QAction* replaceAction = moreMenu->addAction(QStringLiteral("更新/替换..."));
@@ -1824,7 +1836,8 @@ void MainWindow::importArchives(const QStringList& archivePaths)
                     QStringLiteral("重命名模组"),
                     QStringLiteral("模组名称："),
                     QFileInfo(archivePath).completeBaseName(),
-                    &accepted);
+                    &accepted
+                );
                 if (accepted && newName != importedMod->name) {
                     const OperationResult renamed = repository_.rename(*importedMod, newName);
                     if (!renamed.success) {
@@ -1944,12 +1957,34 @@ void MainWindow::repackageMod(const ModInfo& mod)
     );
 }
 
+void MainWindow::addModFromArchive(const ModInfo& mod)
+{
+    const QString archivePath = QFileDialog::getOpenFileName(
+        this,
+        QStringLiteral("选择要添加的压缩包"),
+        QString(),
+        QStringLiteral("压缩包 (*.zip *.rar *.7z)")
+    );
+    if (archivePath.isEmpty()) {
+        return;
+    }
+
+    runAsyncOperation(
+        QStringLiteral("正在向 %1 添加文件...").arg(mod.name),
+        [repository = repository_, mod, archivePath](const auto&) {
+            return repository.addFromArchive(mod, archivePath);
+        }
+    );
+}
+
 void MainWindow::replaceModFromArchive(const ModInfo& mod)
 {
     const QString archivePath = QFileDialog::getOpenFileName(
         this,
         QStringLiteral("选择要替换/更新的压缩包"),
-        QStringLiteral("压缩包 (*.zip *.rar *.7z)"));
+        QString(),
+        QStringLiteral("压缩包 (*.zip *.rar *.7z)")
+    );
     if (archivePath.isEmpty()) {
         return;
     }

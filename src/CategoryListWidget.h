@@ -8,6 +8,12 @@
 #include <functional>
 
 class QMouseEvent;
+class QVariantAnimation;
+
+namespace CategoryListItemRole
+{
+constexpr int BackgroundPath = Qt::UserRole + 5;
+}
 
 class CategoryListWidget final : public QListWidget
 {
@@ -95,6 +101,9 @@ protected:
 
 private:
     void beginDrag();
+    void beginPressAnimation(QListWidgetItem* item);
+    void releasePressAnimation();
+    void clearPressAnimation();
     void showPreview(const QPoint& position);
     void movePreview(const QPoint& position);
     void updateDropTarget(const QPoint& position);
@@ -118,6 +127,8 @@ private:
     int dropMarker_ = 0;
     int dropInsertionIndex_ = 0;
     bool dragging_ = false;
+    QVariantAnimation* pressAnimation_ = nullptr;
+    QListWidgetItem* pressedAnimationItem_ = nullptr;
     QColor categoryCardTextColor_;
     QColor categoryCardSelectedTextColor_;
     QColor categoryCardCountColor_;

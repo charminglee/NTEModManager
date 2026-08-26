@@ -185,14 +185,14 @@ QString materialStyleSheet(Qt::ColorScheme colorScheme)
             qproperty-categoryCardNameBold: true;
         }
         #categoryList::item {
-            background: rgba(255, 255, 255, 155); 
+            background: rgba(255, 255, 255, 200);
             border: 2px solid rgba(255, 255, 255, 255);
             border-radius: 14px; 
             color: #000000; 
             padding: 0px;
         }
         #categoryList::item:hover { 
-            background: rgba(240, 247, 255, 225); 
+            background: rgba(240, 247, 255, 255);
             border: 2px solid rgba(255, 255, 255, 255);
             border-radius: 14px; 
             color: #003b6f; 

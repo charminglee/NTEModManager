@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(NteModManager VERSION 0.1.0 LANGUAGES CXX)
+project(NteModManager VERSION 1.0.0 LANGUAGES CXX)
+
+set(NTE_VERSION_BUILD 0)
 
 if(NOT WIN32)
     message(FATAL_ERROR "NteModManager currently supports Windows only.")
@@ -65,6 +67,13 @@ endif()
 
 qt_standard_project_setup()
 
+set(NTE_RC_FILE "${CMAKE_CURRENT_BINARY_DIR}/NteModManager.rc")
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/NteModManager.rc.in"
+    "${NTE_RC_FILE}"
+    @ONLY
+)
+
 set(NTE_PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/python")
 set(NTE_PYTHON_VENV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/.venv")
 set(NTE_ORIENTATION_MODEL_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/training/orientation/checkpoints/weighted_unfrozen/best.pt")
@@ -101,7 +110,7 @@ qt_add_executable(NteModManager WIN32
     src/main.cpp
     src/VisualRegionDetector.cpp
     src/VisualRegionDetector.h
-    NteModManager.rc
+    "${NTE_RC_FILE}"
 )
 
 qt_add_resources(NteModManager "branding"
@@ -182,6 +191,9 @@ add_custom_command(TARGET NteModManager POST_BUILD
         --release
         --no-translations
         "$<TARGET_FILE:NteModManager>"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/img/bg"
+        "$<TARGET_FILE_DIR:NteModManager>/img/bg"
     ${NTE_7ZIP_DEPLOY_COMMAND}
     COMMENT "Deploying Qt runtime libraries"
     VERBATIM

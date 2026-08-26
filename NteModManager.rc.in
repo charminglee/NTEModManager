@@ -1,0 +1,35 @@
+#include <windows.h>
+
+IDI_NTE_MOD_MANAGER ICON "@CMAKE_CURRENT_SOURCE_DIR@/img/nte-mod-manager.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,@NTE_VERSION_BUILD@
+ PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,@NTE_VERSION_BUILD@
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "NTE Mod Manager\0"
+            VALUE "FileDescription", "NTE Mod Manager\0"
+            VALUE "FileVersion", "@PROJECT_VERSION@.@NTE_VERSION_BUILD@\0"
+            VALUE "InternalName", "NteModManager.exe\0"
+            VALUE "OriginalFilename", "NteModManager.exe\0"
+            VALUE "ProductName", "NTE Mod Manager\0"
+            VALUE "ProductVersion", "@PROJECT_VERSION@.@NTE_VERSION_BUILD@\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 1200
+    END
+END

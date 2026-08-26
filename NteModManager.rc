@@ -1,3 +1,0 @@
-#include <windows.h>
-
-IDI_NTE_MOD_MANAGER ICON "img/nte-mod-manager.ico"
