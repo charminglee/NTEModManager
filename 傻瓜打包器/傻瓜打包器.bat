@@ -7,6 +7,7 @@ title 异环 (NTE) 5.6 傻瓜式一键 IO 封包工具
 :: ===================【只需修改这里】===================
 :: 你的 Mod 文件夹名字
 set "SOURCE_FOLDER=xg"
+set "SOURCE_DIRECTORY=%~1"
 :: 最终生成的 Mod 文件名
 set "FINAL_NAME=Mod_P"
 :: ======================================================
@@ -50,7 +51,11 @@ if not exist "%IMPORT_SCRIPT%" (
 
 :: 2. 清空并导入文件夹
 echo [1/5] 正在清空 xg\HT\Content 并导入文件夹...
-powershell.exe -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File "%IMPORT_SCRIPT%" -TargetDirectory "%CONTENT_FOLDER%"
+if defined SOURCE_DIRECTORY (
+    powershell.exe -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File "%IMPORT_SCRIPT%" -TargetDirectory "%CONTENT_FOLDER%" -SourceDirectory "%SOURCE_DIRECTORY%"
+) else (
+    powershell.exe -NoLogo -NoProfile -STA -ExecutionPolicy Bypass -File "%IMPORT_SCRIPT%" -TargetDirectory "%CONTENT_FOLDER%"
+)
 set "IMPORT_EXIT_CODE=%errorlevel%"
 
 if "%IMPORT_EXIT_CODE%"=="2" (

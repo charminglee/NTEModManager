@@ -17,6 +17,7 @@ public:
     [[nodiscard]] static QString pythonModelCache();
     [[nodiscard]] static QString gameLauncherPath();
     [[nodiscard]] static QString packagerDirectory();
+    [[nodiscard]] static bool autoUseLastPackagingPath();
     [[nodiscard]] static QSize windowSize();
     static void setWindowSize(const QSize& size);
     [[nodiscard]] static int modListSortOrder();

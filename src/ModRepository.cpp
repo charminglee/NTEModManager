@@ -657,6 +657,39 @@ OperationResult ModRepository::replacePackagedMod(const ModInfo& mod, const QStr
     return {true, QStringLiteral("已重新打包并替换 %1 的源文件").arg(mod.name)};
 }
 
+QString ModRepository::lastPackagingPath(const QString& modName) const
+{
+    if (modName.trimmed().isEmpty()) {
+        return {};
+    }
+
+    const QJsonObject mods = loadManifest(manifestPath()).value(QStringLiteral("mods")).toObject();
+    return QDir::fromNativeSeparators(
+        mods.value(modName).toObject().value(QStringLiteral("lastPackagingPath")).toString().trimmed());
+}
+
+OperationResult ModRepository::setLastPackagingPath(const QString& modName, const QString& path) const
+{
+    if (modName.trimmed().isEmpty()) {
+        return {false, QStringLiteral("无法保存空的模组名称。")};
+    }
+
+    QJsonObject manifest = loadManifest(manifestPath());
+    QJsonObject mods = manifest.value(QStringLiteral("mods")).toObject();
+    QJsonObject metadata = mods.value(modName).toObject();
+    if (path.trimmed().isEmpty()) {
+        metadata.remove(QStringLiteral("lastPackagingPath"));
+    } else {
+        metadata.insert(
+            QStringLiteral("lastPackagingPath"),
+            QDir::fromNativeSeparators(path).trimmed());
+    }
+    mods.insert(modName, metadata);
+    manifest.insert(QStringLiteral("version"), 1);
+    manifest.insert(QStringLiteral("mods"), mods);
+    return saveManifest(manifestPath(), manifest);
+}
+
 OperationResult ModRepository::addFromArchive(const ModInfo& mod, const QString& archivePath) const
 {
     const QFileInfo archiveInfo(archivePath);

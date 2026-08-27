@@ -13,6 +13,7 @@
 | `background_images_directory` | 背景图片目录。留空可禁用背景图片。 | `F:\pictures\真人` |
 | `game_launcher` | **Launch Game** 按钮启动的游戏启动器 | `E:\Neverness To Everness\NTELauncher.exe` |
 | `packager_directory` | 包含 `傻瓜打包器.bat` 和生成的打包文件的目录 | `E:\Neverness To Everness\Mods\ModManager\傻瓜打包器` |
+| `Preferences/auto_use_last_packaging_path` | 重新打包时是否自动使用该模组上次选择的源文件夹。设为 `0` 可每次重新选择。 | `1` |
 
 `[Categories] names` 设置以逗号分隔的角色名列表。模组名称必须符合 `角色名-二级名称` 或 `角色名-二级名称-三级名称` 格式，其中角色名必须在此列表中；不符合格式的模组会显示在 `其他` 分类中。特殊分类 `全部` 和 `其他` 始终可用，不要将它们添加到此设置中。
 
@@ -63,6 +64,7 @@ Qt 和 7-Zip 的路径保存在 `CMakeUserPresets.json` 中，首次使用时可
 - 每个压缩包都会被解压到 `Backups` 中独立的目录。如果压缩包中恰好包含一个顶层文件夹，则使用该文件夹作为模组根目录。
 - 只有在解压和状态记录都成功后，原始压缩包才会被永久删除，不会被移入回收站。
 - **Package Mod**（打包模组）会运行 `傻瓜打包器\傻瓜打包器.bat`。运行成功后，输入模组名称，程序会将 `Mod_P.pak`、`Mod_P.ucas` 和 `Mod_P.utoc` 复制到 `Backups` 中的新文件夹。
+- **重新打包**会为每个模组分别记住上次选择的源文件夹，并将路径保存到 `Backups\\.nte-mod-manager.json`；当 `Preferences/auto_use_last_packaging_path=1` 且该文件夹仍存在时，后续操作会直接复用它，不再弹出选择窗口。关闭该配置后，每次操作都会重新选择文件夹。
 - **Install**（安装）会在游戏的 `~mods` 文件夹中创建目录符号链接。链接存在期间，该按钮会被禁用。
 - **Uninstall**（卸载）只会移除该目录符号链接。不存在链接时，该按钮会被禁用。
 - **Delete**（删除）会移除对应的符号链接，永久删除备份文件夹，并刷新列表。

@@ -1,6 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$TargetDirectory
+    [string]$TargetDirectory,
+
+    [string]$SourceDirectory
 )
 
 function Get-NormalizedDirectoryPath {
@@ -232,10 +234,15 @@ try {
     Write-Host 'Target folder cleared.'
 
     $lastSelectedFolder = Get-LastSelectedFolder -StateFile $stateFile
-    $sourceDirectory = [NtePacker.NativeFolderPicker]::SelectFolder(
-        $lastSelectedFolder,
-        'Select a folder to import into xg\HT\Content'
-    )
+    $sourceDirectoryWasProvided = -not [string]::IsNullOrWhiteSpace($SourceDirectory)
+    if (-not $sourceDirectoryWasProvided) {
+        $sourceDirectory = [NtePacker.NativeFolderPicker]::SelectFolder(
+            $lastSelectedFolder,
+            'Select a folder to import into xg\HT\Content'
+        )
+    } else {
+        $sourceDirectory = $SourceDirectory
+    }
 
     if ([string]::IsNullOrEmpty($sourceDirectory)) {
         exit 2
@@ -260,7 +267,9 @@ try {
         throw 'The xg\HT\Content folder and its parent or child folders cannot be selected.'
     }
 
-    Save-LastSelectedFolder -StateFile $stateFile -SelectedFolder $sourceDirectory
+    if (-not $sourceDirectoryWasProvided) {
+        Save-LastSelectedFolder -StateFile $stateFile -SelectedFolder $sourceDirectory
+    }
 
     $folderName = Split-Path -Path $sourceDirectory -Leaf
     $destinationDirectory = Join-Path -Path $targetDirectory -ChildPath $folderName

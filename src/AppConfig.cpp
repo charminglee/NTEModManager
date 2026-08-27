@@ -77,6 +77,7 @@ void createDefaultConfig(const QString& filePath)
     settings.setValue(QStringLiteral("Preferences/window_size"), QSize(1315, 1000));
     settings.setValue(QStringLiteral("Preferences/mod_list_sort_order"), 1);
     settings.setValue(QStringLiteral("Preferences/mod_category_order"), defaultModCategoryOrder());
+    settings.setValue(QStringLiteral("Preferences/auto_use_last_packaging_path"), 1);
     settings.setValue(QStringLiteral("Debug/test_images"), 0);
     settings.sync();
 }
@@ -185,6 +186,12 @@ QString AppConfig::packagerDirectory()
     return configuredPath(
         QStringLiteral("Paths/packager_directory"),
         QStringLiteral("E:/Neverness To Everness/Mods/ModManager/傻瓜打包器"));
+}
+
+bool AppConfig::autoUseLastPackagingPath()
+{
+    QSettings settings(configFilePath(), QSettings::IniFormat);
+    return settings.value(QStringLiteral("Preferences/auto_use_last_packaging_path"), 1).toBool();
 }
 
 QSize AppConfig::windowSize()

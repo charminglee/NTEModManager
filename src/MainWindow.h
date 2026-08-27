@@ -121,6 +121,7 @@ private:
 
     void toggleDebugMode();
     void toggleUiVisibility();
+    void openCurrentBackground();
     void notifyStatus(const QString& statusText);
     void updateLogBottomButtonVisibility();
     void buildUi();

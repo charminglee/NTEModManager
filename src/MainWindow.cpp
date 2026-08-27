@@ -292,12 +292,19 @@ QString getTextInput(
 //     return dialog.exec() == QDialog::Accepted ? dialog.selectedFiles().value(0) : QString();
 // }
 
-OperationResult runPackager(const QString& batchPath, const QString& packageDirectory)
+OperationResult runPackager(
+    const QString& batchPath,
+    const QString& packageDirectory,
+    const QString& sourceDirectory = {})
 {
     QProcess process;
     process.setWorkingDirectory(packageDirectory);
     Log::info(QStringLiteral("启动打包脚本：%1").arg(batchPath));
-    process.start(QStringLiteral("cmd.exe"), {QStringLiteral("/c"), QDir::toNativeSeparators(batchPath)});
+    QStringList arguments = {QStringLiteral("/c"), QDir::toNativeSeparators(batchPath)};
+    if (!sourceDirectory.isEmpty()) {
+        arguments.append(QDir::toNativeSeparators(sourceDirectory));
+    }
+    process.start(QStringLiteral("cmd.exe"), arguments);
     if (!process.waitForStarted(10000)) {
         Log::error(QStringLiteral("无法启动打包脚本：%1").arg(process.errorString()));
         return {false, QStringLiteral("无法启动打包脚本：%1").arg(process.errorString())};
@@ -655,6 +662,30 @@ void MainWindow::toggleUiVisibility()
     root_->setVisible(!root_->isVisible());
 }
 
+void MainWindow::openCurrentBackground()
+{
+    if (backgroundWidget_ == nullptr || backgroundWidget_->background_.path.isEmpty()) {
+        notifyStatus(QStringLiteral("当前没有可打开的背景图"));
+        return;
+    }
+
+    const QString path = backgroundWidget_->background_.path;
+    if (!QFileInfo::exists(path)) {
+        Log::warning(QStringLiteral("当前背景图不存在：%1").arg(path));
+        notifyStatus(QStringLiteral("当前背景图不存在"));
+        return;
+    }
+
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(path))) {
+        Log::warning(QStringLiteral("无法使用系统默认方式打开背景图：%1").arg(path));
+        notifyStatus(QStringLiteral("无法打开当前背景图"));
+        return;
+    }
+
+    Log::info(QStringLiteral("已使用系统默认方式打开背景图：%1").arg(path));
+    notifyStatus(QStringLiteral("已打开当前背景图"));
+}
+
 void MainWindow::notifyStatus(const QString& statusText)
 {
     if (!operationInProgress_) {
@@ -705,6 +736,10 @@ void MainWindow::keyPressEvent(QKeyEvent* event)
             toggleDebugMode();
             event->accept();
             return;
+        case Qt::Key_F10:
+            openCurrentBackground();
+            event->accept();
+            return;
         case Qt::Key_F11:
             toggleUiVisibility();
             event->accept();
@@ -724,6 +759,10 @@ bool MainWindow::eventFilter(QObject* watched, QEvent* event)
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_F12 && keyEvent->modifiers() == Qt::NoModifier) {
             toggleDebugMode();
+            return true;
+        }
+        if (keyEvent->key() == Qt::Key_F10 && keyEvent->modifiers() == Qt::NoModifier) {
+            openCurrentBackground();
             return true;
         }
         if (keyEvent->key() == Qt::Key_Down) {
@@ -1917,10 +1956,32 @@ void MainWindow::repackageMod(const ModInfo& mod)
         return;
     }
 
+    QString sourceDirectory;
+    const QString lastPackagingPath = repository_.lastPackagingPath(mod.name);
+    if (AppConfig::autoUseLastPackagingPath() && QFileInfo(lastPackagingPath).isDir()) {
+        sourceDirectory = QFileInfo(lastPackagingPath).absoluteFilePath();
+    } else {
+        sourceDirectory = QFileDialog::getExistingDirectory(
+            this,
+            QStringLiteral("选择要重新打包的源文件夹"),
+            QFileInfo(lastPackagingPath).isDir() ? lastPackagingPath : QString(),
+            QFileDialog::ShowDirsOnly);
+        if (sourceDirectory.isEmpty()) {
+            notifyStatus(QStringLiteral("已取消重新打包"));
+            return;
+        }
+        sourceDirectory = QFileInfo(sourceDirectory).absoluteFilePath();
+        const OperationResult pathSaved = repository_.setLastPackagingPath(mod.name, sourceDirectory);
+        if (!pathSaved.success) {
+            showWarning(this, QStringLiteral("无法重新打包模组"), pathSaved.message);
+            return;
+        }
+    }
+
     runAsyncOperation(
         QStringLiteral("正在重新打包 %1...").arg(mod.name),
-        [batchPath, packageDirectory](const auto&) {
-            return runPackager(batchPath, packageDirectory);
+        [batchPath, packageDirectory, sourceDirectory](const auto&) {
+            return runPackager(batchPath, packageDirectory, sourceDirectory);
         },
         [this, mod, packageDirectory](const OperationResult& result) {
             if (!result.success) {
