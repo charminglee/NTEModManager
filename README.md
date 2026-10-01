@@ -12,7 +12,7 @@
 | `backups_directory` | 模组备份和管理器状态目录 | `E:\Neverness To Everness\Mods\Backups` |
 | `background_images_directory` | 背景图片目录。留空可禁用背景图片。 | `F:\pictures\真人` |
 | `game_launcher` | **Launch Game** 按钮启动的游戏启动器 | `E:\Neverness To Everness\NTELauncher.exe` |
-| `packager_directory` | 包含 `傻瓜打包器.bat` 和生成的打包文件的目录 | `E:\Neverness To Everness\Mods\ModManager\傻瓜打包器` |
+| `packager_directory` | 包含 `傻瓜打包器.bat` 和生成的打包文件的目录 | `E:\Projects\ModManager\傻瓜打包器` |
 | `Preferences/auto_use_last_packaging_path` | 重新打包时是否自动使用该模组上次选择的源文件夹。设为 `0` 可每次重新选择。 | `1` |
 
 `[Categories] names` 设置以逗号分隔的角色名列表。模组名称必须符合 `角色名-二级名称` 或 `角色名-二级名称-三级名称` 格式，其中角色名必须在此列表中；不符合格式的模组会显示在 `其他` 分类中。特殊分类 `全部` 和 `其他` 始终可用，不要将它们添加到此设置中。
@@ -57,6 +57,10 @@ Qt 和 7-Zip 的路径保存在 `CMakeUserPresets.json` 中，首次使用时可
 需要关注的配置项是：`NTE_QT_ROOT` 指向包含 `lib/cmake/Qt6` 的 Qt kit 根目录，`NTE_7ZIP_PATH` 指向 `7z.exe` 或 `7zz.exe`。
 
 构建过程会将独立 Python 运行时、环境包、检测脚本、训练得到的朝向检查点以及缓存的 YOLO 文件复制到 `build\Release\python`。可执行文件会根据自身位置查找这些文件，因此 `NteModManager.ini` 中不需要保存 Python 路径。如果缓存中没有 YOLO 模型，Python 会在首次使用时下载。
+
+同一构建还会生成无界面的 `NteBackgroundImageServer.exe`。服务自身采用单例互斥体，重复启动的服务进程会退出；该互斥体与 `NteModManager` 不同，两者可以同时运行。服务默认监听 `127.0.0.1:48126`，仅接受本机连接；可以用 `--port 48127` 指定其他端口。
+
+请求接口为 `GET /background?width=<窗口宽度>&height=<窗口高度>`，例如 `http://127.0.0.1:48126/background?width=1315&height=1000`。成功时响应体是 PNG 图片，像素尺寸与请求的宽、高一致；每次请求从 `background_images_directory` 中随机选择图片，并复用桌面版的 AI 检测与裁剪逻辑。请求错误以 HTTP 状态码和 JSON `error` 字段返回；宽或高不能超过 16384，且总像素不能超过 64 Mi。
 
 ## 使用说明
 

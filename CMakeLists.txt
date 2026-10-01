@@ -21,7 +21,7 @@ if(NTE_QT_ROOT)
     list(PREPEND CMAKE_PREFIX_PATH "${NTE_QT_ROOT}")
 endif()
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Network)
 
 get_filename_component(NTE_QT_ROOT "${Qt6_DIR}/../../.." ABSOLUTE)
 find_program(NTE_WINDEPLOYQT_EXECUTABLE
@@ -99,6 +99,8 @@ endif()
 
 qt_add_executable(NteModManager WIN32
     src/AppConfig.cpp
+    src/BackgroundImageCatalog.cpp
+    src/BackgroundImageCatalog.h
     src/CategoryListWidget.cpp
     src/CategoryListWidget.h
     src/MainWindow.cpp
@@ -119,6 +121,19 @@ qt_add_resources(NteModManager "branding"
 )
 
 target_link_libraries(NteModManager PRIVATE Qt6::Widgets)
+
+qt_add_executable(NteBackgroundImageServer WIN32
+    src/AppConfig.cpp
+    src/BackgroundImageCatalog.cpp
+    src/BackgroundImageCatalog.h
+    src/BackgroundImageServer.cpp
+    src/Logger.cpp
+    src/Logger.h
+    src/VisualRegionDetector.cpp
+    src/VisualRegionDetector.h
+)
+
+target_link_libraries(NteBackgroundImageServer PRIVATE Qt6::Gui Qt6::Network)
 
 set(NTE_PYTHON_PACKAGE_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/python")
 set(NTE_PYTHON_PACKAGE_MARKER "${NTE_PYTHON_PACKAGE_DIR}/.package-complete")
@@ -185,6 +200,7 @@ add_custom_command(
 
 add_custom_target(NteModManagerPythonPackage DEPENDS "${NTE_PYTHON_PACKAGE_MARKER}")
 add_dependencies(NteModManager NteModManagerPythonPackage)
+add_dependencies(NteBackgroundImageServer NteModManagerPythonPackage)
 
 add_custom_command(TARGET NteModManager POST_BUILD
     COMMAND "${NTE_WINDEPLOYQT_EXECUTABLE}"
@@ -199,7 +215,21 @@ add_custom_command(TARGET NteModManager POST_BUILD
     VERBATIM
 )
 
+add_custom_command(TARGET NteBackgroundImageServer POST_BUILD
+    COMMAND "${NTE_WINDEPLOYQT_EXECUTABLE}"
+        --release
+        --no-translations
+        "$<TARGET_FILE:NteBackgroundImageServer>"
+    COMMENT "Deploying Qt runtime libraries for the background image server"
+    VERBATIM
+)
+
 target_compile_definitions(NteModManager PRIVATE
+    UNICODE
+    _UNICODE
+)
+
+target_compile_definitions(NteBackgroundImageServer PRIVATE
     UNICODE
     _UNICODE
 )

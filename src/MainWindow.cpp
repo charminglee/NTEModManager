@@ -1226,9 +1226,10 @@ void MainWindow::refreshCategories()
 
     QSignalBlocker blocker(categoryList_);
     categoryList_->clear();
-    QStringList displayCategories{QStringLiteral("全部")};
+    QStringList displayCategories{};
     displayCategories += categoryOrder_;
     displayCategories.append(QStringLiteral("其他"));
+    displayCategories.append(QStringLiteral("全部"));
     for (const QString& category : displayCategories) {
         auto* item = new QListWidgetItem(categoryList_);
         item->setData(Qt::UserRole, category);
