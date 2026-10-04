@@ -9,7 +9,7 @@
 | 配置键 | 用途 | 默认值 |
 | --- | --- | --- |
 | `mods_directory` | 游戏模组安装目录 | `E:\Neverness To Everness\Client\WindowsNoEditor\HT\Content\Paks\~mods` |
-| `backups_directory` | 模组备份和管理器状态目录 | `E:\Neverness To Everness\Mods\Backups` |
+| `backups_directory` | 模组备份和管理器状态目录 | `E:\NteMod\Backups` |
 | `background_images_directory` | 背景图片目录。留空可禁用背景图片。 | `F:\pictures\真人` |
 | `game_launcher` | **Launch Game** 按钮启动的游戏启动器 | `E:\Neverness To Everness\NTELauncher.exe` |
 | `packager_directory` | 包含 `傻瓜打包器.bat` 和生成的打包文件的目录 | `E:\Projects\ModManager\傻瓜打包器` |

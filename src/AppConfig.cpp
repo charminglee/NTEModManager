@@ -12,6 +12,7 @@ constexpr auto kConfigFileName = "NteModManager.ini";
 QStringList defaultModCategories()
 {
     return {
+        QStringLiteral("黑羽"),
         QStringLiteral("灵可"),
         QStringLiteral("残虹"),
         QStringLiteral("安魂曲"),
@@ -35,21 +36,22 @@ QStringList defaultModCategories()
 QStringList defaultModCategoryOrder()
 {
     return {
+        QStringLiteral("黑羽"),
+        QStringLiteral("灵可"),
         QStringLiteral("残虹"),
+        QStringLiteral("伊洛伊"),
         QStringLiteral("真红"),
         QStringLiteral("安魂曲"),
         QStringLiteral("娜娜莉"),
-        QStringLiteral("伊洛伊"),
         QStringLiteral("小吱"),
         QStringLiteral("薄荷"),
         QStringLiteral("九原"),
         QStringLiteral("达芙蒂尔"),
+        QStringLiteral("浔"),
+        QStringLiteral("主角"),
         QStringLiteral("哈尼娅"),
         QStringLiteral("法帝娅"),
         QStringLiteral("哈索尔"),
-        QStringLiteral("主角"),
-        QStringLiteral("灵可"),
-        QStringLiteral("浔"),
         QStringLiteral("早雾"),
         QStringLiteral("海月"),
     };
@@ -63,10 +65,10 @@ void createDefaultConfig(const QString& filePath)
         QStringLiteral("E:/Neverness To Everness/Client/WindowsNoEditor/HT/Content/Paks/~mods"));
     settings.setValue(
         QStringLiteral("Paths/backups_directory"),
-        QStringLiteral("E:/Neverness To Everness/Mods/Backups"));
+        QStringLiteral("E:/NteMod/Backups"));
     settings.setValue(
         QStringLiteral("Paths/background_images_directory"),
-        QStringLiteral("F:/pictures/真人"));
+        QStringLiteral("D:/pictures/真人"));
     settings.setValue(
         QStringLiteral("Paths/game_launcher"),
         QStringLiteral("E:/Neverness To Everness/NTELauncher.exe"));
@@ -133,7 +135,7 @@ QString AppConfig::backupsDirectory()
 {
     return configuredPath(
         QStringLiteral("Paths/backups_directory"),
-        QStringLiteral("E:/Neverness To Everness/Mods/Backups"));
+        QStringLiteral("E:/NteMod/Backups"));
 }
 
 QString AppConfig::backgroundImagesDirectory()
