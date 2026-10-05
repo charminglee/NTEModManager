@@ -7,6 +7,7 @@
 class AppConfig
 {
 public:
+    [[nodiscard]] static QString configFilePath();
     [[nodiscard]] static QString modsDirectory();
     [[nodiscard]] static QString backupsDirectory();
     [[nodiscard]] static QString backgroundImagesDirectory();
@@ -18,6 +19,7 @@ public:
     [[nodiscard]] static QString gameLauncherPath();
     [[nodiscard]] static QString packagerDirectory();
     [[nodiscard]] static bool autoUseLastPackagingPath();
+    [[nodiscard]] static QStringList exclusiveInstallExemptGroups();
     [[nodiscard]] static QSize windowSize();
     static void setWindowSize(const QSize& size);
     [[nodiscard]] static int modListSortOrder();

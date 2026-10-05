@@ -80,11 +80,12 @@ void createDefaultConfig(const QString& filePath)
     settings.setValue(QStringLiteral("Preferences/mod_list_sort_order"), 1);
     settings.setValue(QStringLiteral("Preferences/mod_category_order"), defaultModCategoryOrder());
     settings.setValue(QStringLiteral("Preferences/auto_use_last_packaging_path"), 1);
+    settings.setValue(QStringLiteral("Preferences/exclusive_install_exempt_groups"), QStringList());
     settings.setValue(QStringLiteral("Debug/test_images"), 0);
     settings.sync();
 }
 
-QString configFilePath()
+QString ensureConfigFilePath()
 {
     const QString filePath = QDir(QCoreApplication::applicationDirPath()).filePath(
         QString::fromLatin1(kConfigFileName));
@@ -96,7 +97,7 @@ QString configFilePath()
 
 QString configuredPath(const QString& key, const QString& fallback, bool allowEmpty = false)
 {
-    QSettings settings(configFilePath(), QSettings::IniFormat);
+    QSettings settings(ensureConfigFilePath(), QSettings::IniFormat);
     const QString configured = settings.value(key, fallback).toString().trimmed();
     if (configured.isEmpty() && !allowEmpty) {
         return fallback;
@@ -106,7 +107,7 @@ QString configuredPath(const QString& key, const QString& fallback, bool allowEm
 
 QStringList configuredList(const QString& key, const QStringList& fallback)
 {
-    QSettings settings(configFilePath(), QSettings::IniFormat);
+    QSettings settings(ensureConfigFilePath(), QSettings::IniFormat);
     const QVariant configuredValue = settings.value(key);
     if (!configuredValue.isValid()) {
         return fallback;
@@ -122,6 +123,11 @@ QStringList configuredList(const QString& key, const QStringList& fallback)
     values.removeAll(QString());
     return values;
 }
+}
+
+QString AppConfig::configFilePath()
+{
+    return ensureConfigFilePath();
 }
 
 QString AppConfig::modsDirectory()
@@ -194,6 +200,11 @@ bool AppConfig::autoUseLastPackagingPath()
 {
     QSettings settings(configFilePath(), QSettings::IniFormat);
     return settings.value(QStringLiteral("Preferences/auto_use_last_packaging_path"), 1).toBool();
+}
+
+QStringList AppConfig::exclusiveInstallExemptGroups()
+{
+    return configuredList(QStringLiteral("Preferences/exclusive_install_exempt_groups"), {});
 }
 
 QSize AppConfig::windowSize()

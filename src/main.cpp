@@ -73,10 +73,11 @@ void logStartupInformation(const QStringList& backgroundImagePaths)
         .arg(AppConfig::gameLauncherPath())
         .arg(AppConfig::packagerDirectory())
     );
-    Log::info(QStringLiteral("配置：mod_list_sort_order=%1，mod_categories=%2，mod_category_order=%3")
+    Log::info(QStringLiteral("配置：mod_list_sort_order=%1，mod_categories=%2，mod_category_order=%3，exclusive_install_exempt_groups=%4")
         .arg(AppConfig::modListSortOrder())
         .arg(AppConfig::modCategories().join(QStringLiteral(",")))
         .arg(AppConfig::modCategoryOrder().join(QStringLiteral(",")))
+        .arg(AppConfig::exclusiveInstallExemptGroups().join(QStringLiteral(",")))
     );
 }
 

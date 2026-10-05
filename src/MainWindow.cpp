@@ -335,7 +335,8 @@ OperationResult installModExclusively(
 {
     const QString categoryName = ModListLogic::categoryForMod(mod, categories);
     const QString secondaryName = ModListLogic::secondaryNameForMod(mod, categories);
-    if (secondaryName.isEmpty()) {
+    if (secondaryName.isEmpty()
+        || AppConfig::exclusiveInstallExemptGroups().contains(secondaryName)) {
         return repository.install(mod);
     }
 
@@ -1181,6 +1182,25 @@ void MainWindow::buildUi()
     addTextShadow(activityLabel_);
     activityLayout->addWidget(activityLabel_);
     activityLayout->addStretch();
+    auto* openConfigButton = new QPushButton(
+        style()->standardIcon(QStyle::SP_FileDialogContentsView),
+        QStringLiteral("配置"),
+        root_
+    );
+    openConfigButton->setObjectName(QStringLiteral("modListActionButton"));
+    openConfigButton->setToolTip(QStringLiteral("打开配置文件"));
+    openConfigButton->setCursor(Qt::PointingHandCursor);
+    connect(openConfigButton, &QPushButton::clicked, this, [this] {
+        const QString path = AppConfig::configFilePath();
+        if (!QDesktopServices::openUrl(QUrl::fromLocalFile(path))) {
+            Log::warning(QStringLiteral("无法使用系统默认方式打开配置文件：%1").arg(path));
+            notifyStatus(QStringLiteral("无法打开配置文件"));
+            return;
+        }
+        Log::info(QStringLiteral("已使用系统默认方式打开配置文件：%1").arg(path));
+        notifyStatus(QStringLiteral("已打开配置文件"));
+    });
+    activityLayout->addWidget(openConfigButton);
     logButton_ = new QPushButton(
         style()->standardIcon(QStyle::SP_MessageBoxInformation),
         QStringLiteral("日志"),
