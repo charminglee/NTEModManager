@@ -21,11 +21,11 @@ LOGGER = logging.getLogger("visual_region_detector")
 
 
 def configure_logging() -> None:
-    for stream in (sys.stdout, sys.stderr):
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure is not None:
             try:
-                reconfigure(encoding="utf-8", errors="backslashreplace")
+                stream.reconfigure(encoding="utf-8", errors="backslashreplace")
             except (OSError, ValueError):
                 pass
     logging.basicConfig(

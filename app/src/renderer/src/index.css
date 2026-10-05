@@ -1,0 +1,306 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 16% 5%;
+    --foreground: 240 10% 96%;
+    --card: 240 13% 8%;
+    --card-foreground: 240 10% 96%;
+    --popover: 240 14% 7%;
+    --popover-foreground: 240 10% 96%;
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 10% 14%;
+    --secondary-foreground: 240 8% 84%;
+    --muted: 240 10% 14%;
+    --muted-foreground: 240 7% 60%;
+    --accent: 258 36% 17%;
+    --accent-foreground: 258 90% 86%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 152 60% 52%;
+    --success-foreground: 152 90% 8%;
+    --border: 240 10% 15%;
+    --input: 240 10% 17%;
+    --ring: 258 90% 66%;
+    --radius: 0.75rem;
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
+  }
+
+  /* 浅色模式:跟随系统 prefers-color-scheme 自动切换 */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --background: 260 40% 96%;
+      --foreground: 247 25% 13%;
+      --card: 0 0% 99%;
+      --card-foreground: 247 25% 13%;
+      --popover: 0 0% 99%;
+      --popover-foreground: 247 25% 13%;
+      --primary: 258 78% 54%;
+      --primary-foreground: 0 0% 100%;
+      --secondary: 258 16% 90%;
+      --secondary-foreground: 250 14% 30%;
+      --muted: 258 16% 90%;
+      --muted-foreground: 248 10% 40%;
+      --accent: 258 55% 92%;
+      --accent-foreground: 258 60% 36%;
+      --destructive: 0 72% 46%;
+      --destructive-foreground: 0 0% 98%;
+      --success: 152 72% 30%;
+      --success-foreground: 0 0% 98%;
+      --border: 250 16% 85%;
+      --input: 250 14% 80%;
+      --ring: 258 78% 54%;
+      --shadow-card: 0 8px 32px rgba(30, 20, 60, 0.14);
+    }
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    user-select: none;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.35);
+  }
+}
+
+@layer utilities {
+  /* 悬浮在 AI 背景图之上的半透明面板(毛玻璃模糊已按要求移除,保留透明效果) */
+  .glass {
+    background: hsl(var(--foreground) / 0.055);
+    border: 1px solid hsl(var(--foreground) / 0.09);
+  }
+
+  .glass-strong {
+    background: hsl(var(--background) / 0.55);
+    border: 1px solid hsl(var(--foreground) / 0.1);
+  }
+
+  /* 液态玻璃面板底色:折射与高光由 vaso 的玻璃层负责,这里只铺适度的底色保证可读性 */
+  .liquid {
+    background: hsl(var(--background) / 0.42);
+    border: 1px solid hsl(var(--foreground) / 0.08);
+  }
+
+  @media (prefers-color-scheme: light) {
+    .liquid {
+      background: hsl(var(--background) / 0.5);
+    }
+  }
+
+  /* 对话框等浮层专用:浅色下提高不透明度避免背景图透出显得发暗 */
+  .glass-dialog {
+    background: hsl(var(--background) / 0.55);
+    border: 1px solid hsl(var(--foreground) / 0.1);
+  }
+
+  @media (prefers-color-scheme: light) {
+    .glass-dialog {
+      background: hsl(var(--card) / 0.88);
+      border-color: hsl(var(--foreground) / 0.12);
+    }
+  }
+
+  /* 毛玻璃:纯 backdrop-filter,渲染开销远低于液态玻璃,用于对话框等浮层 */
+  .frosted {
+    backdrop-filter: blur(16px);
+  }
+
+  /* 液态玻璃关闭时的高透毛玻璃回退:底色近乎全透,靠 backdrop 模糊提背景保证可读性。
+     需定义在 .glass / .liquid 之后,回退时才能覆盖它们的底色 */
+  .frosted-hi {
+    backdrop-filter: blur(20px) saturate(1.5);
+    background: hsl(var(--background) / 0.09);
+    border-color: hsl(var(--foreground) / 0.08);
+  }
+
+  @media (prefers-color-scheme: light) {
+    .frosted-hi {
+      background: hsl(var(--background) / 0.22);
+    }
+  }
+
+  /* F11 隐藏/恢复 UI 的面板级淡出。不能在玻璃面板的祖先上过渡 opacity:
+     祖先 opacity<1(过渡进行中)会成为 backdrop root,backdrop-filter 采样不到子树外的
+     背景图,动画结束祖先恢复透明度时毛玻璃才瞬间「接上」,非常突兀。
+     因此淡出做在面板根上:根自身只过渡底色/边框/backdrop-filter(自身滤镜全程有效),
+     直接子元素各自过渡 opacity,玻璃层的背景采样不受任何祖先影响 */
+  .ui-fade {
+    transition:
+      background-color 300ms,
+      border-color 300ms,
+      backdrop-filter 300ms;
+  }
+
+  .ui-fade.ui-fade-hidden {
+    background-color: transparent;
+    border-color: transparent;
+    backdrop-filter: none;
+  }
+
+  /* 子元素的淡入淡出用 animation 而非 transition:transition 会整体覆盖子元素
+     自己的 transition 声明(如模组卡片展开区的 grid-template-rows 过渡) */
+  @keyframes ui-child-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ui-child-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  .ui-fade > * {
+    animation: ui-child-fade-in 300ms ease-out;
+  }
+
+  .ui-fade.ui-fade-hidden > * {
+    animation: ui-child-fade-out 300ms ease-out forwards;
+  }
+
+  /* 弹层玻璃面板(对话框/下拉菜单)的进入/退出淡出,与 ui-fade 同理:
+     opacity 动画不能落在玻璃元素的祖先上,否则动画期间 backdrop root 收窄,
+     毛玻璃要等动画结束才突然出现。进入时根的底色用 keyframe-from 淡入、
+     子元素各自淡入(backdrop 模糊从第一帧就在,始终不跳变);
+     退出由祖先 radix 容器的 data-state=closed 触发反向过渡 */
+  @keyframes ui-pop-in {
+    from {
+      background-color: transparent;
+      border-color: transparent;
+    }
+  }
+
+  @keyframes ui-pop-children-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .ui-fade-popover {
+    animation: ui-pop-in 150ms ease-out;
+  }
+
+  .ui-fade-popover > * {
+    animation: ui-pop-children-in 150ms ease-out;
+  }
+
+  [data-state='closed'] .ui-fade-popover,
+  [data-state='closed'].ui-fade-popover {
+    background-color: transparent;
+    border-color: transparent;
+    /* 模糊也随退出过渡归零,否则会留下一块没有内容的毛玻璃残影 */
+    backdrop-filter: blur(0);
+    transition:
+      background-color 150ms,
+      border-color 150ms,
+      backdrop-filter 150ms,
+      box-shadow 150ms;
+  }
+
+  /* 投影同样参与淡出;目标值须与各阴影类形状一致(长度数相同)才能插值,否则会跳变 */
+  [data-state='closed'] .shadow-card.ui-fade-popover,
+  [data-state='closed'].shadow-card.ui-fade-popover {
+    box-shadow: 0 8px 32px transparent;
+  }
+
+  [data-state='closed'] .ui-fade-popover > *,
+  [data-state='closed'].ui-fade-popover > * {
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+
+  /* 模组卡片推入动画(从右往左),首次进入视口才播放:列表一次性渲染上百张卡,
+     若按挂载时机播放,视口外的卡动画白白放完,滚动下来的都是播完的静态卡。
+     卡片挂载即处于等待态(容器右移 + 内容透明),共享 IntersectionObserver 触发后
+     整体置换为播放态——等待态由首帧渲染直接携带,不会先定格再跳位。
+     容器只动 transform——opacity 落在玻璃层的祖先上会把 backdrop 采样范围收窄到
+     卡片自身;子元素(含 vaso 玻璃层,自身 opacity 不影响其采样)各自淡入。
+     同批进入视口的卡片经 --card-enter-delay(观察器按批内序号写入)交错推入 */
+  @keyframes card-slide-in {
+    from {
+      transform: translateX(64px);
+    }
+  }
+
+  @keyframes card-children-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .card-wait {
+    transform: translateX(64px);
+  }
+
+  .card-children-wait > * {
+    opacity: 0;
+  }
+
+  .card-go {
+    animation: card-slide-in 500ms cubic-bezier(0.33, 1, 0.68, 1) backwards;
+    animation-delay: var(--card-enter-delay, 0ms);
+  }
+
+  .card-enter > * {
+    animation: card-children-in 500ms ease-out backwards;
+    animation-delay: var(--card-enter-delay, 0ms);
+  }
+
+  .text-shadow-soft {
+    text-shadow: 0 1px 8px rgb(0 0 0 / 0.55);
+  }
+
+  @media (prefers-color-scheme: light) {
+    .text-shadow-soft {
+      text-shadow: 0 1px 6px rgb(0 0 0 / 0.22);
+    }
+  }
+}
+
+/* 细滚动条 */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--foreground) / 0.14);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground) / 0.26);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 背景轮播交叉淡化(对应原版 900ms InOutCubic) */
+@keyframes nte-bg-crossfade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

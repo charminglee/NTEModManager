@@ -1,0 +1,7 @@
+node_modules
+out
+dist
+*.local
+NteModManager.ini
+smoke-*.png
+electron-stderr.log

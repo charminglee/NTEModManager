@@ -1,0 +1,25 @@
+appId: com.nuoyan.nte-mod-manager
+productName: NteModManager
+directories:
+  output: dist
+files:
+  - out/**
+extraResources:
+  - from: ../img/bg
+    to: category-bg
+  - from: ../img/nte-mod-manager.ico
+    to: nte-mod-manager.ico
+  # 视觉识别(Python 桥)资源:脚本、姿态模型与方向模型
+  - from: ../src/python/visual_region_detector.py
+    to: python/visual_region_detector.py
+  - from: ../yolo26x-pose.pt
+    to: python/model-cache/yolo26x-pose.pt
+  - from: ../training/orientation/checkpoints/weighted_unfrozen/best.pt
+    to: python/orientation-model/best.pt
+asar: true
+win:
+  icon: ../img/nte-mod-manager.ico
+  target:
+    - target: dir
+      arch:
+        - x64
