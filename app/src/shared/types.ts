@@ -99,10 +99,6 @@ export interface AppConfigData {
   categories: string[]
   categoryOrder: string[]
   sortOrder: SortOrder
-  windowSize: [number, number] | null
-  /** 窗口左上角位置;首次启动(配置中无记录)时为 null,由系统默认摆放 */
-  windowPosition: [number, number] | null
-  windowMaximized: boolean
   testImagesEnabled: boolean
   /** 显示 FPS 计数器(性能诊断);NTEMM_FPS=1 环境变量可强制开启 */
   fpsCounterEnabled: boolean

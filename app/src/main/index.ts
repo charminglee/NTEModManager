@@ -1,8 +1,8 @@
-import { BrowserWindow, Menu, app, nativeTheme, protocol, screen } from 'electron'
+import { BrowserWindow, Menu, app, nativeTheme, protocol } from 'electron'
 import { existsSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
-import { configFilePath, getAppConfig, setWindowState, type WindowState } from './config'
+import { configFilePath, getAppConfig } from './config'
 import { logger } from './logger'
 import { TEST_IMAGES_ROOT, decodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
@@ -63,37 +63,23 @@ function windowIcon(): string | null {
   return existsSync(candidate) ? candidate : null
 }
 
-/** 窗口矩形与任一显示器工作区有重叠才算有效,防止拔掉显示器后窗口开到屏幕外。 */
-function isPositionVisible(state: { x: number; y: number; width: number; height: number }): boolean {
-  return screen.getAllDisplays().some((display) => {
-    const { x, y, width, height } = display.workArea
-    return state.x + state.width > x && state.x < x + width && state.y + state.height > y && state.y < y + height
-  })
-}
-
 function createWindow(): void {
   // 深浅色跟随系统;NTEMM_FORCE_THEME=light|dark 可强制指定(用于冒烟测试)。
   const forcedTheme = process.env.NTEMM_FORCE_THEME
   nativeTheme.themeSource = forcedTheme === 'light' || forcedTheme === 'dark' ? forcedTheme : 'system'
   const backgroundColor = nativeTheme.shouldUseDarkColors ? '#0a0a12' : '#f1f0f7'
 
-  const config = getAppConfig()
-  const [width, height] = config.windowSize ?? [1315, 1000]
   const iconPath = windowIcon()
 
-  const savedBounds =
-    config.windowPosition && config.windowSize
-      ? { x: config.windowPosition[0], y: config.windowPosition[1], width, height }
-      : null
-  const restoreBounds = savedBounds && isPositionVisible(savedBounds) ? savedBounds : null
-
   mainWindow = new BrowserWindow({
-    width,
-    height,
+    // 窗口位置/尺寸/最大化的记忆交给 Electron 内置持久化(Electron 44+):
+    // name 是状态存取的键,缺省尺寸仅在首次启动(无持久化记录)时生效
+    name: 'main',
+    windowStatePersistence: true,
+    width: 1315,
+    height: 1000,
     minWidth: 940,
     minHeight: 600,
-    x: restoreBounds?.x,
-    y: restoreBounds?.y,
     show: false,
     autoHideMenuBar: true,
     backgroundColor,
@@ -106,9 +92,6 @@ function createWindow(): void {
       spellcheck: false
     }
   })
-  if (config.windowMaximized) {
-    mainWindow.maximize()
-  }
   setMainWindowProvider(() => mainWindow)
 
   mainWindow.on('ready-to-show', () => {
@@ -164,18 +147,7 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('close', () => {
-    if (!mainWindow) {
-      return
-    }
-    // getNormalBounds 在最大化时也返回还原状态的矩形,配合 isMaximized 完整还原上次状态
-    const { x, y, width, height } = mainWindow.getNormalBounds()
-    const state: WindowState = { x, y, width, height, maximized: mainWindow.isMaximized() }
-    if (isPositionVisible(state)) {
-      setWindowState(state)
-    }
-  })
-
+  // 窗口位置/尺寸由 windowStatePersistence 自动持久化,无需在 close 时手动保存
   mainWindow.on('closed', () => {
     mainWindow = null
   })

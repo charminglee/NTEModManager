@@ -145,7 +145,6 @@ function createDefaultConfig(filePath: string): void {
     names: DEFAULT_MOD_CATEGORIES.join(',')
   }
   ini.Preferences = {
-    window_size: '1315x1000',
     mod_list_sort_order: String(SortOrder.NameAscending),
     mod_category_order: DEFAULT_CATEGORY_ORDER.join(','),
     auto_use_last_packaging_path: '1',
@@ -185,13 +184,6 @@ function deriveGameDirectory(modsDirectory: string, gameLauncher: string): strin
 
 export function getAppConfig(): AppConfigData {
   const ini = readIni()
-  const windowSizeRaw = ini.Preferences?.window_size
-  let windowSize: [number, number] | null = null
-  const sizeMatch = /^(\d+)x(\d+)$/.exec(windowSizeRaw ?? '')
-  if (sizeMatch) {
-    windowSize = [Number(sizeMatch[1]), Number(sizeMatch[2])]
-  }
-
   const modsDirectory = getPath('mods_directory', `${DEFAULT_GAME_DIRECTORY}/${GAME_MODS_SUBPATH}`)
   const gameLauncher = getPath('game_launcher', `${DEFAULT_GAME_DIRECTORY}/${GAME_LAUNCHER_FILENAME}`)
 
@@ -208,9 +200,6 @@ export function getAppConfig(): AppConfigData {
     categories: getList('Categories', 'names', DEFAULT_MOD_CATEGORIES),
     categoryOrder: getList('Preferences', 'mod_category_order', DEFAULT_CATEGORY_ORDER),
     sortOrder: clampSortOrder(getInt('Preferences', 'mod_list_sort_order', SortOrder.NameAscending)),
-    windowSize,
-    windowPosition: readWindowPosition(ini),
-    windowMaximized: getBool('Preferences', 'window_maximized', false),
     testImagesEnabled: getBool('Debug', 'test_images', false),
     // 冒烟测量工具可用 NTEMM_FPS=1 强制开启,不受配置开关影响
     fpsCounterEnabled:
@@ -253,16 +242,6 @@ function getLiquidGlassConfig(ini: ReturnType<typeof parseIni>): LiquidGlassConf
   return result
 }
 
-/** 读取持久化的窗口位置;任一坐标缺失或非法时返回 null。 */
-function readWindowPosition(ini: ReturnType<typeof parseIni>): [number, number] | null {
-  const x = Number.parseInt(ini.Preferences?.window_x ?? '', 10)
-  const y = Number.parseInt(ini.Preferences?.window_y ?? '', 10)
-  if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    return null
-  }
-  return [x, y]
-}
-
 function clampSortOrder(value: number): SortOrder {
   if (value < SortOrder.InstalledFirst || value > SortOrder.SizeSmallestFirst) {
     return SortOrder.NameAscending
@@ -282,14 +261,6 @@ export function setCategoryOrder(categoryOrder: string[]): void {
     ...readIni().Preferences,
     mod_category_order: categoryOrder.join(',')
   })
-}
-
-export interface WindowState {
-  x: number
-  y: number
-  width: number
-  height: number
-  maximized: boolean
 }
 
 // ============ 视觉识别(Python 桥)路径 ============
@@ -361,17 +332,6 @@ export function pythonModelCache(): string {
     return repoRoot()
   }
   return join(process.resourcesPath, 'python/model-cache')
-}
-
-/** 关闭窗口时持久化窗口状态;最大化时仍记录还原后的尺寸与位置。 */
-export function setWindowState(state: WindowState): void {
-  writeSection('Preferences', {
-    ...readIni().Preferences,
-    window_size: `${state.width}x${state.height}`,
-    window_x: String(state.x),
-    window_y: String(state.y),
-    window_maximized: state.maximized ? '1' : '0'
-  })
 }
 
 const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {

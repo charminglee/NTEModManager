@@ -305,9 +305,6 @@ const config: AppConfigData = {
   categories: [...CATEGORIES],
   categoryOrder: [],
   sortOrder: SortOrder.InstalledFirst,
-  windowSize: null,
-  windowPosition: null,
-  windowMaximized: false,
   testImagesEnabled: true,
   fpsCounterEnabled: false,
   liquidGlass: { ...LIQUID_GLASS_DEFAULTS }
