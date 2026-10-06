@@ -79,6 +79,16 @@
 }
 
 @layer utilities {
+  /* Chromium 139+(Electron 44)的 corner-shape:圆角改为连续曲率(squircle),
+     与系统原生控件的 Apple 风格圆角一致,视觉上比普通圆弧更饱满。
+   * 仅排除 vaso 的宿主([data-vaso-root])与玻璃层([data-vaso]):vaso 按 border-radius
+     测量自绘玻璃圆角(折射贴图/高光描边),改这两个元素的形状会与玻璃层错位;
+   * 玻璃关闭时 LiquidGlass 走 frosted-hi 回退(宿主无 data-vaso-root),正常命中本规则;
+   * 面板内部的控件与 vaso 测量无关,跟随 squircle */
+  *:not([data-vaso-root]):not([data-vaso]) {
+    corner-shape: squircle;
+  }
+
   /* 悬浮在 AI 背景图之上的半透明面板(毛玻璃模糊已按要求移除,保留透明效果) */
   .glass {
     background: hsl(var(--foreground) / 0.055);
@@ -284,6 +294,7 @@
 *::-webkit-scrollbar-thumb {
   background: hsl(var(--foreground) / 0.14);
   border-radius: 8px;
+  corner-shape: squircle;
   border: 2px solid transparent;
   background-clip: content-box;
 }

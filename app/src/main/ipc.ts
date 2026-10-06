@@ -409,6 +409,15 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   ipcMain.handle('background:currentState', () => backgroundCarousel.lastPushedState())
 
   ipcMain.handle('category:image', (_event, category: string) => {
+    // category 拼进路径前先拒绝分隔符:防止构造出目录树之外的文件路径
+    if (
+      typeof category !== 'string' ||
+      category.length === 0 ||
+      category.includes('/') ||
+      category.includes('\\')
+    ) {
+      return null
+    }
     const imagePath = join(categoryImageBase, `${category}.png`)
     if (!existsSync(imagePath)) {
       return null

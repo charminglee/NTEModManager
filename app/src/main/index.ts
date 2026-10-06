@@ -1,10 +1,10 @@
 import { BrowserWindow, Menu, app, nativeTheme, protocol, screen } from 'electron'
 import { existsSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { configFilePath, getAppConfig, setWindowState, type WindowState } from './config'
 import { logger } from './logger'
-import { decodeMediaPath } from './background'
+import { TEST_IMAGES_ROOT, decodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { registerIpcHandlers, setMainWindowProvider } from './ipc'
 
@@ -27,6 +27,24 @@ app.commandLine.appendSwitch('enable-features', 'SkiaGraphite')
 if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
+
+// 加固:拦截 window.open 与页面发起的导航(渲染层只应加载本地 dev server / 打包文件),
+// 防止未来引入的远程内容或被污染的数据把窗口导向任意 URL
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  contents.on('will-navigate', (event, url) => {
+    const devUrl = process.env.ELECTRON_RENDERER_URL
+    const allowed =
+      (devUrl !== undefined && url.startsWith(devUrl)) ||
+      url.startsWith('file://') ||
+      url.startsWith('media://') ||
+      url.startsWith('devtools://')
+    if (!allowed) {
+      event.preventDefault()
+      logger.warning(`已拦截渲染层导航：${url}`)
+    }
+  })
+})
 
 
 let mainWindow: BrowserWindow | null = null
@@ -188,11 +206,42 @@ const IMAGE_CONTENT_TYPES: Record<string, string> = {
   ico: 'image/x-icon'
 }
 
+/** media:// 允许读取的根目录:背景图目录(+测试图目录)、分类图目录、应用图标目录。 */
+function allowedMediaRoots(): string[] {
+  const roots: string[] = []
+  const config = getAppConfig()
+  if (config.backgroundImagesDirectory) {
+    roots.push(config.backgroundImagesDirectory)
+  }
+  if (config.testImagesEnabled) {
+    roots.push(TEST_IMAGES_ROOT)
+  }
+  roots.push(categoryImageBase())
+  const icon = windowIcon()
+  if (icon) {
+    roots.push(dirname(icon))
+  }
+  return roots.map((root) => resolve(root))
+}
+
+/** child 是否位于 root 之内(win32 relative 大小写不敏感,与 NTFS 一致)。 */
+function isPathInsideRoot(child: string, root: string): boolean {
+  const rel = relative(root, child)
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
+}
+
 function registerMediaProtocol(): void {
   protocol.handle('media', async (request) => {
     const path = decodeMediaPath(request.url)
     if (!path) {
       return new Response('Bad Request', { status: 400 })
+    }
+    // URL 由主进程构造,但协议处理必须按最小权限收紧:仅允许应用自己目录树内的图片,
+    // 否则 media://local/<编码路径> 可读取磁盘上任意匹配扩展名的文件
+    const resolved = resolve(path)
+    if (!allowedMediaRoots().some((root) => isPathInsideRoot(resolved, root))) {
+      logger.warning(`media:// 拒绝了目录白名单之外的路径：${path}`)
+      return new Response('Forbidden', { status: 403 })
     }
     const extension = path.split('.').pop()?.toLowerCase() ?? ''
     const contentType = IMAGE_CONTENT_TYPES[extension]
@@ -241,7 +290,11 @@ if (!gotSingleInstanceLock) {
     registerIpcHandlers(categoryImageBase(), windowIcon())
 
     logger.info('========== NTE 模组管理器启动 ==========')
-    logger.info(`GPU 特性状态：${JSON.stringify(app.getGPUFeatureStatus())}`)
+    // Electron 43+ 主进程快照启动让 whenReady 早于 GPU 进程初始化完成,立即查询
+    // getGPUFeatureStatus 会永远读到 disabled_software 的假象,延迟到状态稳定后再记录。
+    setTimeout(() => {
+      logger.info(`GPU 特性状态：${JSON.stringify(app.getGPUFeatureStatus())}`)
+    }, 3000)
     void app
       .getGPUInfo('basic')
       .then((info) => {

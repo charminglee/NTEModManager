@@ -971,11 +971,12 @@ export function renameFile(
   newFileName: string
 ): OperationResult {
   const cleanRelativePath = relativeFilePath.replace(/\\/g, '/')
+  // 拒绝盘符与任何位置的「..」路径段:join 会解析中间的 ..(如 sub/../../x),
+  // 使实际读写越过模组目录,把任意文件拖进模组后随安装/打包扩散
   if (
     relativeFilePath.trim().length === 0 ||
     /^[a-zA-Z]:/.test(cleanRelativePath) ||
-    cleanRelativePath === '..' ||
-    cleanRelativePath.startsWith('../')
+    cleanRelativePath.split('/').some((segment) => segment === '..')
   ) {
     return failure('无法重命名无效的模组文件路径。')
   }

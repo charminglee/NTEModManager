@@ -9,11 +9,6 @@ export default defineConfig({
       alias: {
         '@shared': resolve(__dirname, 'src/shared')
       }
-    },
-    build: {
-      rollupOptions: {
-        input: { index: resolve(__dirname, 'src/main/index.ts') }
-      }
     }
   },
   preload: {
