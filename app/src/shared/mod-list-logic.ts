@@ -112,7 +112,7 @@ export function filterAndSort(
   return copy
 }
 
-/** 默认、名称升序、名称降序三种排序下按二级名称分组展示(与原版一致) */
+/** 默认、名称升序、名称降序三种排序下按二级名称分组展示 */
 export function groupBySecondaryName(
   mods: ModInfo[],
   categories: string[]

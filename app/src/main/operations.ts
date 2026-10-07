@@ -7,7 +7,7 @@ import { getAppConfig } from './config'
 export type ProgressReporter = (message: string) => void
 
 /**
- * 与原版 installModExclusively 一致:同一角色下同一二级名称分组只能安装一个模组,
+ * 同一角色下同一二级名称分组只能安装一个模组,
  * 安装前自动卸载同组已安装模组(exempt 名单中的分组除外)。
  */
 export async function installModExclusively(
@@ -51,7 +51,7 @@ export interface BulkResult {
   result: OperationResult
 }
 
-/** 全部安装/全部卸载指定分类中的模组(与原版一致:按当前分类过滤)。 */
+/** 全部安装/全部卸载指定分类中的模组(按当前分类过滤)。 */
 export async function changeInstallationForAll(
   install: boolean,
   category: string,

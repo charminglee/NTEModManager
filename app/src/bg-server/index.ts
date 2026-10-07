@@ -3,15 +3,17 @@ import { app } from 'electron'
 import { join } from 'node:path'
 import { configFilePath } from '../main/config'
 import { logger } from '../main/logger'
+import { ntemmElectronDir, ntemmLogsDir } from '../main/ntemm-paths'
 import { backgroundService } from './service'
 
-// 与主程序共用 NteModManager.ini,但 userData 必须独立:
+// 与主程序共用 ~/.ntemm/NteModManager.ini(config.ts 缺省解析),但 userData 必须独立:
 // Electron 单例锁存放在 userData 目录,独立之后才能与主程序共存,同时自身保持单例。
+// 旧 userData(%APPDATA%/NteModBgServer)只有可再生缓存,不搬迁。
 const userDataOverride = process.env.NTEMM_USER_DATA
 if (userDataOverride) {
   app.setPath('userData', userDataOverride)
 } else {
-  app.setPath('userData', join(app.getPath('appData'), 'NteModManagerBgServer'))
+  app.setPath('userData', join(ntemmElectronDir(), 'bg-server'))
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
@@ -24,7 +26,7 @@ if (!gotSingleInstanceLock) {
   })
 
   app.whenReady().then(() => {
-    logger.initialize(app.getPath('userData'))
+    logger.initialize(ntemmLogsDir(), 'NteModBgServer.log')
     logger.info('========== NTE 背景图服务启动（无界面） ==========')
     logger.info(`配置文件：${configFilePath()}`)
     backgroundService.start()

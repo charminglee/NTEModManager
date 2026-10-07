@@ -1,6 +1,7 @@
 import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { ntemmCacheDir, ntemmConfigFile } from './ntemm-paths'
 import { parseIni, serializeIni, splitList, unquote } from './ini'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '../shared/types'
 import {
@@ -78,22 +79,36 @@ const LIQUID_GLASS_INI_KEYS: Record<keyof LiquidGlassConfig, string> = {
 }
 
 /**
- * 配置文件与可执行文件放在同一目录(与原 Qt 版一致);开发模式下放在 app 目录,
- * 避免写进 node_modules/electron/dist。
+ * 配置统一保存到 ~/.ntemm/NteModManager.ini(主程序与背景服务共享);
+ * 可执行文件同目录(开发模式为 app 目录)的已有 ini 首次读取时自动迁移过来。
  */
 export function configFilePath(): string {
   if (cachedConfigPath) {
     return cachedConfigPath
   }
   // NTEMM_CONFIG 显式指定 ini 位置(bg-server 的 --config= 参数会写入该环境变量),
-  // 供服务与主程序 exe 不同目录部署时指回主程序的配置
+  // 供服务与主程序不同目录部署时指回主程序的配置
   const override = process.env.NTEMM_CONFIG?.trim()
   if (override) {
     cachedConfigPath = override.replace(/\\/g, '/')
     return cachedConfigPath
   }
-  const baseDir = app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
-  cachedConfigPath = join(baseDir, CONFIG_FILE_NAME)
+  const filePath = ntemmConfigFile()
+  // 旧位置(exe/app 目录)的 ini 仍存在而新位置还没有时,搬一次家;失败则退回旧位置
+  const legacyPath = join(
+    app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath(),
+    CONFIG_FILE_NAME
+  )
+  if (!existsSync(filePath) && existsSync(legacyPath)) {
+    try {
+      mkdirSync(dirname(filePath), { recursive: true })
+      copyFileSync(legacyPath, filePath)
+    } catch {
+      cachedConfigPath = legacyPath.replace(/\\/g, '/')
+      return cachedConfigPath
+    }
+  }
+  cachedConfigPath = filePath
   return cachedConfigPath
 }
 
@@ -229,7 +244,7 @@ export function getAppConfig(): AppConfigData {
 }
 
 /** 解析 [LiquidGlass] 配置节;键缺失时逐项回退到默认值。
- *  效果强度项兼容旧版布尔编码:'1'/'true' 视为 100,'0'/'false' 视为 0。 */
+ *  效果强度项兼容布尔写法:'1'/'true' 视为 100,'0'/'false' 视为 0。 */
 function getLiquidGlassConfig(ini: ReturnType<typeof parseIni>): LiquidGlassConfig {
   const section = ini.LiquidGlass
   const result = { ...LIQUID_GLASS_DEFAULTS }
@@ -247,7 +262,7 @@ function getLiquidGlassConfig(ini: ReturnType<typeof parseIni>): LiquidGlassConf
       continue
     }
     if (raw === '1' || raw === 'true') {
-      // 旧版布尔开关的视觉等效值:强度按 100% 迁移(色散现仅作用于侧边栏/工具栏,可安全开启)
+      // 布尔开关的视觉等效值:强度按 100% 迁移(色散现仅作用于侧边栏/工具栏,可安全开启)
       ;(result[configKey] as number) = 100
     } else if (raw === '0' || raw === 'false') {
       ;(result[configKey] as number) = 0
@@ -290,7 +305,6 @@ export function setCategoryOrder(categoryOrder: string[]): void {
 }
 
 // ============ 视觉识别(Python 桥)路径 ============
-// 对应原 Qt 版 AppConfig 的 pythonExecutable/visualRegionScript/orientationModel/pythonModelCache:
 // 打包后固定在 resources/python 下;开发模式自动探测仓库内环境,均可用 Paths/* 键覆盖。
 
 function repoRoot(): string {
@@ -322,7 +336,7 @@ export function visualRegionScript(): string {
     return override
   }
   if (!app.isPackaged) {
-    const devScript = join(repoRoot(), 'src/python/visual_region_detector.py')
+    const devScript = join(repoRoot(), 'python/visual_region_detector.py')
     if (existsSync(devScript)) {
       return devScript
     }
@@ -348,7 +362,8 @@ export function orientationModel(): string {
   return join(process.resourcesPath, 'python/orientation-model/best.pt')
 }
 
-/** 姿态模型(yolo26x-pose.pt)所在目录;Python 端 resolve_model_path 会在该目录下解析模型文件名 */
+/** 姿态模型(yolo26x-pose.pt)所在目录;Python 端 resolve_model_path 会在该目录下解析模型文件名。
+ *  打包版的安装目录(resources)不可写,模型缓存统一放 ~/.ntemm/cache/python-model。 */
 export function pythonModelCache(): string {
   const override = overriddenPath('python_model_cache')
   if (override) {
@@ -357,7 +372,7 @@ export function pythonModelCache(): string {
   if (!app.isPackaged && existsSync(join(repoRoot(), 'yolo26x-pose.pt'))) {
     return repoRoot()
   }
-  return join(process.resourcesPath, 'python/model-cache')
+  return join(ntemmCacheDir(), 'python-model')
 }
 
 const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {

@@ -136,7 +136,7 @@ export interface AppConfigPatch {
   liquidGlass?: Partial<LiquidGlassConfig>
 }
 
-/** 与原 Qt 版 Preferences/mod_list_sort_order 的取值保持一致 */
+/** 持久化到 INI 的 Preferences/mod_list_sort_order 取值 */
 export enum SortOrder {
   InstalledFirst = 0,
   NameAscending = 1,

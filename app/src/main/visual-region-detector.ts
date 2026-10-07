@@ -1,7 +1,9 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { nativeImage } from 'electron'
 import { orientationModel, pythonExecutable, pythonModelCache, visualRegionScript } from './config'
+import { ensurePythonCacheDirs, ntemmCacheDir } from './ntemm-paths'
 import { logger } from './logger'
 import type { BackgroundRect } from '../shared/types'
 
@@ -10,7 +12,6 @@ export interface Size {
   height: number
 }
 
-/** 对应 C++ VisualRegion 结构 */
 export interface VisualRegion {
   /** 检测出的区域;hasCrop=false 时为 null */
   bounds: BackgroundRect | null
@@ -134,8 +135,17 @@ class LineReader {
   }
 }
 
+/** 握手协议行:{"ready": true/false, ...}。首次运行时 Ultralytics 会先往 stdout
+ *  打印设置初始化横幅等非 JSON 噪声,握手只认含 ready 布尔的行。 */
+function isHandshakeLine(line: string): boolean {
+  try {
+    return typeof JSON.parse(line)?.ready === 'boolean'
+  } catch {
+    return false
+  }
+}
+
 /**
- * 对应 C++ VisualRegionDetector::PythonBridge:
  * 以 --server 模式运行 visual_region_detector.py,通过 stdin/stdout 的 JSON 行协议通信。
  */
 class PythonBridge {
@@ -151,6 +161,7 @@ class PythonBridge {
   }
 
   private start(): void {
+    ensurePythonCacheDirs()
     const orientationModelPath = orientationModel()
     const args = [
       visualRegionScript(),
@@ -167,8 +178,17 @@ class PythonBridge {
     }
     logger.info(`启动 Python 视觉识别进程：${pythonExecutable()}`)
 
-    // -X utf8:Windows 上管道 stdin 默认按 ANSI 代码页(GBK)解码,中文路径会变乱码
-    const child = spawn(pythonExecutable(), ['-X', 'utf8', ...args], { windowsHide: true })
+    // -X utf8:Windows 上管道 stdin 默认按 ANSI 代码页(GBK)解码,中文路径会变乱码。
+    // YOLO_CONFIG_DIR/TORCH_HOME:Ultralytics 设置与 Torch Hub 缓存默认写到用户目录,
+    // 统一收进 ~/.ntemm/cache,避免运行数据散落别处。
+    const child = spawn(pythonExecutable(), ['-X', 'utf8', ...args], {
+      windowsHide: true,
+      env: {
+        ...process.env,
+        YOLO_CONFIG_DIR: join(ntemmCacheDir(), 'ultralytics'),
+        TORCH_HOME: join(ntemmCacheDir(), 'torch')
+      }
+    })
     this.process = child
     this.stdout = new LineReader(child.stdout)
     child.stderr.setEncoding('utf-8')
@@ -193,9 +213,18 @@ class PythonBridge {
     return this.ready && this.process !== null && this.process.exitCode === null
   }
 
-  /** 等待 ready 握手(与 C++ 构造函数中的 120 秒等待一致) */
+  /** 等待 ready 握手(120 秒超时) */
   async warmup(): Promise<boolean> {
-    const line = await this.stdout?.read(READY_TIMEOUT_MS)
+    const deadline = Date.now() + READY_TIMEOUT_MS
+    let line: string | null = null
+    while (Date.now() < deadline) {
+      line = (await this.stdout?.read(Math.max(1, deadline - Date.now()))) ?? null
+      if (line === null || isHandshakeLine(line)) {
+        break
+      }
+      logger.debug(`忽略 Python 进程输出行：${line.slice(0, 200)}`)
+      line = null
+    }
     if (!line) {
       logger.error('Python 视觉识别进程未返回 ready 响应')
       this.kill()
@@ -320,7 +349,7 @@ class PythonBridge {
     region.debugOverlayStatus = '调试线框已解码'
   }
 
-  /** 对应 C++ 析构:礼貌退出,3 秒后强杀 */
+  /** 礼貌退出,3 秒后强杀 */
   async dispose(): Promise<void> {
     const child = this.process
     if (!child || child.exitCode !== null) {
@@ -364,7 +393,6 @@ function logStandardErrorLine(line: string): void {
 }
 
 /**
- * 对应 C++ VisualRegionDetector:
  * 方向模型缺失时仅用 fallback 检测;否则优先 Python 检测结果,失败时回退 fallback。
  */
 export class VisualRegionDetector {
@@ -406,7 +434,7 @@ export class VisualRegionDetector {
 }
 
 /**
- * 对应 C++ fallbackDetect:把图像缩到约 128x128,按「局部对比度 + 饱和度」显著度
+ * 把图像缩到约 128x128,按「局部对比度 + 饱和度」显著度
  * 加权求质心,取质心为中心的 58% 区域作为人物焦点区域。
  */
 function fallbackDetect(imagePath: string, imageSize: Size): VisualRegion {
@@ -454,7 +482,7 @@ function fallbackDetect(imagePath: string, imageSize: Size): VisualRegion {
       const contrast = Math.abs(luminance - neighbourAverage)
       const channelMax = Math.max(current.r, current.g, current.b)
       const channelMin = Math.min(current.r, current.g, current.b)
-      // Qt QColor::hsvSaturation() / 255
+      // HSV 饱和度,归一化到 0-1
       const saturation = channelMax === 0 ? 0 : (channelMax - channelMin) / channelMax
       const weight = contrast + saturation * 24
 

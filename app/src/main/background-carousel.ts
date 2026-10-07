@@ -10,7 +10,7 @@ import {
 } from './visual-region-detector'
 import type { BackgroundState } from '../shared/types'
 
-// 与原 Qt 版 BackgroundWidget 一致:10 秒轮换、900ms 交叉淡化、resize 后 120ms 去抖重新检测
+// 10 秒轮换、900ms 交叉淡化、resize 后 120ms 去抖重新检测
 const ROTATION_INTERVAL_MS = 10000
 const TRANSITION_DURATION_MS = 900
 const RESIZE_DETECTION_DELAY_MS = 120
@@ -25,7 +25,7 @@ interface BackgroundSlot {
 }
 
 /**
- * 主进程背景轮播(对应 C++ BackgroundWidget):
+ * 主进程背景轮播:
  * 随机选图 → Python 视觉识别 → 计算视口裁剪 → 推送渲染端交叉淡化显示。
  * 检测在后台进行,检测结果就绪后再次推送;窗口 resize 后延迟重新检测。
  */

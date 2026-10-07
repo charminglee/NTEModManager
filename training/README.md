@@ -1,6 +1,6 @@
 # 人体朝向分类训练
 
-本目录存放人体朝向分类器的训练代码、数据目录约定和训练产物位置。它与 `src/python` 中的生产视觉识别服务分开维护，训练完成并经过人工检查后，才考虑把模型接入正式推理流程。
+本目录存放人体朝向分类器的训练代码、数据目录约定和训练产物位置。它与 `python` 中的生产视觉识别服务分开维护，训练完成并经过人工检查后，才考虑把模型接入正式推理流程。
 
 ## 目标
 
@@ -318,7 +318,7 @@ $python = '.\.venv\Scripts\python.exe'
 
 ### 第七步：确定是否可以接入生产
 
-模型至少应满足以下检查后，才考虑接入 C++ 背景流程：
+模型至少应满足以下检查后，才考虑接入背景识别流程：
 
 1. 独立 test 集的整体结果明显高于多数类基线。
 2. `front`、`back`、`uncertain` 都有足够的样本和可接受的 recall，不能用整体 accuracy 掩盖某一个类别完全失效。
@@ -353,6 +353,6 @@ test accuracy：填写独立测试结果
 
 ## 与生产模块的边界
 
-`training/orientation/train_orientation.py` 负责训练和单图检查。当前生产程序使用 `weighted_unfrozen/best.pt` 作为 ConvNeXt-Tiny 朝向模型；CMake 会把它复制为发布目录中的 `python/orientation-model/best.pt`，由 `src/python/visual_region_detector.py` 为每个人体框分类 `front`、`back` 或 `uncertain`。低于 `0.50` 的正面/背面置信度会转为 `uncertain`。生产服务仍使用 YOLO pose 生成胸部和胯部区域，并根据朝向选择外框优先区域。
+`training/orientation/train_orientation.py` 负责训练和单图检查。当前生产程序使用 `weighted_unfrozen/best.pt` 作为 ConvNeXt-Tiny 朝向模型，部署为 `python/orientation-model/best.pt`，由 `python/visual_region_detector.py` 为每个人体框分类 `front`、`back` 或 `uncertain`。低于 `0.50` 的正面/背面置信度会转为 `uncertain`。生产服务仍使用 YOLO pose 生成胸部和胯部区域，并根据朝向选择外框优先区域。
 
 只有在独立测试集表现稳定、类别定义经过确认、推理耗时可接受后，才应设计生产接入。接入时还需要明确：人体框裁剪方式、多人选择策略、置信度阈值、模型文件部署位置和模型不可用时的 fallback 行为。

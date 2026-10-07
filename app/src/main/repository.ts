@@ -490,7 +490,7 @@ export async function scan(): Promise<ModInfo[]> {
       invalid: metadata.invalid === true
     })
   }
-  // 与原版一致:已安装的模组排在前面(稳定排序)。
+  // 已安装的模组排在前面(稳定排序)。
   const withIndex = result.map((mod, index) => ({ mod, index }))
   withIndex.sort((a, b) => Number(b.mod.installed) - Number(a.mod.installed) || a.index - b.index)
   return withIndex.map((item) => item.mod)

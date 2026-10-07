@@ -238,7 +238,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
         return failure(`找不到模组：${name}`)
       }
 
-      // 与原版一致:开启自动复用时直接使用该模组上次选择的源文件夹。
+      // 开启自动复用时直接使用该模组上次选择的源文件夹。
       let sourceDirectory: string | null = null
       const lastPath = repository.lastPackagingPath(name)
       if (config.autoUseLastPackagingPath && isDirectory(lastPath)) {

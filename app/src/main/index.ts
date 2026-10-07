@@ -4,6 +4,13 @@ import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { configFilePath, getAppConfig } from './config'
 import { logger } from './logger'
+import {
+  NTEMM_HOME_DIR,
+  legacyUserDataDir,
+  migrateLegacyUserData,
+  ntemmElectronDir,
+  ntemmLogsDir
+} from './ntemm-paths'
 import { TEST_IMAGES_ROOT, decodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { registerIpcHandlers, setMainWindowProvider } from './ipc'
@@ -152,7 +159,7 @@ function createWindow(): void {
     mainWindow = null
   })
 
-  // 窗口尺寸变化后延迟重新做视觉识别(与原版 resizeDetectionTimer 一致)
+  // 窗口尺寸变化后延迟重新做视觉识别
   mainWindow.on('resize', () => {
     backgroundCarousel.handleWindowResized()
   })
@@ -234,10 +241,17 @@ function registerMediaProtocol(): void {
   })
 }
 
-// 冒烟/多开隔离:NTEMM_USER_DATA 指定独立 userData(含单例锁与日志),不影响正在运行的实例
+// 运行数据统一保存到 ~/.ntemm(配置/日志/缓存/Electron userData)。
+// userData 迁入 electron/app;旧的 %APPDATA% 目录在首次启动时搬迁(跳过可再生缓存),
+// 窗口状态等不丢。NTEMM_USER_DATA 仍可显式隔离(冒烟/多开),且优先于默认位置。
 const userDataOverride = process.env.NTEMM_USER_DATA
 if (userDataOverride) {
   app.setPath('userData', userDataOverride)
+} else {
+  app.setPath(
+    'userData',
+    migrateLegacyUserData(join(ntemmElectronDir(), 'app'), legacyUserDataDir())
+  )
 }
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
@@ -257,11 +271,12 @@ if (!gotSingleInstanceLock) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
     registerMediaProtocol()
-    logger.initialize(app.getPath('userData'))
+    logger.initialize(ntemmLogsDir(), 'NteModManager.log')
     logger.addBroadcaster(() => mainWindow)
     registerIpcHandlers(categoryImageBase(), windowIcon())
 
     logger.info('========== NTE 模组管理器启动 ==========')
+    logger.info(`数据目录：${NTEMM_HOME_DIR}`)
     // Electron 43+ 主进程快照启动让 whenReady 早于 GPU 进程初始化完成,立即查询
     // getGPUFeatureStatus 会永远读到 disabled_software 的假象,延迟到状态稳定后再记录。
     setTimeout(() => {

@@ -11,7 +11,7 @@
 backgroundCarousel(主进程单例)───────── 10s 轮换 / resize 后 120ms 去抖重检
         │ VisualRegionDetector          app/src/main/visual-region-detector.ts
         ▼
-常驻 Python 子进程(src/python/visual_region_detector.py --server,stdio JSON 行协议)
+常驻 Python 子进程(python/visual_region_detector.py --server,stdio JSON 行协议)
         │ 识别完成:主体区域 bounds
         ▼
 cropForViewport():按视口比例取裁剪矩形(无识别结果时以图心为中心)
@@ -25,7 +25,7 @@ BackgroundLayer(渲染端):等图片解码 → 900ms 交叉淡化 → 按裁剪�
 | 图库收集 / media 路径编码 | `app/src/main/background.ts` |
 | 轮播状态机(选图、换代、推送) | `app/src/main/background-carousel.ts` |
 | Python 识别进程桥接 + 视口裁剪 | `app/src/main/visual-region-detector.ts` |
-| Python 识别脚本(`--server` 模式) | `src/python/visual_region_detector.py` |
+| Python 识别脚本(`--server` 模式) | `python/visual_region_detector.py` |
 | IPC 注册 | `app/src/main/ipc.ts` |
 | Preload 暴露 | `app/src/preload/index.ts` |
 | 渲染端背景层 | `app/src/renderer/src/components/background-layer.tsx` |
@@ -150,7 +150,7 @@ export function BackgroundImage() {
 `VisualRegionDetector` 以 `--server` 模式启动常驻子进程,通过 stdin/stdout 的 JSON 行协议通信(检测请求串行化,Python 端逐行处理):
 
 ```text
-启动:python -X utf8 src/python/visual_region_detector.py --server --device auto \
+启动:python -X utf8 python/visual_region_detector.py --server --device auto \
       --cache-dir <模型目录> [--orientation-model <方向模型>]
 握手:进程就绪后向 stdout 输出一行 {"ready": true},主进程最多等 120 秒
 请求:{"image": "正斜杠分隔的图片绝对路径", "viewport_size": [视口宽, 视口高]}
@@ -172,7 +172,7 @@ export function BackgroundImage() {
 | 资源 | 探测顺序 |
 | --- | --- |
 | 解释器 | 仓库 `.venv/Scripts/python.exe` → 仓库 `python/python.exe` |
-| 识别脚本 | 仓库 `src/python/visual_region_detector.py` |
+| 识别脚本 | 仓库 `python/visual_region_detector.py` |
 | 方向模型 | `training/orientation/checkpoints/weighted_unfrozen/best.pt` → 仓库 `python/orientation-model/best.pt` |
 | 姿态模型目录 | 仓库根(`yolo26x-pose.pt`) |
 

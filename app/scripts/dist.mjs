@@ -3,15 +3,15 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// dist 链路编排:stash → electron-vite build → electron-builder → restore → 启动 exe。
-// 之前用 npm script 的 && 串联,build/builder 中途失败时 restore 永远不会执行,
-// 配置会一直留在暂存处(结合旧版 stash 的清理逻辑甚至会被删掉,导致用户设置永久丢失)。
-// 这里用 try/finally 保证 restore 总是执行;exitCode 在 finally 之后才落地。
+// dist 链路编排:electron-vite build → electron-builder → 启动 exe。
 //
 // 用法:node scripts/dist.mjs [app|bg-server]
 // - app(默认):主程序 NteModManager.exe,打包完成后启动验证;
-// - bg-server:无界面背景图服务 NteModBgServer.exe,独立配置/独立输出目录,
+// - bg-server:无界面背景图服务 NteModBgServer.exe,独立输出目录,
 //   打包后不自动启动(服务常驻,阻塞等待无意义)。
+//
+// 配置文件统一在 ~/.ntemm/NteModManager.ini(运行时读写,不在打包产物里),
+// 打包不会碰它,也无需像旧版那样在打包前后 stash/restore exe 旁边的 ini。
 
 const mode = process.argv[2] === 'bg-server' ? 'bg-server' : 'app'
 const isBgServer = mode === 'bg-server'
@@ -49,34 +49,17 @@ function runNpx(args) {
   return result.status ?? 1
 }
 
-let failed = false
-try {
-  failed =
-    runStep(process.execPath, [
-      join(appDir, 'scripts', 'preserve-config.mjs'),
-      'stash',
-      join(unpackedDir, 'NteModManager.ini')
-    ]) !== 0
-  if (!failed) {
-    failed = runNpx(
-      isBgServer
-        ? ['electron-vite', 'build', '-c', 'electron.vite.bg-server.config.ts']
-        : ['electron-vite', 'build']
-    ) !== 0
-  }
-  if (!failed) {
-    failed = runNpx(
-      isBgServer
-        ? ['electron-builder', '--dir', '--config', 'electron-builder.bg-server.yml']
-        : ['electron-builder', '--dir']
-    ) !== 0
-  }
-} finally {
-  runStep(process.execPath, [
-    join(appDir, 'scripts', 'preserve-config.mjs'),
-    'restore',
-    join(unpackedDir, 'NteModManager.ini')
-  ])
+let failed = runNpx(
+  isBgServer
+    ? ['electron-vite', 'build', '-c', 'electron.vite.bg-server.config.ts']
+    : ['electron-vite', 'build']
+) !== 0
+if (!failed) {
+  failed = runNpx(
+    isBgServer
+      ? ['electron-builder', '--dir', '--config', 'electron-builder.bg-server.yml']
+      : ['electron-builder', '--dir']
+  ) !== 0
 }
 
 if (failed) {
@@ -91,7 +74,7 @@ if (!existsSync(exePath)) {
 
 if (isBgServer) {
   console.log(`背景图服务打包完成：${exePath}`)
-  console.log('静默运行,无界面;与主程序 exe 同目录时自动共用 NteModManager.ini,')
+  console.log('静默运行,无界面;默认与主程序共用 ~/.ntemm/NteModManager.ini,')
   console.log('否则用 NteModBgServer.exe --config=<主程序 ini 路径> 指定。')
   process.exit(0)
 }

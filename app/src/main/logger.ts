@@ -19,11 +19,11 @@ class Logger {
   private filePath: string | null = null
   private broadcasters = new Set<Broadcaster>()
 
-  initialize(userDataPath: string): void {
-    const dataDirectory = join(userDataPath, 'logs')
+  /** 目录不存在时自动创建;主程序与背景服务共用 ~/.ntemm/logs 但各写各的文件 */
+  initialize(directory: string, fileName: string): void {
     try {
-      mkdirSync(dataDirectory, { recursive: true })
-      this.filePath = join(dataDirectory, 'NteModManager.log')
+      mkdirSync(directory, { recursive: true })
+      this.filePath = join(directory, fileName)
     } catch {
       this.filePath = null
     }

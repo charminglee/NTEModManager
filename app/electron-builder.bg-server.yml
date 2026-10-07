@@ -1,5 +1,5 @@
 # 无界面背景图服务(NteModBgServer.exe):仅主进程,无 preload/renderer。
-# 与主程序共用 NteModManager.ini(exe 同目录时自动命中,分开放置用 --config=<路径> 指回);
+# 与主程序共用 ~/.ntemm/NteModManager.ini(缺省自动命中,分开放置用 --config=<路径> 指回);
 # 输出目录独立于主程序的 dist,两者产物可共存。
 appId: com.nuoyan.nte-mod-bg-server
 productName: NteModBgServer
@@ -14,7 +14,7 @@ extraMetadata:
   main: ./out/bg-server/index.js
 extraResources:
   # 视觉识别(Python 桥)资源:脚本、姿态模型与方向模型(与主程序一致)
-  - from: ../src/python/visual_region_detector.py
+  - from: ../python/visual_region_detector.py
     to: python/visual_region_detector.py
   - from: ../yolo26x-pose.pt
     to: python/model-cache/yolo26x-pose.pt
