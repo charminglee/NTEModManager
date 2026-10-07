@@ -1,0 +1,2150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Web 开发教程 · NTE 模组管理器</title>
+<style>
+:root {
+  --background: 240 16% 5%;
+  --foreground: 240 10% 96%;
+  --card: 240 13% 8%;
+  --card-foreground: 240 10% 96%;
+  --primary: 258 90% 66%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 10% 14%;
+  --secondary-foreground: 240 8% 84%;
+  --muted: 240 10% 14%;
+  --muted-foreground: 240 7% 60%;
+  --accent: 258 36% 17%;
+  --accent-foreground: 258 90% 86%;
+  --success: 152 60% 52%;
+  --border: 240 10% 15%;
+  --radius: 1rem;
+  --app-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: 260 40% 96%;
+    --foreground: 247 25% 13%;
+    --card: 0 0% 99%;
+    --card-foreground: 247 25% 13%;
+    --primary: 258 78% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 258 16% 90%;
+    --secondary-foreground: 250 14% 30%;
+    --muted: 258 16% 90%;
+    --muted-foreground: 248 10% 40%;
+    --accent: 258 55% 92%;
+    --accent-foreground: 258 60% 36%;
+    --success: 152 72% 30%;
+    --border: 250 16% 85%;
+    --app-shadow-card: 0 8px 32px rgba(30, 20, 60, 0.14);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', system-ui, sans-serif;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: hsl(var(--primary) / 0.35); }
+
+.bg-blob { position: fixed; border-radius: 50%; filter: blur(110px); pointer-events: none; z-index: 0; }
+.blob-a { width: 560px; height: 560px; right: -140px; top: -180px; background: hsl(var(--primary) / 0.16); }
+.blob-b { width: 640px; height: 640px; left: -220px; bottom: -260px; background: hsl(220 70% 45% / 0.12); }
+
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 60;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.45));
+  border-radius: 0 2px 2px 0;
+}
+
+.layout { position: relative; z-index: 1; display: flex; align-items: flex-start; }
+
+.sidebar {
+  position: sticky; top: 0;
+  width: 316px; flex: none; height: 100vh;
+  padding: 20px 14px 14px;
+  display: flex; flex-direction: column; gap: 14px;
+  background: hsl(var(--card) / 0.55);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border-right: 1px solid hsl(var(--foreground) / 0.08);
+  overflow-y: auto;
+}
+.side-head { display: flex; gap: 12px; align-items: center; padding: 4px 8px 14px; border-bottom: 1px solid hsl(var(--foreground) / 0.07); }
+.side-logo {
+  width: 40px; height: 40px; border-radius: 12px; flex: none;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(280 70% 58%));
+  color: #fff; box-shadow: 0 4px 20px hsl(var(--primary) / 0.45);
+}
+.side-title { font-weight: 700; font-size: 15px; line-height: 1.3; }
+.side-sub { font-size: 11.5px; color: hsl(var(--muted-foreground)); margin-top: 2px; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 10px;
+  text-decoration: none; color: hsl(var(--foreground) / 0.72);
+  font-size: 13.5px; line-height: 1.4;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-link:hover { background: hsl(var(--foreground) / 0.05); color: hsl(var(--foreground)); }
+.nav-link.active { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
+.nav-link .num {
+  flex: none; width: 24px; height: 24px; border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 11.5px; font-weight: 600;
+  background: hsl(var(--foreground) / 0.07); color: hsl(var(--muted-foreground));
+  transition: background 0.15s, color 0.15s;
+}
+.nav-link.active .num { background: hsl(var(--primary) / 0.85); color: hsl(var(--primary-foreground)); }
+.side-foot { font-size: 11px; color: hsl(var(--muted-foreground)); padding: 10px 8px 2px; border-top: 1px solid hsl(var(--foreground) / 0.07); }
+
+.main { flex: 1; min-width: 0; max-width: 1020px; margin: 0 auto; padding: 36px 44px 72px; }
+.chapter {
+  background: hsl(var(--card) / 0.6);
+  backdrop-filter: blur(20px) saturate(1.25);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  border: 1px solid hsl(var(--foreground) / 0.09);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--app-shadow-card);
+  padding: 42px 52px 34px;
+  margin-bottom: 36px;
+  min-height: 62vh;
+}
+.ch-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ch-chip {
+  display: inline-flex; align-items: center;
+  padding: 3px 12px; border-radius: 999px;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(280 70% 58%));
+  color: hsl(var(--primary-foreground));
+  font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+  box-shadow: 0 2px 12px hsl(var(--primary) / 0.35);
+}
+.ch-pos { font-size: 12px; color: hsl(var(--muted-foreground)); }
+.chapter h1 {
+  font-size: 27px; line-height: 1.4; margin: 0 0 22px; letter-spacing: 0.2px;
+  padding-bottom: 16px; border-bottom: 1px solid hsl(var(--foreground) / 0.08);
+}
+.chapter h2 {
+  font-size: 20.5px; margin: 38px 0 12px;
+  display: flex; align-items: center; gap: 10px; line-height: 1.45;
+}
+.chapter h2::before {
+  content: ""; flex: none; width: 4px; height: 20px; border-radius: 2px;
+  background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--primary) / 0.35));
+}
+.chapter h3 { font-size: 16.5px; margin: 24px 0 8px; }
+.chapter p { font-size: 14.5px; line-height: 1.9; margin: 10px 0; color: hsl(var(--foreground) / 0.9); }
+.chapter ul, .chapter ol { padding-left: 1.5em; margin: 10px 0; }
+.chapter li { font-size: 14.5px; line-height: 1.9; margin: 4px 0; color: hsl(var(--foreground) / 0.9); }
+.chapter li::marker { color: hsl(var(--primary) / 0.85); }
+.chapter a {
+  color: hsl(var(--primary)); text-decoration: underline;
+  text-decoration-color: hsl(var(--primary) / 0.35); text-underline-offset: 3px;
+  transition: text-decoration-color 0.15s;
+}
+.chapter a:hover { text-decoration-color: hsl(var(--primary)); }
+.chapter strong { color: hsl(var(--foreground)); font-weight: 650; }
+.chapter img { max-width: 100%; }
+.chapter hr { border: 0; border-top: 1px solid hsl(var(--foreground) / 0.08); margin: 30px 0; }
+
+.chapter code {
+  font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.87em;
+  background: hsl(var(--foreground) / 0.07);
+  border: 1px solid hsl(var(--foreground) / 0.06);
+  border-radius: 6px; padding: 1.5px 6px;
+  color: hsl(var(--accent-foreground));
+  overflow-wrap: anywhere;
+}
+.codeblock pre code,
+.chapter pre code {
+  background: none; border: 0; padding: 0; border-radius: 0;
+  color: hsl(240 10% 88%); font-size: 12.8px; overflow-wrap: normal;
+}
+
+.codeblock {
+  margin: 16px 0; border-radius: 12px; overflow: hidden;
+  border: 1px solid hsl(240 10% 16%);
+  background: hsl(240 18% 6%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 10px 6px 14px;
+  background: hsl(240 12% 9%);
+  border-bottom: 1px solid hsl(240 10% 14%);
+}
+.code-lang { font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; color: hsl(240 8% 52%); font-weight: 600; }
+.copy-btn {
+  font: inherit; font-size: 11.5px; cursor: pointer;
+  color: hsl(240 8% 62%); background: hsl(240 10% 14%);
+  border: 1px solid hsl(240 10% 19%); border-radius: 6px; padding: 2.5px 10px;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.copy-btn:hover { color: hsl(0 0% 92%); background: hsl(240 10% 19%); }
+.copy-btn.copied { color: hsl(152 60% 62%); border-color: hsl(152 45% 30%); background: hsl(152 40% 11%); }
+.codeblock pre { margin: 0; padding: 14px 18px; overflow-x: auto; }
+.codeblock pre code { font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace; line-height: 1.75; display: block; }
+.tok-c { color: hsl(240 6% 46%); font-style: italic; }
+.tok-s { color: hsl(152 55% 62%); }
+.tok-k { color: hsl(258 90% 77%); }
+.tok-n { color: hsl(35 85% 66%); }
+.tok-t { color: hsl(190 75% 64%); }
+.tok-a { color: hsl(45 80% 70%); }
+
+.table-wrap { overflow-x: auto; margin: 14px 0; border: 1px solid hsl(var(--foreground) / 0.08); border-radius: 12px; }
+.chapter table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 0; }
+.chapter th {
+  text-align: left; font-weight: 600; color: hsl(var(--muted-foreground));
+  background: hsl(var(--foreground) / 0.04);
+  padding: 9px 14px; border-bottom: 1px solid hsl(var(--foreground) / 0.08);
+}
+.chapter td { padding: 9px 14px; border-bottom: 1px solid hsl(var(--foreground) / 0.06); vertical-align: top; }
+.chapter tr:last-child td { border-bottom: none; }
+
+.chapter blockquote {
+  margin: 14px 0; padding: 8px 18px;
+  border-left: 3px solid hsl(var(--primary) / 0.7);
+  background: hsl(var(--primary) / 0.07);
+  border-radius: 4px 12px 12px 4px;
+}
+.chapter blockquote p { margin: 6px 0; color: hsl(var(--foreground) / 0.88); }
+
+.chapter li:has(input[type="checkbox"]) { list-style: none; margin-left: -1.3em; }
+.chapter input[type="checkbox"] { accent-color: hsl(var(--primary)); margin-right: 7px; }
+
+.ch-nav {
+  display: flex; gap: 14px;
+  margin-top: 44px; padding-top: 22px;
+  border-top: 1px solid hsl(var(--foreground) / 0.08);
+}
+.ch-nav a, .ch-nav-spacer { flex: 1; min-width: 0; }
+.ch-nav a {
+  text-decoration: none;
+  border: 1px solid hsl(var(--foreground) / 0.09);
+  border-radius: 12px; padding: 11px 16px;
+  background: hsl(var(--foreground) / 0.03);
+  transition: background 0.15s, border-color 0.15s;
+}
+.ch-nav a:hover { background: hsl(var(--foreground) / 0.06); border-color: hsl(var(--primary) / 0.4); }
+.ch-nav a.next { text-align: right; }
+.ch-nav-label { display: block; font-size: 11.5px; color: hsl(var(--muted-foreground)); margin-bottom: 3px; }
+.ch-nav-title {
+  display: block; font-size: 13.5px; font-weight: 600;
+  color: hsl(var(--foreground) / 0.92);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.site-foot { text-align: center; font-size: 12px; color: hsl(var(--muted-foreground)); padding: 10px 0 20px; }
+
+@media (max-width: 1080px) {
+  .layout { display: block; }
+  .sidebar { position: relative; width: auto; height: auto; border-right: 0; border-bottom: 1px solid hsl(var(--foreground) / 0.08); }
+  .side-nav { flex-direction: row; flex-wrap: wrap; }
+  .main { padding: 26px 18px 52px; }
+  .chapter { padding: 26px 20px; }
+  .ch-nav { flex-direction: column; }
+  .ch-nav a.next { text-align: left; }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="bg-blob blob-a"></div><div class="bg-blob blob-b"></div>
+<div class="layout">
+<aside class="sidebar">
+<div class="side-head"><div class="side-logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></div><div><div class="side-title">Web 开发零基础教程</div><div class="side-sub">以 NTE 模组管理器为实物教材</div></div></div>
+<nav class="side-nav"><a class="nav-link" data-target="ch-readme" href="#ch-readme"><span class="num">序</span><span class="nav-text">教程首页 · 学习路线</span></a>
+<a class="nav-link" data-target="ch-01-html" href="#ch-01-html"><span class="num">1</span><span class="nav-text">Web 是如何工作的 &amp; HTML 入门</span></a>
+<a class="nav-link" data-target="ch-02-css" href="#ch-02-css"><span class="num">2</span><span class="nav-text">CSS:网页的外观</span></a>
+<a class="nav-link" data-target="ch-03-javascript" href="#ch-03-javascript"><span class="num">3</span><span class="nav-text">JavaScript:让网页活起来</span></a>
+<a class="nav-link" data-target="ch-04-typescript" href="#ch-04-typescript"><span class="num">4</span><span class="nav-text">TypeScript:给 JavaScript 加上类型护栏</span></a>
+<a class="nav-link" data-target="ch-05-node-npm" href="#ch-05-node-npm"><span class="num">5</span><span class="nav-text">Node.js 与 npm:一切的运行地基</span></a>
+<a class="nav-link" data-target="ch-06-vite" href="#ch-06-vite"><span class="num">6</span><span class="nav-text">Vite 与现代工程化</span></a>
+<a class="nav-link" data-target="ch-07-react-basics" href="#ch-07-react-basics"><span class="num">7</span><span class="nav-text">React 入门:组件与 JSX</span></a>
+<a class="nav-link" data-target="ch-08-react-state" href="#ch-08-react-state"><span class="num">8</span><span class="nav-text">React 进阶:状态与 Hooks</span></a>
+<a class="nav-link" data-target="ch-09-tailwind-shadcn" href="#ch-09-tailwind-shadcn"><span class="num">9</span><span class="nav-text">Tailwind CSS 4 与 shadcn/ui</span></a>
+<a class="nav-link" data-target="ch-10-electron" href="#ch-10-electron"><span class="num">10</span><span class="nav-text">Electron:把网页变成桌面应用</span></a>
+<a class="nav-link" data-target="ch-11-practice" href="#ch-11-practice"><span class="num">11</span><span class="nav-text">实战:给项目加一个新功能</span></a>
+<a class="nav-link" data-target="ch-12-next-steps" href="#ch-12-next-steps"><span class="num">12</span><span class="nav-text">调试、打包与后续学习路线</span></a></nav>
+<div class="side-foot">由 scripts/build-tutorial.mjs 生成 · 2026-10-06</div>
+</aside>
+<main class="main"><section class="chapter" id="ch-readme" data-title="教程首页 · 学习路线">
+<div class="ch-eyebrow"><span class="ch-chip">序</span><span class="ch-pos">1 / 13</span></div>
+<h1>Web 开发零基础教程 —— 以 NTE 模组管理器为教材</h1>
+<p>这是一份面向<strong>零基础读者</strong>的 Web 开发完整教程。它不空讲理论,而是以本仓库的 <code>app/</code> 目录(NTE 模组管理器 2.0,一个 Electron + React 桌面应用)作为唯一的“实物教材”:每一章讲一个技术点,都会打开项目里的真实文件,看这个知识点在工业级代码里是怎么用的。</p>
+<p>学完本教程,你将能看懂这个项目的全部前端代码,并且有能力亲手给它加功能。</p>
+<h2>网页版</h2>
+<p>本教程有<strong>单章翻页浏览</strong>的网页版:<a href="site/index.html">site/index.html</a>(单文件,双击即可在浏览器打开;深浅色跟随系统)。支持侧边栏切章、上一章/下一章按钮、键盘 ←/→ 翻章、代码高亮与一键复制。</p>
+<p>它由 <code>app/scripts/build-tutorial.mjs</code> 从本章的 Markdown 源文件自动编译而成。<strong>修改教程内容请改 <code>.md</code> 文件</strong>,然后重新生成:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">cd</span> app
+<span class="tok-k">npm</span> <span class="tok-k">run</span> docs:tutorial</code></pre></div><h2>这份教程适合谁</h2>
+<ul>
+<li>完全没写过代码,或者只写过一点点,想系统学 Web 开发的人;</li>
+<li>想通过“一个真实项目从上到下拆开看”来学习,而不是做一堆孤零零小练习的人;</li>
+<li>最终目标是自己能开发网页,甚至开发像本项目管理器这样的<strong>桌面应用</strong>的人。</li>
+</ul>
+<h2>学习路线图</h2>
+<p>现代 Web 开发的知识栈是一层叠一层的,本教程严格按照依赖顺序排列,<strong>请按章节顺序学习,不要跳章</strong>:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">学习路线自上而下,与章节编号一致:
+
+【语言层】网页由什么构成
+   ├─ 第 1 章  HTML:网页的骨架
+   ├─ 第 2 章  CSS:控制外观
+   ├─ 第 3 章  JavaScript:让网页活起来
+   └─ 第 4 章  TypeScript:给 JavaScript 加上类型护栏
+
+【工具层】一切运行在它之上
+   ├─ 第 5 章  Node.js 与 npm:运行和安装一切的地基
+   └─ 第 6 章  Vite:现代开发的工具链
+
+【框架与样式】把界面真正搭起来
+   ├─ 第 7 章  React 入门:组件与 JSX
+   ├─ 第 8 章  React 进阶:状态与 Hooks
+   └─ 第 9 章  Tailwind CSS 4 与 shadcn/ui:界面样式体系
+
+【桌面形态】本项目的最终样子
+   └─ 第 10 章 Electron:把网页变成桌面应用
+
+【毕业】
+   └─ 第 11、12 章  实战演练、调试与打包发布</code></pre></div><p>一句话概括各层的关系:<strong>HTML 是骨架,CSS 是皮肤,JavaScript 是肌肉;TypeScript 给肌肉装上“防拉伤”检查;React 告诉你怎么把成千上万块肌肉组织成一个人;Tailwind/shadcn 是现成的高质量皮肤库;Vite 和 npm 是健身房和器械;Electron 最后给这个人穿上一身铠甲,让他脱离浏览器作为桌面程序运行。</strong></p>
+<h2>环境准备(开始前必读)</h2>
+<h3>1. 安装 Node.js</h3>
+<p>到 <a href="https://nodejs.org" target="_blank" rel="noreferrer">https://nodejs.org</a> 下载 <strong>LTS 版本</strong>并安装(一路下一步即可)。安装完打开终端验证:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">node</span> -v    <span class="tok-c"># 输出版本号,如 v22.x.x</span>
+<span class="tok-k">npm</span> -v     <span class="tok-c"># 输出版本号,如 10.x.x</span></code></pre></div><blockquote>
+<p>国内网络如果访问 GitHub 经常超时,可以先给 npm 配置国内镜像:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">npm</span> config <span class="tok-k">set</span> registry https://registry.npmmirror.com</code></pre></div></blockquote>
+<h3>2. 安装编辑器</h3>
+<p>推荐 <a href="https://code.visualstudio.com/" target="_blank" rel="noreferrer">VS Code</a>(免费)。装好后再在扩展商店里安装:</p>
+<ul>
+<li><strong>ESLint</strong>:代码规范检查</li>
+<li><strong>Prettier</strong>:自动格式化</li>
+<li><strong>Tailwind CSS IntelliSense</strong>:写样式类名时自动补全(第 9 章会用到)</li>
+</ul>
+<h3>3. 把项目跑起来</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">cd</span> app
+<span class="tok-k">npm</span> <span class="tok-k">install</span>     <span class="tok-c"># 第一次需要,下载所有依赖(可能要几分钟)</span>
+<span class="tok-k">npm</span> <span class="tok-k">run</span> dev     <span class="tok-c"># 启动开发模式,会自动打开浏览器</span></code></pre></div><p>看到“NTE 模组管理器”界面出现在浏览器里,环境就绪。以后<strong>所有练习和验证都用 <code>npm run dev</code></strong>,改完代码浏览器会自动刷新(这个机制叫热更新,第 6 章详讲)。</p>
+<blockquote>
+<p><code>npm run dev:electron</code> 是完整的桌面模式(连 Electron 外壳一起跑)。日常学习用浏览器模式就够了,界面代码完全相同。</p>
+</blockquote>
+<h3>4. 项目地图(建议打印或放在第二块屏幕上)</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">app/
+├─ package.json              ← 第 5 章:项目清单(名字、依赖、命令)
+├─ web.vite.config.ts        ← 第 6 章:浏览器模式的构建配置
+├─ electron.vite.config.ts   ← 第 6 章:桌面模式的构建配置
+└─ src/
+   ├─ renderer/              ← "前端"本体,浏览器里跑的部分
+   │  ├─ index.html          ← 第 1 章:整个页面的入口 HTML
+   │  └─ src/
+   │     ├─ main.tsx         ← 第 7 章:React 的启动入口
+   │     ├─ App.tsx          ← 第 8 章:整个应用的根组件
+   │     ├─ index.css        ← 第 2、9 章:全局样式与主题
+   │     ├─ components/      ← 第 7-9 章:一个个 UI 零件
+   │     │  ├─ mod-card.tsx      (模组卡片)
+   │     │  ├─ sidebar.tsx       (左侧分类栏)
+   │     │  ├─ fps-counter.tsx   (FPS 角标,全项目最简单的组件)
+   │     │  └─ ui/               (shadcn/ui 基础零件库)
+   │     └─ lib/             ← 工具函数(format.ts、utils.ts)
+   ├─ main/                  ← 第 10 章:Electron 主进程(Node.js 环境)
+   ├─ preload/               ← 第 10 章:连接两个世界的桥梁
+   └─ shared/                ← 第 4 章:两边共用的类型定义</code></pre></div><h2>学习方法建议</h2>
+<ol>
+<li><strong>每章 30~90 分钟</strong>,看完概念后一定动手:打开对照的文件,改一行,看浏览器变化,再改回来。</li>
+<li>每章末尾有<strong>自测题</strong>,答不上来说明该回头重读。</li>
+<li>看不懂某个概念很正常——Web 开发的知识是环环相扣的,第一遍允许“知道有这么个东西”,第二遍回头再看会豁然开朗。</li>
+<li>遇到报错先完整读一遍错误信息,80% 的错误信息里直接写了原因和文件行号。</li>
+</ol>
+<h2>目录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>章节</th>
+<th>内容</th>
+<th>对照的项目文件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="#ch-01-html">第 1 章</a></td>
+<td>Web 如何工作 &amp; HTML 入门</td>
+<td><code>src/renderer/index.html</code></td>
+</tr>
+<tr>
+<td><a href="#ch-02-css">第 2 章</a></td>
+<td>CSS:网页的外观</td>
+<td><code>src/renderer/src/index.css</code></td>
+</tr>
+<tr>
+<td><a href="#ch-03-javascript">第 3 章</a></td>
+<td>JavaScript:让网页活起来</td>
+<td><code>src/renderer/src/lib/format.ts</code></td>
+</tr>
+<tr>
+<td><a href="#ch-04-typescript">第 4 章</a></td>
+<td>TypeScript:给 JS 加上类型护栏</td>
+<td><code>src/shared/types.ts</code></td>
+</tr>
+<tr>
+<td><a href="#ch-05-node-npm">第 5 章</a></td>
+<td>Node.js 与 npm</td>
+<td><code>app/package.json</code></td>
+</tr>
+<tr>
+<td><a href="#ch-06-vite">第 6 章</a></td>
+<td>Vite 与现代工程化</td>
+<td><code>web.vite.config.ts</code> / <code>electron.vite.config.ts</code></td>
+</tr>
+<tr>
+<td><a href="#ch-07-react-basics">第 7 章</a></td>
+<td>React 入门:组件与 JSX</td>
+<td><code>main.tsx</code> / <code>fps-counter.tsx</code></td>
+</tr>
+<tr>
+<td><a href="#ch-08-react-state">第 8 章</a></td>
+<td>React 进阶:状态与 Hooks</td>
+<td><code>mod-card.tsx</code> / <code>App.tsx</code></td>
+</tr>
+<tr>
+<td><a href="#ch-09-tailwind-shadcn">第 9 章</a></td>
+<td>Tailwind CSS 4 与 shadcn/ui</td>
+<td><code>index.css</code> / <code>ui/button.tsx</code></td>
+</tr>
+<tr>
+<td><a href="#ch-10-electron">第 10 章</a></td>
+<td>Electron:桌面应用</td>
+<td><code>main/index.ts</code> / <code>preload/index.ts</code></td>
+</tr>
+<tr>
+<td><a href="#ch-11-practice">第 11 章</a></td>
+<td>实战:给项目加一个新功能</td>
+<td><code>mod-card.tsx</code> 等</td>
+</tr>
+<tr>
+<td><a href="#ch-12-next-steps">第 12 章</a></td>
+<td>调试、打包与后续学习路线</td>
+<td><code>electron-builder.yml</code> 等</td>
+</tr>
+</tbody></table></div>
+
+<div class="ch-nav"><div class="ch-nav-spacer"></div><a class="next" href="#ch-01-html"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 1 章 · Web 是如何工作的 &amp; HTML 入门</span></a></div>
+</section>
+<section class="chapter" id="ch-01-html" data-title="Web 是如何工作的 &amp; HTML 入门">
+<div class="ch-eyebrow"><span class="ch-chip">第 1 章</span><span class="ch-pos">2 / 13</span></div>
+<h1>Web 是如何工作的 &amp; HTML 入门</h1>
+<blockquote>
+<p>对照文件:<code>app/src/renderer/index.html</code></p>
+</blockquote>
+<h2>1.1 浏览器到底在干什么</h2>
+<p>你在浏览器里看到的每一个网页,本质上都是浏览器<strong>下载了几个文本文件,然后把它们“画”出来</strong>。这三个核心文本文件是:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>语言</th>
+<th>职责</th>
+<th>类比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>.html</code></td>
+<td>HTML</td>
+<td>描述页面<strong>有什么内容、什么结构</strong></td>
+<td>房子的承重墙和房间格局</td>
+</tr>
+<tr>
+<td><code>.css</code></td>
+<td>CSS</td>
+<td>描述内容<strong>长什么样子</strong></td>
+<td>装修:墙漆、地板、家具风格</td>
+</tr>
+<tr>
+<td><code>.js</code></td>
+<td>JavaScript</td>
+<td>描述内容<strong>如何行为、如何响应操作</strong></td>
+<td>电路:开关灯、电梯、门铃</td>
+</tr>
+</tbody></table></div>
+<p>当你在地址栏输入网址回车后:</p>
+<ol>
+<li>浏览器向服务器发送一个请求(“把这个网址的内容给我”);</li>
+<li>服务器返回一个 HTML 文件;</li>
+<li>浏览器<strong>逐行解析</strong> HTML,遇到 <code>&lt;link&gt;</code> 就去下载 CSS,遇到 <code>&lt;script&gt;</code> 就去下载 JS;</li>
+<li>浏览器把 HTML 解析成一棵树(称为 <strong>DOM</strong>,Document Object Model),再根据 CSS 把每个节点画到屏幕上,根据 JS 让它响应点击、输入等事件。</li>
+</ol>
+<blockquote>
+<p><strong>本项目的特别之处</strong>:NTE 模组管理器最终是一个桌面应用,但它的界面就是一个网页——由 Electron 这个“壳”内嵌的浏览器(Chromium)渲染。所以在第 10 章之前,你学的一切都是纯 Web 知识,完全通用。</p>
+</blockquote>
+<h2>1.2 打开项目里的第一个 HTML</h2>
+<p>用 VS Code 打开 <code>app/src/renderer/index.html</code>,全文只有 16 行:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">HTML</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-html"><span class="tok-k">&lt;!doctype html&gt;</span>
+&lt;<span class="tok-t">html</span> <span class="tok-a">lang</span>=<span class="tok-s">"zh-CN"</span> <span class="tok-a">class</span>=<span class="tok-s">"dark"</span>&gt;
+  &lt;<span class="tok-t">head</span>&gt;
+    &lt;<span class="tok-t">meta</span> <span class="tok-a">charset</span>=<span class="tok-s">"UTF-8"</span> /&gt;
+    &lt;<span class="tok-t">meta</span> <span class="tok-a">name</span>=<span class="tok-s">"viewport"</span> <span class="tok-a">content</span>=<span class="tok-s">"width=device-width, initial-scale=1.0"</span> /&gt;
+    &lt;<span class="tok-t">meta</span>
+      <span class="tok-a">http-equiv</span>=<span class="tok-s">"Content-Security-Policy"</span>
+      <span class="tok-a">content</span>=<span class="tok-s">"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' media: blob: data:; font-src 'self' data:; connect-src 'self'"</span>
+    /&gt;
+    &lt;<span class="tok-t">title</span>&gt;NTE 模组管理器&lt;/<span class="tok-t">title</span>&gt;
+  &lt;/<span class="tok-t">head</span>&gt;
+  &lt;<span class="tok-t">body</span>&gt;
+    &lt;<span class="tok-t">div</span> <span class="tok-a">id</span>=<span class="tok-s">"root"</span>&gt;&lt;/<span class="tok-t">div</span>&gt;
+    &lt;<span class="tok-t">script</span> <span class="tok-a">type</span>=<span class="tok-s">"module"</span> <span class="tok-a">src</span>=<span class="tok-s">"/src/main.tsx"</span>&gt;&lt;/<span class="tok-t">script</span>&gt;
+  &lt;/<span class="tok-t">body</span>&gt;
+&lt;/<span class="tok-t">html</span>&gt;</code></pre></div><p>就这么短的文件,却是整个应用的起点。逐行拆解:</p>
+<h3><code>&lt;!doctype html&gt;</code></h3>
+<p>声明“这是一份现代 HTML5 文档”。固定写法,必须是第一行。</p>
+<h3><code>&lt;html lang=&quot;zh-CN&quot; class=&quot;dark&quot;&gt;</code></h3>
+<p>整个页面的根元素。两个知识点:</p>
+<ul>
+<li><code>lang=&quot;zh-CN&quot;</code> 告诉浏览器和搜索引擎“页面内容是简体中文”(影响翻译提示、朗读发音);</li>
+<li><code>class=&quot;dark&quot;</code> 是一个 CSS 类名。本项目是深色主题,就是在根元素上挂了 <code>dark</code> 类,让所有深色样式生效——第 2 章讲 CSS 类时会回来对照。</li>
+</ul>
+<h3><code>&lt;head&gt;</code>:给浏览器看的“元信息”,不显示在页面上</h3>
+<ul>
+<li><code>&lt;meta charset=&quot;UTF-8&quot; /&gt;</code>:字符编码。没有它,中文可能显示成乱码。<strong>每个项目都必须有</strong>。</li>
+<li><code>&lt;meta name=&quot;viewport&quot; ...&gt;</code>:移动端适配声明,规定页面宽度跟随设备宽度。桌面项目也习惯性带上。</li>
+<li><code>&lt;meta http-equiv=&quot;Content-Security-Policy&quot; ...&gt;</code>:<strong>安全策略</strong>,内容较多,现在只需知道它的作用——限制页面只能加载哪些来源的资源(脚本只能来自自己、图片可以来自 <code>media:</code> 协议等),防止被注入恶意脚本。Electron 官方强烈建议桌面应用的界面加上它,第 10 章会再提到。</li>
+<li><code>&lt;title&gt;NTE 模组管理器&lt;/title&gt;</code>:显示在浏览器标签页上的标题。</li>
+</ul>
+<h3><code>&lt;body&gt;</code>:页面上真正显示的内容</h3>
+<p>关键只有两行:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">HTML</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-html">&lt;<span class="tok-t">div</span> <span class="tok-a">id</span>=<span class="tok-s">"root"</span>&gt;&lt;/<span class="tok-t">div</span>&gt;
+&lt;<span class="tok-t">script</span> <span class="tok-a">type</span>=<span class="tok-s">"module"</span> <span class="tok-a">src</span>=<span class="tok-s">"/src/main.tsx"</span>&gt;&lt;/<span class="tok-t">script</span>&gt;</code></pre></div><p>第一行是一个<strong>空的</strong> <code>&lt;div&gt;</code>,只有一个 <code>id=&quot;root&quot;</code> 作为门牌号。</p>
+<p>第二行加载了一个脚本。注意它的路径指向的是 <code>.tsx</code> 而不是 <code>.js</code>——这在纯 HTML 时代不可能,因为浏览器不认识 <code>.tsx</code>。这正是现代开发工具链(第 6 章的 Vite)的魔法:<strong>开发时 Vite 会在幕后把 TypeScript/JSX 实时翻译成浏览器能懂的 JavaScript</strong>。</p>
+<p><code>&lt;div id=&quot;root&quot;&gt;</code> 为什么是空的?因为第 7 章的 React 会接管一切:<strong>JavaScript 代码会动态地把整个界面“塞进”这个 div 里</strong>。现代前端应用的 HTML 往往就这么一个空壳,界面全部由 JS 生成——这种应用叫 <strong>SPA(Single-Page Application,单页应用)</strong>。</p>
+<h2>1.3 HTML 核心概念:标签、属性、嵌套</h2>
+<p>不依赖任何工具,你现在就可以体验 HTML。在桌面新建 <code>hello.html</code>,写入:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">HTML</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-html"><span class="tok-k">&lt;!doctype html&gt;</span>
+&lt;<span class="tok-t">html</span> <span class="tok-a">lang</span>=<span class="tok-s">"zh-CN"</span>&gt;
+  &lt;<span class="tok-t">head</span>&gt;
+    &lt;<span class="tok-t">meta</span> <span class="tok-a">charset</span>=<span class="tok-s">"UTF-8"</span> /&gt;
+    &lt;<span class="tok-t">title</span>&gt;我的第一个网页&lt;/<span class="tok-t">title</span>&gt;
+  &lt;/<span class="tok-t">head</span>&gt;
+  &lt;<span class="tok-t">body</span>&gt;
+    &lt;<span class="tok-t">h1</span>&gt;你好,Web 世界&lt;/<span class="tok-t">h1</span>&gt;
+    &lt;<span class="tok-t">p</span>&gt;这是一个段落。&lt;/<span class="tok-t">p</span>&gt;
+    &lt;<span class="tok-t">button</span>&gt;点我&lt;/<span class="tok-t">button</span>&gt;
+  &lt;/<span class="tok-t">body</span>&gt;
+&lt;/<span class="tok-t">html</span>&gt;</code></pre></div><p>双击文件用浏览器打开,你会看到一个大标题、一段文字和一个按钮。<strong>你刚刚写出了网页的三件套之一。</strong></p>
+<h3>语法规则(就这么多)</h3>
+<ol>
+<li><strong>标签(tag)</strong>:尖括号包裹的关键字,如 <code>&lt;h1&gt;</code>、<code>&lt;p&gt;</code>。大多数成对出现:<code>&lt;p&gt;内容&lt;/p&gt;</code>,斜杠表示结束。</li>
+<li><strong>自闭合标签</strong>:没有内容的标签可以写成 <code>&lt;meta ... /&gt;</code>(如 meta、img、br)。</li>
+<li><strong>属性(attribute)</strong>:标签上的额外信息,写在开始标签里,格式为 <code>名字=&quot;值&quot;</code>。例如 <code>&lt;html lang=&quot;zh-CN&quot;&gt;</code> 里的 <code>lang</code>,以及最常见的 <code>class</code> 和 <code>id</code>。</li>
+<li><strong>嵌套</strong>:标签里可以套标签,像俄罗斯套娃。<strong>必须正确闭合、不许交叉</strong>,例如 <code>&lt;p&gt;&lt;b&gt;粗体&lt;/b&gt;&lt;/p&gt;</code> 合法,<code>&lt;p&gt;&lt;b&gt;粗体&lt;/p&gt;&lt;/b&gt;</code> 非法。</li>
+<li><strong>缩进</strong>:HTML 不在乎缩进,但每嵌套一层缩进一格(2 空格)是全行业的强制习惯,本项目所有文件都严格遵守。</li>
+</ol>
+<h3>常用标签速查(本项目用到的)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>标签</th>
+<th>用途</th>
+<th>项目里的例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>div</code></td>
+<td>通用容器,划区布局</td>
+<td><code>index.html</code> 的 <code>#root</code></td>
+</tr>
+<tr>
+<td><code>span</code></td>
+<td>行内小容器,包裹一段文字</td>
+<td><code>fps-counter.tsx</code> 的整个返回值</td>
+</tr>
+<tr>
+<td><code>button</code></td>
+<td>按钮</td>
+<td><code>mod-card.tsx</code> 里的安装按钮</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>输入框</td>
+<td>搜索框、重命名框</td>
+</tr>
+<tr>
+<td><code>h1</code>~<code>h6</code> / <code>p</code></td>
+<td>标题与段落</td>
+<td>弹窗里的标题与说明</td>
+</tr>
+<tr>
+<td><code>ul</code> / <code>li</code></td>
+<td>列表</td>
+<td>下拉菜单本质就是列表的变体</td>
+</tr>
+</tbody></table></div>
+<p>看一眼 <code>app/src/renderer/src/components/fps-counter.tsx</code> 的返回部分(现在看不懂 import 没关系,那是 JS,第 3 章讲):</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">return</span> (
+  &lt;span className=<span class="tok-s">"shrink-0 tabular-nums"</span>&gt;
+    {fps} <span class="tok-t">FPS</span>
+  &lt;/span&gt;
+)</code></pre></div><p>这就是一个 <code>span</code> 标签,带一个 <code>className</code> 属性(注意:React 里写 <code>className</code> 而不是 HTML 的 <code>class</code>,因为 <code>class</code> 在 JS 里是保留字)。<code>{fps}</code> 是“把 JS 变量的值填进这里”的语法,第 7 章展开。</p>
+<h2>1.4 DOM:浏览器眼里的页面</h2>
+<p>浏览器解析 HTML 后,会在内存里构建一棵<strong>树</strong>,每个标签是一个节点。上面 hello.html 的树长这样:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">document
+└─ html
+   ├─ head
+   │  ├─ meta
+   │  └─ title → "我的第一个网页"
+   └─ body
+      ├─ h1 → "你好,Web 世界"
+      ├─ p → "这是一个段落。"
+      └─ button → "点我"</code></pre></div><p>这棵树叫 <strong>DOM</strong>。之所以重要,是因为 JavaScript 操作网页,本质就是<strong>增删改这棵树上的节点</strong>。你可以在浏览器里亲眼看到它:打开任意网页按 <code>F12</code>,<code>Elements</code>(元素)面板展示的就是 live 的 DOM。</p>
+<h2>动手练习</h2>
+<ol>
+<li>写出你的 <code>hello.html</code>,要求:标题是你的名字,含一个段落和一个按钮;把 <code>class=&quot;dark&quot;</code> 加到 <code>&lt;html&gt;</code> 上(暂时看不出变化,正常,还没有 CSS)。</li>
+<li>用 F12 打开<strong>本项目管理器</strong>(先 <code>npm run dev</code>)的页面,在 Elements 面板里找到 <code>&lt;div id=&quot;root&quot;&gt;</code>,展开它——你会看到成百上千个节点,全部由 React 生成,而 <code>index.html</code> 里它是空的。</li>
+<li>在 F12 的 Elements 面板里,双击某个节点文字直接改掉它,观察页面即时变化。这就是“JS 改 DOM”能达成效果的图形化版本。</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>HTML、CSS、JS 各自负责什么?</li>
+<li><code>index.html</code> 里 <code>#root</code> 那个 div 为什么是空的?</li>
+<li>标签的“属性”是什么?举出两个本项目出现过的属性。</li>
+<li>什么是 DOM?为什么它重要?</li>
+</ul>
+<p>下一章:<a href="#ch-02-css">第 2 章 · CSS:网页的外观</a></p>
+
+<div class="ch-nav"><a href="#ch-readme"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">教程首页 · 学习路线</span></a><a class="next" href="#ch-02-css"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 2 章 · CSS:网页的外观</span></a></div>
+</section>
+<section class="chapter" id="ch-02-css" data-title="CSS:网页的外观">
+<div class="ch-eyebrow"><span class="ch-chip">第 2 章</span><span class="ch-pos">3 / 13</span></div>
+<h1>CSS:网页的外观</h1>
+<blockquote>
+<p>对照文件:<code>app/src/renderer/src/index.css</code></p>
+</blockquote>
+<h2>2.1 CSS 是什么</h2>
+<p>CSS(Cascading Style Sheets,层叠样式表)回答一个问题:<strong>页面上每个元素长什么样</strong>——颜色、大小、位置、边框、阴影、动画,全部由它管。</p>
+<p>CSS 的基本单元是<strong>规则(rule)</strong>,由<strong>选择器 + 一组声明</strong>构成:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">选择器 {
+  属性: 值;
+  属性: 值;
+}</code></pre></div><p>比如“让所有段落文字变红”:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">p {
+  color: red;
+}</code></pre></div><h2>2.2 三种“选中元素”的方式</h2>
+<p>CSS 最核心的问题是:<strong>这条规则作用于谁?</strong></p>
+<h3>① 按标签名</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">button {
+  font-size: <span class="tok-n">14px</span>;
+}</code></pre></div><p>选中页面上<strong>所有</strong> <code>&lt;button&gt;</code>。范围太大,实际项目很少单独用。</p>
+<h3>② 按类名(class)—— 最重要的方式</h3>
+<p>HTML 里给元素挂类名:<code>&lt;button class=&quot;primary big&quot;&gt;</code>,CSS 里用点号选中:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">.primary {
+  background: <span class="tok-n">#7c5cff</span>;
+}
+.big {
+  padding: <span class="tok-n">12px</span> <span class="tok-n">24px</span>;
+}</code></pre></div><p>一个元素可以挂多个类(空格分隔),一个类也可以被无数元素复用——这是 CSS 设计的精髓:<strong>样式与结构解耦</strong>。</p>
+<h3>③ 按 id</h3>
+<p><code>&lt;div id=&quot;root&quot;&gt;</code> 对应 <code>#root { ... }</code>。id 在页面里必须唯一,所以只用于“全页面就这一个”的东西。</p>
+<h2>2.3 必须掌握的常用属性</h2>
+<p>先有个印象即可,后面写多了自然记住:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">.card {
+  <span class="tok-c">/* 尺寸与间距 */</span>
+  width: <span class="tok-n">300px</span>;            <span class="tok-c">/* 宽 */</span>
+  height: <span class="tok-n">64px</span>;            <span class="tok-c">/* 高 */</span>
+  padding: <span class="tok-n">16px</span>;           <span class="tok-c">/* 内边距:边框到内容的距离 */</span>
+  margin: <span class="tok-n">8px</span>;             <span class="tok-c">/* 外边距:与相邻元素的距离 */</span>
+
+  <span class="tok-c">/* 外观 */</span>
+  background: <span class="tok-t">rgba</span>(<span class="tok-n">30</span>, <span class="tok-n">30</span>, <span class="tok-n">40</span>, <span class="tok-n">0.7</span>);  <span class="tok-c">/* 背景(支持半透明) */</span>
+  color: <span class="tok-n">#f0f0f5</span>;                     <span class="tok-c">/* 文字颜色 */</span>
+  border-radius: <span class="tok-n">12px</span>;                <span class="tok-c">/* 圆角 */</span>
+  border: <span class="tok-n">1px</span> solid <span class="tok-n">#333</span>;             <span class="tok-c">/* 边框 */</span>
+
+  <span class="tok-c">/* 文字 */</span>
+  font-size: <span class="tok-n">14px</span>;         <span class="tok-c">/* 字号 */</span>
+  font-weight: <span class="tok-n">600</span>;        <span class="tok-c">/* 字重(400 常规 / 600 半粗 / 700 粗) */</span>
+
+  <span class="tok-c">/* 布局:让子元素排队 */</span>
+  display: flex;
+  gap: <span class="tok-n">12px</span>;               <span class="tok-c">/* 子元素之间的间距 */</span>
+}</code></pre></div><h3>颜色的三种常见写法</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">color: red;                            <span class="tok-c">/* 预设名,项目里基本不用 */</span>
+color: <span class="tok-n">#7c5cff</span>;                        <span class="tok-c">/* 十六进制 */</span>
+color: <span class="tok-t">hsl</span>(<span class="tok-n">258</span> <span class="tok-n">90</span>% <span class="tok-n">66</span>%);               <span class="tok-c">/* 色相/饱和度/亮度 —— 本项目的主题色就用它 */</span>
+color: <span class="tok-t">hsl</span>(<span class="tok-t">var</span>(<span class="tok-a">--primary</span>) / <span class="tok-n">0.2</span>);      <span class="tok-c">/* 借助 CSS 变量 + 透明度,项目里到处都是 */</span></code></pre></div><h3>最重要的布局工具:flex(弹性盒)</h3>
+<p>现代界面布局九成靠 <code>display: flex</code>。它让容器<strong>的子元素</strong>沿一行(或一列)排列,并能控制对齐和伸缩。看 <code>mod-card.tsx</code> 卡片头部那一行的真实写法:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;div className=<span class="tok-s">"relative flex items-center gap-3 px-4 py-3"</span>&gt;</code></pre></div><p>翻译成原生 CSS 就是:这个容器启用 flex 布局,子元素垂直居中(<code>items-center</code>),彼此间隔 12px(<code>gap-3</code>),容器自身左右内边距 16px、上下 12px。flex 详细规则在 <a href="https://developer.mozilla.org/zh-CN/docs/Learn/CSS/CSS_layout/Flexbox" target="_blank" rel="noreferrer">MDN 的 flexbox 指南</a> 里,先理解“它能让一排东西整齐排队并居中”就够往下学了。</p>
+<h2>2.4 CSS 变量:本项目的主题系统</h2>
+<p>CSS 允许定义变量,以 <code>--</code> 开头,用 <code>var()</code> 取用:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">:root {
+  <span class="tok-a">--primary</span>: <span class="tok-n">258</span> <span class="tok-n">90</span>% <span class="tok-n">66</span>%;   <span class="tok-c">/* 主题紫色 */</span>
+}
+.button {
+  background: <span class="tok-t">hsl</span>(<span class="tok-t">var</span>(<span class="tok-a">--primary</span>));
+}</code></pre></div><p>最大的价值:<strong>一处定义,全局引用</strong>。想换主题色只改一行。</p>
+<p>打开 <code>app/src/renderer/src/index.css</code> 的 <code>@layer base</code> 段(约 108 行起),你会看到整个项目的调色板就是这么定义的:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css">:root {
+  <span class="tok-a">--background</span>: <span class="tok-n">240</span> <span class="tok-n">16</span>% <span class="tok-n">5</span>%;      <span class="tok-c">/* 页面底色:近黑的深蓝 */</span>
+  <span class="tok-a">--foreground</span>: <span class="tok-n">240</span> <span class="tok-n">10</span>% <span class="tok-n">96</span>%;     <span class="tok-c">/* 前景文字:近白 */</span>
+  <span class="tok-a">--primary</span>: <span class="tok-n">258</span> <span class="tok-n">90</span>% <span class="tok-n">66</span>%;        <span class="tok-c">/* 主题紫色 */</span>
+  <span class="tok-a">--radius</span>: <span class="tok-n">16px</span>;                <span class="tok-c">/* 全局圆角 */</span>
+  ...
+}</code></pre></div><p>再往下看这些变量被 <code>@theme</code> 段映射成工具类可用的名字(<code>--color-primary: hsl(var(--primary))</code> 等),于是代码里就能写 <code>text-primary</code>、<code>bg-background</code> 这样的类名——这是第 9 章 Tailwind 的内容,这里只需记住因果链:</p>
+<blockquote>
+<p><strong><code>:root</code> 里的变量(第 2 章)→ 被映射进主题(第 9 章)→ 变成界面上一片片颜色。</strong>
+顺带一提:设置界面里那个“全局圆角”滑杆,改的就是 <code>--radius</code> 这一个变量,全 UI 的圆角随之联动——CSS 变量威力的实证。</p>
+</blockquote>
+<h2>2.5 层叠:当多条规则撞车听谁的</h2>
+<p>CSS 的“C”就是 Cascade(层叠)。多条规则命中同一元素时,按优先级取胜:</p>
+<ol>
+<li><strong>越具体越强</strong>:<code>.card .title</code> 强于 <code>.title</code> 强于 <code>div</code>;</li>
+<li><strong>同权重时,后写的赢</strong>;</li>
+<li>内联 <code>style=&quot;...&quot;</code> 属性最强,<code>!important</code> 是掀桌子的王炸(能不用就不用)。</li>
+</ol>
+<p>工程上真正管理优先级的手段是 <code>@layer</code>。本项目 <code>index.css</code> 里所有规则都收在层里:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css"><span class="tok-k">@layer</span> base {
+  :root { <span class="tok-a">--background</span>: <span class="tok-n">240</span> <span class="tok-n">16</span>% <span class="tok-n">5</span>%; <span class="tok-c">/* ... */</span> }
+}</code></pre></div><p>层与层之间有明确的强弱顺序,避免“组件样式”和“基础样式”打架。现在记住“<code>@layer base</code> 里放全局基础样式”即可。</p>
+<h2>动手练习</h2>
+<ol>
+<li><p>给第 1 章的 <code>hello.html</code> 加一个 <code>&lt;style&gt;</code> 块(放在 <code>&lt;head&gt;</code> 里),把 <code>h1</code> 改成紫色、<code>button</code> 加圆角和内边距:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">HTML</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-html">&lt;<span class="tok-t">style</span>&gt;
+  h1 { color: hsl(258 90% 66%); }
+  button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: hsl(258 90% 66%);
+    color: white;
+  }
+&lt;/<span class="tok-t">style</span>&gt;</code></pre></div></li>
+<li><p>在浏览器 F12 的 Elements 面板选中某个元素,在右侧 Styles 面板里勾选/取消它的样式,直观感受“层叠”。</p>
+</li>
+<li><p>打开本项目,在 <code>index.css</code> 的 <code>:root</code> 里把 <code>--primary: 258 90% 66%</code> 改成 <code>--primary: 160 84% 39%</code>(绿色),保存,观察浏览器热更新后整个应用从紫变绿。改完记得还原。</p>
+</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>类选择器和 id 选择器写法上、语义上有什么区别?</li>
+<li><code>padding</code> 和 <code>margin</code> 分别是哪两个边界之间的距离?</li>
+<li>CSS 变量怎么定义、怎么取用?本项目哪个设置项是靠它实现“一处改、全局变”的?</li>
+<li>两条规则冲突时,一般谁赢?</li>
+</ul>
+<p>下一章:<a href="#ch-03-javascript">第 3 章 · JavaScript:让网页活起来</a></p>
+
+<div class="ch-nav"><a href="#ch-01-html"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 1 章 · Web 是如何工作的 &amp; HTML 入门</span></a><a class="next" href="#ch-03-javascript"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 3 章 · JavaScript:让网页活起来</span></a></div>
+</section>
+<section class="chapter" id="ch-03-javascript" data-title="JavaScript:让网页活起来">
+<div class="ch-eyebrow"><span class="ch-chip">第 3 章</span><span class="ch-pos">4 / 13</span></div>
+<h1>JavaScript:让网页活起来</h1>
+<blockquote>
+<p>对照文件:<code>app/src/renderer/src/lib/format.ts</code>(本教程最友好的真实教材,全文 32 行)</p>
+</blockquote>
+<h2>3.1 JS 在哪里运行</h2>
+<p>JavaScript 是一门编程语言,主要有两种运行环境:</p>
+<ol>
+<li><strong>浏览器</strong>:操作网页(DOM)、响应用户操作、发网络请求;</li>
+<li><strong>Node.js</strong>:脱离浏览器,在操作系统里跑(能读写文件、起服务器)——第 5 章详讲。</li>
+</ol>
+<p>同一门语言,两个舞台。本项目的界面逻辑跑在浏览器(Electron 内嵌 Chromium)里,扫描磁盘上的模组文件夹则跑在 Node.js 里。</p>
+<h2>3.2 变量与常量</h2>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js"><span class="tok-k">let</span> count = <span class="tok-n">10</span>        <span class="tok-c">// 变量:可以重新赋值</span>
+count = <span class="tok-n">20</span>            <span class="tok-c">// OK</span>
+
+<span class="tok-k">const</span> name = <span class="tok-s">'NTE'</span>    <span class="tok-c">// 常量:赋值后不可重新赋值</span>
+name = <span class="tok-s">'other'</span>        <span class="tok-c">// ❌ 报错</span></code></pre></div><p><strong>行业规范:默认一律用 <code>const</code>,只有确实需要重新赋值时才用 <code>let</code>。</strong> 项目里你几乎见不到 <code>var</code>(老式声明,有坑,已被淘汰)。</p>
+<h2>3.3 数据类型</h2>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js"><span class="tok-c">// 基础类型</span>
+<span class="tok-k">const</span> n = <span class="tok-n">1024</span>                  <span class="tok-c">// 数字(不区分整数浮点)</span>
+<span class="tok-k">const</span> s = <span class="tok-s">'模组名'</span>               <span class="tok-c">// 字符串,单双引号皆可,习惯单引号</span>
+<span class="tok-k">const</span> ok = <span class="tok-k">true</span>                 <span class="tok-c">// 布尔</span>
+<span class="tok-k">const</span> nothing = <span class="tok-k">null</span>            <span class="tok-c">// "刻意为空"</span>
+<span class="tok-k">let</span> x                            <span class="tok-c">// 未赋值时是 undefined</span>
+
+<span class="tok-c">// 两个核心复合类型</span>
+<span class="tok-k">const</span> mod = {                   <span class="tok-c">// 对象:键值对的集合,像一张登记表</span>
+  name: <span class="tok-s">'风灵月影'</span>,
+  sizeBytes: <span class="tok-n">52428800</span>,
+  installed: <span class="tok-k">true</span>
+}
+mod.name                        <span class="tok-c">// 取值:'风灵月影'(点号)</span>
+mod[<span class="tok-s">'sizeBytes'</span>]                <span class="tok-c">// 也可以方括号取值</span>
+
+<span class="tok-k">const</span> mods = [mod1, mod2, mod3] <span class="tok-c">// 数组:有序列表</span>
+mods.length                     <span class="tok-c">// 元素个数</span>
+mods[<span class="tok-n">0</span>]                         <span class="tok-c">// 第一个元素(从 0 数起)</span></code></pre></div><h2>3.4 函数:打包一段可复用的逻辑</h2>
+<p>打开 <code>lib/format.ts</code>,看第一个函数:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js"><span class="tok-k">export</span> <span class="tok-k">function</span> formatFileSize(byteCount: <span class="tok-k">number</span>): <span class="tok-k">string</span> {
+  <span class="tok-k">const</span> units = [<span class="tok-s">'B'</span>, <span class="tok-s">'KB'</span>, <span class="tok-s">'MB'</span>, <span class="tok-s">'GB'</span>, <span class="tok-s">'TB'</span>]
+  <span class="tok-k">let</span> size = byteCount
+  <span class="tok-k">let</span> unitIndex = <span class="tok-n">0</span>
+  <span class="tok-k">while</span> (size &gt;= <span class="tok-n">1024</span> &amp;&amp; unitIndex &lt; units.length - <span class="tok-n">1</span>) {
+    size /= <span class="tok-n">1024</span>
+    unitIndex += <span class="tok-n">1</span>
+  }
+  <span class="tok-k">const</span> precision = unitIndex === <span class="tok-n">0</span> ? <span class="tok-n">0</span> : size &lt; <span class="tok-n">10</span> ? <span class="tok-n">1</span> : <span class="tok-n">0</span>
+  <span class="tok-k">return</span> <span class="tok-s">`${size.toFixed(precision)} ${units[unitIndex]}`</span>
+}</code></pre></div><p>忽略 <code>: number</code>、<code>: string</code> 这些类型标注(第 4 章讲)和开头的 <code>export</code>,这是一个非常典型的函数,值得逐行吃透:</p>
+<ul>
+<li><code>function formatFileSize(...)</code> <strong>定义</strong>了一个名叫 <code>formatFileSize</code> 的函数;括号里是<strong>参数</strong>(进去的原料)。</li>
+<li><code>units</code> 是一个<strong>数组字面量</strong>;<code>mod</code> 那样的对象字面量同理。</li>
+<li><code>while</code> 循环:字节数每除以一次 1024 就升一档单位,直到小于 1024。这就是“52428800 → 50 MB”的全部秘密。</li>
+<li><code>const precision = A ? B : C</code> 是<strong>三元表达式</strong>:<code>A</code> 为真取 <code>B</code> 否则取 <code>C</code>。连续的三元是嵌套的,等价于 if/else 链。</li>
+<li>最后的 <code>`${……}`</code> 是<strong>模板字符串</strong>:反引号包裹,<code>${}</code> 里可以填任何表达式,结果拼进字符串。</li>
+<li><code>return</code> 把结果交还给调用者。</li>
+</ul>
+<p><strong>调用</strong>它:<code>formatFileSize(52428800)</code> 返回 <code>&#39;50 MB&#39;</code>。模组卡片上“128.5 MB · 导入于 2026-10-01 12:30”那行小字,前半截就出自它,后半截出自同文件的 <code>formatImportedAt</code>。</p>
+<h3>箭头函数:现代 JS 的日常写法</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js"><span class="tok-c">// 这两种写法完全等价:</span>
+<span class="tok-k">function</span> double(x) { <span class="tok-k">return</span> x * <span class="tok-n">2</span> }
+<span class="tok-k">const</span> double = (x) =&gt; x * <span class="tok-n">2</span>     <span class="tok-c">// 箭头函数:更短;函数体只有一句时可省略 return 和花括号</span></code></pre></div><p>项目里箭头函数随处可见,比如 <code>mod-card.tsx</code> 里的 <code>onClick={() =&gt; setExpanded(...)}</code> ——“点击时,执行 setExpanded(……)”。<strong>看到 <code>() =&gt;</code> 就读作“一个函数”</strong>。</p>
+<h2>3.5 数组的三个神器:map / filter / find</h2>
+<p>React 世界每天打交道的三件套:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js"><span class="tok-k">const</span> mods = [
+  { name: <span class="tok-s">'A'</span>, installed: <span class="tok-k">true</span> },
+  { name: <span class="tok-s">'B'</span>, installed: <span class="tok-k">false</span> },
+  { name: <span class="tok-s">'C'</span>, installed: <span class="tok-k">true</span> }
+]
+
+<span class="tok-c">// map:每个元素加工一遍,返回新数组(长度不变)</span>
+mods.map((m) =&gt; m.name)                    <span class="tok-c">// → ['A', 'B', 'C']</span>
+
+<span class="tok-c">// filter:按条件筛选,返回新数组</span>
+mods.filter((m) =&gt; m.installed)            <span class="tok-c">// → [A, C]</span>
+
+<span class="tok-c">// find:返回第一个满足条件的元素,找不到返回 undefined</span>
+mods.find((m) =&gt; m.name === <span class="tok-s">'B'</span>)           <span class="tok-c">// → { name: 'B', installed: false }</span></code></pre></div><p>它们都接收一个<strong>函数</strong>作为参数(“对每个元素做什么”)。这就是第 7 章 React 渲染模组列表的核心手段:<code>mods.map((m) =&gt; &lt;ModCard mod={m} /&gt;)</code>。</p>
+<h2>3.6 异步:Promise 与 await</h2>
+<p>读写文件、网络请求这类操作需要时间,JS 的处理方式是<strong>先承诺(Promise)后兑现</strong>:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js"><span class="tok-c">// scanMods() 立刻返回一个 Promise 对象 —— 一张"取货凭证"</span>
+<span class="tok-c">// 函数前面的 await 意思是:在这行等结果落地,再继续往下走</span>
+<span class="tok-k">const</span> mods = <span class="tok-k">await</span> window.api.scanMods()
+setMods(mods)</code></pre></div><p>要点:</p>
+<ul>
+<li><code>await</code> 只能写在 <code>async</code> 标记的函数里(项目里的 <code>refreshMods</code> 就标着 <code>async</code>);</li>
+<li>await 期间<strong>不会卡死界面</strong>,JS 会先去干别的(这就是所谓“异步不阻塞”);</li>
+<li><code>Promise</code> 还有失败态,配 <code>try { ... } catch (err) { ... }</code> 捕获。</li>
+</ul>
+<p>不需要更深了。现在能读懂“<code>await 某函数()</code> = 等它完成并拿返回值”即可,第 8、10 章会反复见到。</p>
+<h2>3.7 事件:网页如何响应操作</h2>
+<p>浏览器里 JS 与用户交互的基本模型是<strong>事件监听</strong>:“当 X 发生时,执行函数 Y”。</p>
+<p>原生写法(了解即可,React 会包一层):</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js">button.addEventListener(<span class="tok-s">'click'</span>, () =&gt; {
+  alert(<span class="tok-s">'被点了!'</span>)
+})</code></pre></div><p>React 里的等价物(先混个脸熟,第 7 章正式讲):</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;button onClick={() =&gt; setExpanded((value) =&gt; !value)}&gt;</code></pre></div><p>本项目里你能找到的事件:点击(<code>onClick</code>,卡片、按钮)、拖放(<code>onDragOver</code>/<code>onDrop</code>,把压缩包拖进窗口即导入)、键盘(<code>onKeyDown</code>)。它们全是同一个模型。</p>
+<h2>3.8 模块:现代 JS 的组织单位</h2>
+<p>代码多了必须分文件。JS 用 <code>import</code> / <code>export</code> 组织:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-c">// format.ts 里:</span>
+<span class="tok-k">export</span> <span class="tok-k">function</span> formatFileSize(...) { ... }   <span class="tok-c">// export = 对外公开</span>
+
+<span class="tok-c">// mod-card.tsx 里:</span>
+<span class="tok-k">import</span> { formatFileSize } <span class="tok-k">from</span> <span class="tok-s">'@/lib/format'</span> <span class="tok-c">// import = 从别处拿来用</span></code></pre></div><p>两点须知:</p>
+<ul>
+<li><code>@/lib/format</code> 里的 <code>@</code> 是项目配置的<strong>路径别名</strong>(指代 <code>src/renderer/src</code>,见 <code>web.vite.config.ts</code> 的 <code>alias</code> 段),让 import 语句不必写一长串 <code>../../..</code>;</li>
+<li>一个文件<strong>默认导出</strong>的东西用 <code>import X from &#39;...&#39;</code> 引入(如每个组件文件末尾的 <code>export default</code>),<strong>具名导出</strong>用 <code>import { X } from &#39;...&#39;</code>。本项目两种都在用。</li>
+</ul>
+<h2>动手练习</h2>
+<ol>
+<li><p>打开浏览器 F12 的 **Console(控制台)**面板,把它当计算器和试验场,逐行输入并观察:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JavaScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-js"><span class="tok-k">const</span> units = [<span class="tok-s">'B'</span>, <span class="tok-s">'KB'</span>, <span class="tok-s">'MB'</span>, <span class="tok-s">'GB'</span>]
+units.length
+units[<span class="tok-n">2</span>]
+<span class="tok-s">`大小是 ${1024 * 5} 字节`</span>
+[<span class="tok-n">1</span>, <span class="tok-n">2</span>, <span class="tok-n">3</span>, <span class="tok-n">4</span>].map((x) =&gt; x * <span class="tok-n">10</span>)
+[<span class="tok-n">1</span>, <span class="tok-n">2</span>, <span class="tok-n">3</span>, <span class="tok-n">4</span>].filter((x) =&gt; x &gt; <span class="tok-n">2</span>)</code></pre></div></li>
+<li><p>在控制台里把 <code>formatFileSize</code> 的逻辑重写一遍(抄上面 3.4 的代码,去掉 <code>: number</code>/<code>: string</code> 和 <code>export</code>),然后调用 <code>formatFileSize(1048576)</code> 验证输出 <code>1.0 MB</code>。</p>
+</li>
+<li><p>打开 <code>lib/format.ts</code> 里的 <code>formatImportedAt</code>,逐行读懂它:入参是什么格式?<code>pad</code> 那个内嵌小函数干了什么?为什么月份要 <code>+1</code>?(提示:JS 的 <code>getMonth()</code> 返回 0~11)</p>
+</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li><code>const</code> 和 <code>let</code> 怎么选?为什么项目里几乎不用 <code>var</code>?</li>
+<li><code>map</code>、<code>filter</code>、<code>find</code> 各返回什么?</li>
+<li><code>await</code> 在等什么?等的时候界面会卡住吗?</li>
+<li><code>`共 ${n} 个模组`</code> 这是什么语法?和 <code>&#39;共 &#39; + n + &#39; 个模组&#39;</code> 有何不同?</li>
+<li><code>import { a } from &#39;x&#39;</code> 和 <code>import a from &#39;x&#39;</code> 的区别?</li>
+</ul>
+<p>下一章:<a href="#ch-04-typescript">第 4 章 · TypeScript:给 JS 加上类型护栏</a></p>
+
+<div class="ch-nav"><a href="#ch-02-css"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 2 章 · CSS:网页的外观</span></a><a class="next" href="#ch-04-typescript"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 4 章 · TypeScript:给 JavaScript 加上类型护栏</span></a></div>
+</section>
+<section class="chapter" id="ch-04-typescript" data-title="TypeScript:给 JavaScript 加上类型护栏">
+<div class="ch-eyebrow"><span class="ch-chip">第 4 章</span><span class="ch-pos">5 / 13</span></div>
+<h1>TypeScript:给 JavaScript 加上类型护栏</h1>
+<blockquote>
+<p>对照文件:<code>app/src/shared/types.ts</code></p>
+</blockquote>
+<h2>4.1 为什么需要 TS</h2>
+<p>JavaScript 是“动态类型”语言:一个变量一会儿装字符串、一会儿装数字,完全合法,直到某天你在运行时才发现 <code>mod.nmae</code> 拼错了——返回 <code>undefined</code>,界面默默坏掉,没有一句提示。</p>
+<p><strong>TypeScript = JavaScript + 类型系统。</strong> 你写的仍是 JS,只是额外标注了“这个变量应该是什么”;于是:</p>
+<ol>
+<li><strong>写错立刻被揪出</strong>:VS Code 里拼错属性名直接红色波浪线,根本跑不起来;</li>
+<li><strong>自动补全变神</strong>:输入 <code>mod.</code> 编辑器立刻列出所有可用字段和注释;</li>
+<li><strong>重构不心虚</strong>:改一个类型定义,所有不兼容的地方全部标红。</li>
+</ol>
+<p>TS 不能在浏览器里直接运行——构建工具(第 6 章 Vite)会先把它<strong>编译</strong>成纯 JS。类型标注只是开发时的护栏,不会拖慢最终程序。</p>
+<p>项目里<strong>所有</strong> <code>.ts</code> / <code>.tsx</code> 文件都是 TypeScript。读本项目代码,80% 的类型知识来自下面四节。</p>
+<h2>4.2 基础标注:给变量和函数贴标签</h2>
+<p>在第 3 章 <code>formatFileSize</code> 里你已经见过它们了:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">function</span> formatFileSize(byteCount: <span class="tok-k">number</span>): <span class="tok-k">string</span> {
+  <span class="tok-c">// 参数 byteCount 是 number;函数返回 string</span>
+}
+
+<span class="tok-k">let</span> expanded = <span class="tok-k">false</span>              <span class="tok-c">// TS 自动推断为 boolean,不必手写</span>
+<span class="tok-k">const</span> sizeBytes: <span class="tok-k">number</span> = <span class="tok-n">123</span>     <span class="tok-c">// 显式标注(能推断时通常省略)</span></code></pre></div><p>经验法则:<strong>TS 的推断很强,能不写就不写;但函数的参数和返回值,项目规范是写明</strong>——它们是函数的“合同”。</p>
+<h2>4.3 interface:描述一个对象的形状</h2>
+<p>打开 <code>app/src/shared/types.ts</code>,第一个重要定义:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">export</span> <span class="tok-k">interface</span> <span class="tok-t">ModInfo</span> {
+  name: <span class="tok-k">string</span>
+  sourcePath: <span class="tok-k">string</span>
+  sizeBytes: <span class="tok-k">number</span>
+  files: <span class="tok-t">ModFileEntry</span>[]
+  <span class="tok-c">/** ISO 8601(本地时间) */</span>
+  importedAt: <span class="tok-k">string</span>
+  installed: <span class="tok-k">boolean</span>
+  invalid: <span class="tok-k">boolean</span>
+}</code></pre></div><p>读法:“一个模组信息对象,必须长这样:名字是字符串、大小是数字、文件列表是 ModFileEntry 数组……”。<code>/** */</code> 是文档注释,会悬浮显示在编辑器里——项目里的注释质量很高,读代码时多把鼠标悬上去。</p>
+<p>interface 只存在于编译期,<strong>编译后消失</strong>,不产生任何运行时代价。</p>
+<h3>字段后加 <code>?</code>:可有可无</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">export</span> <span class="tok-k">interface</span> <span class="tok-t">OperationResult</span> {
+  success: <span class="tok-k">boolean</span>
+  message: <span class="tok-k">string</span>
+  cancelled?: <span class="tok-k">boolean</span>     <span class="tok-c">// 问号:这个字段可以不存在</span>
+}</code></pre></div><p>取用可空字段时 TS 会强制你先判空——这正是护栏在起作用。</p>
+<h3>联合类型:二选一或多选一</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">export</span> <span class="tok-k">type</span> <span class="tok-t">LogLevel</span> = <span class="tok-s">'debug'</span> | <span class="tok-s">'info'</span> | <span class="tok-s">'warning'</span> | <span class="tok-s">'error'</span></code></pre></div><p>读法:LogLevel 类型的值只能是这四个字符串之一。写 <code>logLevel = &#39;warn&#39;</code>(拼错)立刻报错。同理,<code>App.tsx</code> 里的</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">const</span> [view, setView] = useState&lt;<span class="tok-s">'mods'</span> | <span class="tok-s">'logs'</span>&gt;(<span class="tok-s">'mods'</span>)</code></pre></div><p>保证界面视图只能在“模组列表”和“日志”两态间切换。</p>
+<h3>什么时候用 interface,什么时候用 type?</h3>
+<p>描述对象形状两者皆可,本项目惯例:对象用 <code>interface</code>,别名/联合用 <code>type</code>。照抄即可,不必纠结。</p>
+<h2>4.4 泛型:类型的“函数”</h2>
+<p>第一次见泛型都会懵,用一个最常遇到的例子讲透。<code>useState</code> 是 React 存状态的函数,我们希望它“装什么类型的值,取出来就是什么类型”:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">const</span> [config, setConfig] = useState&lt;<span class="tok-t">AppConfigData</span> | <span class="tok-k">null</span>&gt;(<span class="tok-k">null</span>)
+<span class="tok-c">//            ↑ 泛型参数:&lt;...&gt; 像给容器贴标签:这个容器装 AppConfigData 或 null</span></code></pre></div><p>之后无论 <code>config</code> 被传到哪里,TS 都知道“它可能是 AppConfigData,也可能还没加载(null)”,任何在判空之前就读 <code>config.gameDirectory</code> 的代码都会被标红。<strong>泛型 = 类型的参数</strong>,让同一个容器/函数能安全地装不同类型。</p>
+<h2>4.5 枚举:给魔法数字起名字</h2>
+<p>项目 <code>types.ts</code> 里有个“排序方式”:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">export</span> <span class="tok-k">enum</span> <span class="tok-t">SortOrder</span> {
+  <span class="tok-t">InstalledFirst</span> = <span class="tok-n">0</span>,      <span class="tok-c">// 默认:已安装优先</span>
+  <span class="tok-t">NameAscending</span> = <span class="tok-n">1</span>,       <span class="tok-c">// 名称 A→Z</span>
+  <span class="tok-t">NameDescending</span> = <span class="tok-n">2</span>,
+  <span class="tok-t">ImportedNewestFirst</span> = <span class="tok-n">3</span>,
+  ...
+}</code></pre></div><p>没有枚举的话代码里会散落 <code>if (order === 3)</code>,没人记得 3 是什么;有了枚举,<code>SortOrder.ImportedNewestFirst</code> 自带文档、改错即报错。这种“底层是数字、面上是名字”的设计还兼容了老版 Qt 程序的配置格式(见该文件上方注释)——真实项目里兼容旧数据是常态。</p>
+<h2>4.6 shared 目录:一份合同管两个世界</h2>
+<p>现在回答一个架构问题:<code>src/shared/</code> 为什么单独存在?</p>
+<p>回忆项目地图:这个应用有两个隔离的代码世界——浏览器侧的 <code>renderer</code>(界面)和 Node.js 侧的 <code>main</code>(读写磁盘、扫模组)。它们之间通过消息通信(第 10 章细讲)。消息的两端必须对数据格式达成一致:主进程发来的“模组列表”里有哪些字段?渲染端能用哪些?</p>
+<p>答案就是 <code>shared/types.ts</code> 里的 <code>ModInfo</code> 等定义——<strong>两端 import 同一份类型文件,合同单点维护</strong>。主进程少给一个字段、渲染端读错一个名字,编译期当场报错。这是“类型护栏”在架构层面的应用,也是 TS 项目最常见的设计模式之一。</p>
+<h2>4.7 怎么验证类型没错</h2>
+<p>项目 <code>package.json</code> 里预置了命令:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">npm</span> <span class="tok-k">run</span> <span class="tok-k">typecheck</span></code></pre></div><p>它调用 TS 编译器做纯检查(<code>tsc --noEmit</code>:只查类型、不产出文件)。<strong>提交代码前跑一遍是本项目的规矩</strong>,第 11 章实战会用到。</p>
+<h2>动手练习</h2>
+<ol>
+<li>打开 <code>shared/types.ts</code> 找到 <code>ModFileEntry</code>,注意它的 <code>children</code> 字段类型是 <code>ModFileEntry[]</code>——<strong>接口在自己的定义里引用了自己</strong>(递归类型)。想想为什么合理:文件夹里可以有子文件夹,子文件夹里还可以有。</li>
+<li>改坏实验:在 <code>App.tsx</code> 里把某处 <code>setSearch(search)</code> 临时改成 <code>setSearch(123)</code>,保存,观察编辑器红线和终端报错;读懂报错后改回来。<strong>主动制造一次类型错误并读懂它,是学 TS 最快的路径。</strong></li>
+<li>运行 <code>npm run typecheck</code>,确认项目当前是绿的。</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>TS 编译后类型信息去哪了?会影响运行速度吗?</li>
+<li><code>interface</code> 里 <code>name?: string</code> 和 <code>name: string</code> 的区别?</li>
+<li><code>&#39;mods&#39; | &#39;logs&#39;</code> 这种联合类型防住了什么错误?</li>
+<li>为什么 <code>shared/types.ts</code> 要放在 main 和 renderer 都能引用的公共位置?</li>
+</ul>
+<p>下一章:<a href="#ch-05-node-npm">第 5 章 · Node.js 与 npm</a></p>
+
+<div class="ch-nav"><a href="#ch-03-javascript"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 3 章 · JavaScript:让网页活起来</span></a><a class="next" href="#ch-05-node-npm"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 5 章 · Node.js 与 npm:一切的运行地基</span></a></div>
+</section>
+<section class="chapter" id="ch-05-node-npm" data-title="Node.js 与 npm:一切的运行地基">
+<div class="ch-eyebrow"><span class="ch-chip">第 5 章</span><span class="ch-pos">6 / 13</span></div>
+<h1>Node.js 与 npm:一切的运行地基</h1>
+<blockquote>
+<p>对照文件:<code>app/package.json</code></p>
+</blockquote>
+<h2>5.1 Node.js 是什么</h2>
+<p>第 3 章说过,JS 原本只能在浏览器里跑。2009 年出现的 <strong>Node.js</strong> 把 Chrome 的 V8 引擎(就是执行 JS 的那台“发动机”)单独抽出来装上了操作系统:从此 JS 可以直接读写文件、监听网络端口、执行任意命令——成为一门和 Python、C++ 平起平坐的通用语言。</p>
+<p>对本项目,Node.js 身兼两职:</p>
+<ol>
+<li><strong>开发工具的运行时</strong>:Vite、TypeScript 编译器、打包器……它们本身就是 Node 程序(你敲的 <code>npm run dev</code> 就是用 Node 起的);</li>
+<li><strong>应用的一半</strong>:模组管理器里真正扫描文件夹、复制文件、解压缩的那半边代码(<code>src/main/</code>、<code>src/bg-server/</code>)跑在 Node 环境里,因为浏览器出于安全限制碰不到磁盘,Node 可以。</li>
+</ol>
+<h2>5.2 npm 与“包”</h2>
+<p>一个函数写得不错,别人也想用——于是大家把可复用的代码打包发布到公共仓库(npm registry,可理解为 JS 世界的应用商店),这个包就叫 <strong>package(包)</strong>。<strong>npm = Node Package Manager</strong>,装包、管包的工具,随 Node.js 一起安装。</p>
+<p>现代前端项目 = 你自己写的代码 + 几十个第三方包。本项目(见 <code>package.json</code>)用到的包包括:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>包名</th>
+<th>作用</th>
+<th>相关章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>react</code> / <code>react-dom</code></td>
+<td>UI 框架</td>
+<td>第 7、8 章</td>
+</tr>
+<tr>
+<td><code>typescript</code></td>
+<td>TS 编译器</td>
+<td>第 4 章</td>
+</tr>
+<tr>
+<td><code>vite</code> / <code>electron-vite</code></td>
+<td>构建工具</td>
+<td>第 6 章</td>
+</tr>
+<tr>
+<td><code>tailwindcss</code></td>
+<td>原子化 CSS 引擎</td>
+<td>第 9 章</td>
+</tr>
+<tr>
+<td><code>lucide-react</code></td>
+<td>图标库(<code>mod-card.tsx</code> 顶部的 <code>ChevronDown</code> 等全是它)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>sonner</code></td>
+<td>弹 toast 通知的库</td>
+<td>第 11 章实战会用到</td>
+</tr>
+<tr>
+<td><code>electron</code> / <code>electron-builder</code></td>
+<td>桌面壳与打包器</td>
+<td>第 10、12 章</td>
+</tr>
+</tbody></table></div>
+<h3>常用命令</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">npm</span> <span class="tok-k">install</span>          <span class="tok-c"># 按 package.json 装齐所有依赖(新机器第一次必跑)</span>
+<span class="tok-k">npm</span> <span class="tok-k">install</span> sonner   <span class="tok-c"># 安装某个新包,并自动写进 package.json</span>
+<span class="tok-k">npm</span> <span class="tok-k">run</span> dev          <span class="tok-c"># 执行 package.json 里 scripts 定义的 dev 命令</span></code></pre></div><h2>5.3 package.json:项目的身份证</h2>
+<p>打开 <code>app/package.json</code>,它是整个项目的清单文件。逐段看:</p>
+<h3>元信息</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JSON</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-json">{
+  <span class="tok-a">"name"</span>: <span class="tok-s">"nte-mod-manager"</span>,
+  <span class="tok-a">"version"</span>: <span class="tok-s">"2.0.0"</span>,
+  <span class="tok-a">"description"</span>: <span class="tok-s">"NTE 模组管理器"</span>,
+  <span class="tok-a">"main"</span>: <span class="tok-s">"./out/main/index.js"</span>,
+  <span class="tok-a">"private"</span>: <span class="tok-k">true</span>
+}</code></pre></div><p><code>main</code> 告诉 Electron“应用启动时先加载哪个文件”(第 10 章);<code>private: true</code> 表示这个项目不发布到 npm 商店,防止手滑 <code>npm publish</code>。</p>
+<h3>scripts:项目的一键命令</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JSON</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-json"><span class="tok-a">"scripts"</span>: {
+  <span class="tok-a">"dev"</span>: <span class="tok-s">"node scripts/test-images.mjs on &amp;&amp; vite --config web.vite.config.ts --open"</span>,
+  <span class="tok-a">"dev:electron"</span>: <span class="tok-s">"node scripts/test-images.mjs on &amp;&amp; electron-vite dev"</span>,
+  <span class="tok-a">"build"</span>: <span class="tok-s">"node scripts/test-images.mjs on &amp;&amp; electron-vite build"</span>,
+  <span class="tok-a">"typecheck"</span>: <span class="tok-s">"npm run typecheck:node &amp;&amp; npm run typecheck:web"</span>
+}</code></pre></div><p><code>scripts</code> 定义<strong>命令的别名</strong>:<code>npm run dev</code> 实际执行右边那串。好处是“复杂细节收进清单,队友只需记住 <code>npm run dev</code>”。</p>
+<p>本项目为了教学稳定有个约定:<strong>日常跑界面用 <code>dev</code>(浏览器模式),需要验证 Electron 特有能力(窗口、文件对话框)时用 <code>dev:electron</code></strong>。<code>&amp;&amp;</code> 表示前一个命令成功后接着跑后一个。</p>
+<h3>dependencies 与 devDependencies</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JSON</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-json"><span class="tok-a">"dependencies"</span>: {
+  <span class="tok-a">"iconv-lite"</span>: <span class="tok-s">"^0.6.3"</span>,
+  ...
+},
+<span class="tok-a">"devDependencies"</span>: {
+  <span class="tok-a">"react"</span>: <span class="tok-s">"^18.3.1"</span>,
+  <span class="tok-a">"vite"</span>: <span class="tok-s">"^7.3.6"</span>,
+  ...
+}</code></pre></div><ul>
+<li><code>dependencies</code>:<strong>运行时</strong>还需要的包;</li>
+<li><code>devDependencies</code>:只在<strong>开发/构建时</strong>需要的包(编译器、打包器……)。</li>
+</ul>
+<p>注意 <code>react</code> 也在 devDependencies 里——对这个 Electron 项目而言,React 代码会被<strong>构建进最终产物</strong>,不需要用户机器上另装,所以归入“开发时依赖”。这是桌面应用与网站部署的差异,了解即可。</p>
+<p>版本号前的 <code>^</code> 读作“这个版本或更高的兼容版本”(<code>^18.3.1</code> = 18.x 里 ≥18.3.1 的最新版)。实际锁定到哪个版本,记录在 <code>package-lock.json</code> 里——<strong>所以团队协作要把 lock 文件提交进 git</strong>,保证每个人装到一模一样的版本。</p>
+<h3>allowScripts:安全闸门</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">JSON</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-json"><span class="tok-a">"allowScripts"</span>: {
+  <span class="tok-a">"electron@44.5.1"</span>: <span class="tok-k">true</span>,
+  <span class="tok-a">"esbuild@0.21.5"</span>: <span class="tok-k">true</span>,
+  ...
+}</code></pre></div><p>npm 新版对“安装包时自动执行脚本”(常见的供应链攻击载体)默认拦截,确需执行的要逐包放行。electron、esbuild 安装时确实需要跑下载脚本,所以这里精确列出了白名单——<strong>看到陌生包要求 allowScripts 时先查它为什么需要,别无脑放行</strong>。</p>
+<h2>5.4 node_modules 与三种“要装的东西”</h2>
+<p><code>npm install</code> 后项目里多出的 <code>node_modules/</code> 文件夹装着所有依赖的实际代码,动辄几百 MB、几万个文件。三条铁律:</p>
+<ol>
+<li><strong>永远不手动改 node_modules 里的东西</strong>;</li>
+<li><strong>它必须写进 <code>.gitignore</code></strong>(本项目的已如此),git 仓库里只存 <code>package.json</code> + <code>package-lock.json</code>,谁克隆谁 <code>npm install</code>;</li>
+<li>依赖装坏了的万能修复:<code>删掉 node_modules 和 package-lock.json,重新 npm install</code>(王炸,十管九用)。</li>
+</ol>
+<h2>5.5 Node 端代码长什么样</h2>
+<p>提前瞄一眼第 10 章的世界。<code>src/main/</code> 下的代码是纯 Node,用 Node 内置模块干活:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">import</span> { existsSync, writeFileSync } <span class="tok-k">from</span> <span class="tok-s">'node:fs'</span>   <span class="tok-c">// fs = 文件系统</span>
+<span class="tok-k">import</span> { dirname, join, resolve } <span class="tok-k">from</span> <span class="tok-s">'node:path'</span>    <span class="tok-c">// path = 路径拼接</span>
+
+<span class="tok-c">// join('C:/Game', 'mods') → 'C:/Game/mods'</span>
+<span class="tok-c">// existsSync(路径) → 文件/文件夹是否存在</span></code></pre></div><p><code>node:</code> 前缀表示“Node 内置模块”,不需要 npm 安装。第 1 章说浏览器里的 JS 碰不到磁盘,<strong>能碰磁盘的只有这半边</strong>——这就是本项目“界面在浏览器、脏活在 Node”分工的根源。</p>
+<h2>动手练习</h2>
+<ol>
+<li>终端执行 <code>node</code>,进入交互环境,输入 <code>1 + 1</code>、<code>const fs = require(&#39;node:fs&#39;); fs.readdirSync(&#39;.&#39;)</code>(列出当前目录),感受“不经过浏览器的 JS”。<code>Ctrl+C</code> 两次退出。</li>
+<li>打开 <code>package.json</code>,找到三个 script(<code>dev</code>、<code>dev:electron</code>、<code>typecheck</code>),口头说出各自干什么、你什么时候会运行它。</li>
+<li>在终端跑 <code>npm run typecheck</code>,看到 <code>tsc</code> 的输出即体验了一次“纯 Node 工具链”。</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>Node.js 和浏览器里的 JS 是什么关系?本项目哪两处分别用到它们?</li>
+<li><code>npm install</code> 做了什么?克隆项目后第一次必须做什么?</li>
+<li>dependencies 和 devDependencies 的区别?<code>^18.3.1</code> 是什么意思?</li>
+<li>为什么 <code>package-lock.json</code> 必须提交到 git?</li>
+</ul>
+<p>下一章:<a href="#ch-06-vite">第 6 章 · Vite 与现代工程化</a></p>
+
+<div class="ch-nav"><a href="#ch-04-typescript"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 4 章 · TypeScript:给 JavaScript 加上类型护栏</span></a><a class="next" href="#ch-06-vite"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 6 章 · Vite 与现代工程化</span></a></div>
+</section>
+<section class="chapter" id="ch-06-vite" data-title="Vite 与现代工程化">
+<div class="ch-eyebrow"><span class="ch-chip">第 6 章</span><span class="ch-pos">7 / 13</span></div>
+<h1>Vite 与现代工程化</h1>
+<blockquote>
+<p>对照文件:<code>app/web.vite.config.ts</code> 与 <code>app/electron.vite.config.ts</code></p>
+</blockquote>
+<h2>6.1 浏览器不认识你的源码:为什么需要构建工具</h2>
+<p>前几章你写的 <code>.tsx</code>、<code>import ... from &#39;@shared/types&#39;</code>、CSS 里的 <code>@theme</code>,浏览器一概看不懂:</p>
+<ul>
+<li>浏览器只懂 JS,不懂 <strong>TypeScript</strong>(类型标注要删掉);</li>
+<li>不懂 <strong>JSX</strong>(<code>&lt;div className=...&gt;</code> 要变成函数调用);</li>
+<li>不懂 <code>@</code> <strong>路径别名</strong>;</li>
+<li>不认识 npm 包的裸名 <code>import ... from &#39;react&#39;</code>;</li>
+<li>Tailwind 的工具类要<strong>现场生成</strong> CSS。</li>
+</ul>
+<p>**构建工具(bundler)**的任务就是:把你成百上千个源文件,翻译、拼装、优化成浏览器能直接跑的少数几个文件。现代事实标准是 <strong>Vite</strong>(法语“快”,读 /vit/),本项目用它,配置就在仓库根上的两个文件里。</p>
+<h2>6.2 Vite 的两种面孔:dev 服务器 &amp; 打包器</h2>
+<h3>开发时:一个很快的本地服务器</h3>
+<p><code>npm run dev</code> 实际执行 <code>vite --config web.vite.config.ts --open</code>,做三件事:</p>
+<ol>
+<li>在本机起一个 HTTP 服务器(如 <code>http://localhost:5173</code>);</li>
+<li>浏览器打开后请求页面,Vite <strong>现场按需</strong>把请求到的 <code>.tsx</code> 翻译成 JS——注意是“请求哪个翻译哪个”,不是全量,所以启动飞快;</li>
+<li><strong>监听你的源码文件</strong>,你一保存,浏览器立刻热替换改动的模块——<strong>HMR(Hot Module Replacement,热更新)</strong>,不用手动刷新,页面状态大多还能保留。</li>
+</ol>
+<h3>发布时:一次深度打包</h3>
+<p><code>npm run build</code> 则把全部源码翻译合并、压缩混淆、拆分按需加载,产出 <code>out/</code> 目录里最精简的静态文件。开发要“快和好调试”,发布要“小和快”,两种模式各司其职。</p>
+<h2>6.3 读懂本项目的 Vite 配置</h2>
+<p>打开 <code>web.vite.config.ts</code>(浏览器 dev 模式用),核心就这几段:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">export</span> <span class="tok-k">default</span> defineConfig({
+  root: resolve(__dirname, <span class="tok-s">'src/renderer'</span>),        <span class="tok-c">// ① 网站的根目录在哪</span>
+  publicDir: resolve(__dirname, <span class="tok-s">'../img/bg'</span>),      <span class="tok-c">// ② 原样伺服的静态资源目录</span>
+  plugins: [react(), tailwindcss(), serveTestImages()],  <span class="tok-c">// ③ 插件</span>
+  resolve: {
+    alias: {
+      <span class="tok-s">'@'</span>: resolve(__dirname, <span class="tok-s">'src/renderer/src'</span>),     <span class="tok-c">// ④ 路径别名</span>
+      <span class="tok-s">'@shared'</span>: resolve(__dirname, <span class="tok-s">'src/shared'</span>)
+    }
+  }
+})</code></pre></div><ul>
+<li><strong>③ 插件</strong>是 Vite 的扩展机制:<code>react()</code> 让它认识 JSX/TSX,<code>tailwindcss()</code> 让它处理 Tailwind。第 2 章见过的 <code>serveTestImages()</code> 就写在同文件上方——一个 dev 专用插件,把测试图集目录挂载成 <code>/test-images/...</code> 网址。以后你听到“加个 Vite 插件”,意思就是往 <code>plugins</code> 数组里塞一个函数返回值。</li>
+<li><strong>④ 路径别名</strong>:为什么代码里能写 <code>import { cn } from &#39;@/lib/utils&#39;</code> 而不必 <code>../../../lib/utils</code>?就是这条 <code>@</code> 定义的。<code>@shared</code> 则让两端(renderer 和 main)都能干净地引用第 4 章的公共类型。</li>
+</ul>
+<p>再看 <code>electron.vite.config.ts</code>(桌面模式用),它把同一套配置<strong>分成三份</strong>:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">export</span> <span class="tok-k">default</span> defineConfig({
+  main:     { plugins: [externalizeDepsPlugin()], resolve: { alias: { <span class="tok-s">'@shared'</span>: ... } } },
+  preload:  { plugins: [externalizeDepsPlugin()], resolve: { alias: { <span class="tok-s">'@shared'</span>: ... } } },
+  renderer: { plugins: [react(), tailwindcss()],  resolve: { alias: { <span class="tok-s">'@'</span>: ..., <span class="tok-s">'@shared'</span>: ... } } }
+})</code></pre></div><p>main / preload / renderer 三部分分别打包——这正是第 10 章 Electron 的三进程架构在<strong>构建层</strong>的投影。现在记住这张对应关系表:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>配置段</th>
+<th>打包谁的代码</th>
+<th>运行在什么环境</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>main</code></td>
+<td><code>src/main/</code></td>
+<td>Node.js(有完整系统能力)</td>
+</tr>
+<tr>
+<td><code>preload</code></td>
+<td><code>src/preload/</code></td>
+<td>渲染窗口里的特殊隔离层</td>
+</tr>
+<tr>
+<td><code>renderer</code></td>
+<td><code>src/renderer/</code></td>
+<td>就是个网页(Chromium)</td>
+</tr>
+</tbody></table></div>
+<h2>6.4 模块化的拼图:import 树</h2>
+<p>Vite 从 <code>index.html</code> 里的 <code>&lt;script src=&quot;/src/main.tsx&quot;&gt;</code> 出发,顺着每条 <code>import</code> 语句递归,把整棵“依赖树”上的文件都纳入翻译范围。所以:</p>
+<ul>
+<li>新建了组件文件却没被任何地方 import,它就不存在于产物里;</li>
+<li>import 路径写错,dev 时终端立刻红字报错——<strong>读 Vite 的报错信息是日常功课</strong>,它通常直接写明“Failed to resolve import”和完整路径。</li>
+</ul>
+<h2>6.5 工程化的其他成员(点到为止)</h2>
+<p>“工程化”是个大词,除了 Vite 还包括本项目已配好的这些,混个脸熟:</p>
+<ul>
+<li><strong>TypeScript 检查</strong>:<code>npm run typecheck</code>(第 4 章),CI 和提交前的静态体检;</li>
+<li><strong>代码规范</strong>:团队约定缩进、引号、命名等,由 ESLint/Prettier 类工具自动检查/格式化;</li>
+<li><strong>打包发布</strong>:electron-builder 把 <code>out/</code> 组装成安装包(第 12 章)。</li>
+</ul>
+<p>初学阶段你只需要熟练一件事:<strong>改代码 → 浏览器 HMR 自动更新 → 报错就读终端</strong>。这套循环转熟了,工程化的其他成员自然会进入视野。</p>
+<h2>动手练习</h2>
+<ol>
+<li>跑起 <code>npm run dev</code>,故意把 <code>App.tsx</code> 里某处 <code>@shared/types</code> 改成 <code>@shared/typo</code>,保存,读一遍终端报错,改回。</li>
+<li>在 <code>web.vite.config.ts</code> 的 <code>serveTestImages</code> 里给响应加一行 <code>res.setHeader(&#39;X-My-First-Plugin&#39;, &#39;hello&#39;)</code>,重启 dev,浏览器 F12 → Network 面板选中一张 <code>/test-images/</code> 图 → Response Headers 里找到你加的头。**你刚改了一个真实的构建插件。**改完还原。</li>
+<li>打开 <code>electron.vite.config.ts</code>,对着 6.3 的表格说出三个配置段各打包哪个目录、跑在哪个环境。</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>开发时 Vite 和发布时 Vite 的任务有何不同?</li>
+<li>HMR 是什么?它如何改变你的开发手感?</li>
+<li><code>@</code> 别名定义在哪个文件?不带它,<code>import App from &#39;./App&#39;</code> 里的 <code>./</code> 又是相对谁?</li>
+<li>为什么 Electron 项目要三份构建配置?</li>
+</ul>
+<p>下一章:<a href="#ch-07-react-basics">第 7 章 · React 入门:组件与 JSX</a></p>
+
+<div class="ch-nav"><a href="#ch-05-node-npm"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 5 章 · Node.js 与 npm:一切的运行地基</span></a><a class="next" href="#ch-07-react-basics"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 7 章 · React 入门:组件与 JSX</span></a></div>
+</section>
+<section class="chapter" id="ch-07-react-basics" data-title="React 入门:组件与 JSX">
+<div class="ch-eyebrow"><span class="ch-chip">第 7 章</span><span class="ch-pos">8 / 13</span></div>
+<h1>React 入门:组件与 JSX</h1>
+<blockquote>
+<p>对照文件:<code>src/renderer/src/main.tsx</code>(启动入口)、<code>src/renderer/src/components/fps-counter.tsx</code>(最简组件)</p>
+</blockquote>
+<h2>7.1 为什么需要 React</h2>
+<p>回想第 3 章:操作网页就是手动改 DOM——列表多一项就 <code>appendChild</code>,改个标题就找节点改 <code>textContent</code>。界面简单还行;本项目界面上有上百张卡片、设置面板、日志流,手动管理 DOM 很快会变成“哪里该更新、更新几次、更新顺序”的噩梦。</p>
+<p><strong>React 的核心思想:界面 = 状态的函数。</strong> 你不再手动改 DOM,而是:</p>
+<ol>
+<li>描述“界面在任意状态下<strong>应该长什么样</strong>”(组件代码);</li>
+<li>状态(当前模组列表、搜索词、某卡片是否展开)变化时,React 自动算出新样子,只把差异应用到 DOM。</li>
+</ol>
+<p>你声明“是什么”,React 负责“怎么改”——所以 React 类框架也叫<strong>声明式 UI</strong>。</p>
+<h2>7.2 启动入口:main.tsx</h2>
+<p>打开 <code>src/renderer/src/main.tsx</code>,全文 17 行:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">import</span> <span class="tok-t">React</span> <span class="tok-k">from</span> <span class="tok-s">'react'</span>
+<span class="tok-k">import</span> <span class="tok-t">ReactDOM</span> <span class="tok-k">from</span> <span class="tok-s">'react-dom/client'</span>
+<span class="tok-k">import</span> <span class="tok-t">App</span> <span class="tok-k">from</span> <span class="tok-s">'./App'</span>
+<span class="tok-k">import</span> { installBrowserApiMock } <span class="tok-k">from</span> <span class="tok-s">'./lib/browser-api-mock'</span>
+<span class="tok-k">import</span> <span class="tok-s">'./index.css'</span>
+
+<span class="tok-c">// 浏览器测试模式(npm run dev):不经 Electron 时 preload 不存在,注入内存 mock</span>
+<span class="tok-k">if</span> (<span class="tok-k">import</span>.meta.env.<span class="tok-t">DEV</span> &amp;&amp; !window.api) {
+  installBrowserApiMock()
+}
+
+<span class="tok-t">ReactDOM</span>.createRoot(document.getElementById(<span class="tok-s">'root'</span>) <span class="tok-k">as</span> <span class="tok-t">HTMLElement</span>).render(
+  &lt;<span class="tok-t">React</span>.<span class="tok-t">StrictMode</span>&gt;
+    &lt;<span class="tok-t">App</span> /&gt;
+  &lt;/<span class="tok-t">React</span>.<span class="tok-t">StrictMode</span>&gt;
+)</code></pre></div><p>这就是第 1 章“空的 <code>#root</code> 如何被填满”的答案(全文 16 行):</p>
+<ul>
+<li><code>import &#39;./index.css&#39;</code>:全局样式从这里注入;</li>
+<li><code>document.getElementById(&#39;root&#39;)</code>:抓走 HTML 里那个空 div;</li>
+<li><code>.render(&lt;App /&gt;)</code>:把名为 <code>App</code> 的组件渲染进去——<strong>整个应用是 App 这一个组件,其他所有组件都是它的子孙</strong>;</li>
+<li><code>if (import.meta.env.DEV ...)</code>:只在开发环境生效的一小段逻辑,给浏览器模式补一个假的“后端”(第 10 章会理解为什么需要);</li>
+<li><code>&lt;React.StrictMode&gt;</code>:开发期的“严格教练”,主动多渲染一次来暴露不规范的写法,不影响生产。</li>
+</ul>
+<h2>7.3 组件:一个返回界面的函数</h2>
+<p><strong>组件(component)= 一个名字大写开头、返回界面描述的函数。</strong> 看全项目最简单的组件 <code>fps-counter.tsx</code>:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">import</span> { useEffect, useState } <span class="tok-k">from</span> <span class="tok-s">'react'</span>
+
+<span class="tok-k">export</span> <span class="tok-k">default</span> <span class="tok-k">function</span> <span class="tok-t">FpsCounter</span>() {
+  <span class="tok-k">const</span> [fps, setFps] = useState(<span class="tok-s">'--'</span>)
+
+  useEffect(() =&gt; {
+    <span class="tok-c">// ...每秒统计渲染帧数,略,第 8 章讲 useEffect</span>
+  }, [])
+
+  <span class="tok-k">return</span> (
+    &lt;span className=<span class="tok-s">"shrink-0 tabular-nums"</span>&gt;
+      {fps} <span class="tok-t">FPS</span>
+    &lt;/span&gt;
+  )
+}</code></pre></div><p>剥掉暂时不讲的 <code>useState</code>/<code>useEffect</code>,骨架就是:<strong>一个函数,返回一段 JSX</strong>。就这么简单。规模不同、复杂度不同的所有组件——sidebar、settings-dialog、mod-card——本质都是“函数返回 JSX”。</p>
+<h2>7.4 JSX:在 JS 里写“HTML”</h2>
+<p>JSX 是 React 发明的语法扩展,<strong>长得像 HTML,实际是 JS 表达式</strong>。规则不多,逐条记:</p>
+<h3>① 就是你已经会的 HTML 标签</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">return</span> &lt;button&gt;点我&lt;/button&gt;</code></pre></div><h3>② <code>{}</code> 花括号:JS 世界的大门</h3>
+<p>花括号里可以放<strong>任何 JS 表达式</strong>,结果渲染到那个位置:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;span&gt;{fps} <span class="tok-t">FPS</span>&lt;/span&gt;                 {<span class="tok-c">/* 变量 */</span>}
+&lt;div&gt;{formatFileSize(mod.sizeBytes)}&lt;/div&gt;   {<span class="tok-c">/* 函数调用 */</span>}
+&lt;span&gt;{mod.installed ? <span class="tok-s">'已安装'</span> : <span class="tok-s">'未安装'</span>}&lt;/span&gt;  {<span class="tok-c">/* 三元:条件渲染 */</span>}</code></pre></div><p><code>mod-card.tsx</code> 里真实的一行——文件大小那行小字:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;div className=<span class="tok-s">"mt-0.5 text-xs text-muted-foreground"</span>&gt;
+  {formatFileSize(mod.sizeBytes)} · 导入于 {formatImportedAt(mod.importedAt)}
+&lt;/div&gt;</code></pre></div><p>第 3 章读过的两个工具函数,在这里被装配进了界面。</p>
+<h3>③ 属性用驼峰,值可以是任意表达式</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;button onClick={() =&gt; ...} disabled={busy}&gt;</code></pre></div><p><code>class</code> → <code>className</code>(JS 保留字冲突)、<code>onclick</code> → <code>onClick</code>。这是 HTML 和 JSX 最容易搞混的两处。</p>
+<h3>④ 条件渲染的两种惯用法</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">{<span class="tok-c">/* A. 短路:为真才渲染(不渲染 = DOM 里根本没有这个元素) */</span>}
+{mod.invalid &amp;&amp; &lt;<span class="tok-t">TriangleAlert</span> className=<span class="tok-s">"h-4 w-4"</span> /&gt;}
+
+{<span class="tok-c">/* B. 三元:二选一 */</span>}
+{mod.installed ? <span class="tok-s">'已安装'</span> : <span class="tok-s">'未安装'</span>}</code></pre></div><p><code>mod-card.tsx</code> 里失效模组头上的 ⚠️ 图标就是 A 写法。</p>
+<h3>⑤ 列表渲染:map 出一切</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">{mods.map((m) =&gt; (
+  &lt;<span class="tok-t">ModCard</span> key={m.name} mod={m} /&gt;
+))}</code></pre></div><p>把对象数组 map 成 JSX 数组,React 就把它们依次渲染。<strong>每个列表项必须给唯一 <code>key</code></strong>(告诉 React 哪个是哪个,更新时才能精准复用),通常用稳定不变的 id 或名字,不要用数组下标。</p>
+<h3>⑥ 只能返回一个根元素</h3>
+<p>函数返回的 JSX 必须单根。需要多个并列元素时用空标签包裹:<code>&lt;&gt;{...}&lt;/&gt;</code>。</p>
+<h2>7.5 Props:父传子的数据通道</h2>
+<p>组件要复用,就不能写死数据。<strong>props(属性)是父组件传给子组件的只读参数</strong>,和函数参数是同一件事——组件本来就是函数。</p>
+<p><code>App.tsx</code> 里渲染每张卡片:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;<span class="tok-t">ModCard</span> mod={mod} actions={actions} disabled={busy} /&gt;</code></pre></div><p><code>mod-card.tsx</code> 里声明自己接收什么:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">interface</span> <span class="tok-t">ModCardProps</span> {
+  mod: <span class="tok-t">ModInfo</span>
+  actions: <span class="tok-t">ModCardActions</span>
+  disabled: <span class="tok-k">boolean</span>
+  uiHidden?: <span class="tok-k">boolean</span>
+}
+
+<span class="tok-k">function</span> <span class="tok-t">ModCard</span>({ mod, actions, disabled, uiHidden }: <span class="tok-t">ModCardProps</span>) {
+  <span class="tok-c">// 参数解构:直接拿到 mod、actions、disabled、uiHidden 四个局部量</span></code></pre></div><p>看懂这个闭环,你就读懂了 React 数据流的半壁江山:</p>
+<blockquote>
+<p><strong>App 持有数据(模组列表)→ 用 props 分发给每张卡片 → 卡片只管“给我什么我显示什么”。</strong>
+props 是只读的:子组件绝不直接修改 props,想改,往上看第 8 章。</p>
+</blockquote>
+<p>注意 <code>interface ModCardProps</code> —— 第 4 章的类型系统在这里上岗:props 传错立刻编译报错。</p>
+<h2>7.6 import 组装:组件树</h2>
+<p>每个组件一个文件、默认导出,用 import 组装成树:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">App
+├─ BackgroundLayer        (背景层)
+├─ Sidebar                (分类侧栏)
+├─ ModListHeader          (搜索/排序工具栏)
+├─ ModCard × N            (每张模组卡片)
+│  ├─ LiquidGlass         (玻璃效果)
+│  ├─ FileTree            (文件树)
+│  ├─ Tooltip / DropdownMenu / Badge  (ui/ 基础件)
+│  └─ ...
+├─ LogView                (日志面板)
+├─ SettingsDialog         (设置弹窗)
+└─ Toaster                (toast 通知出口)</code></pre></div><p><code>mod-card.tsx</code> 顶部十几行 import 就是这棵树的“进货单”。<strong>读陌生 React 项目的标准姿势:从入口的 import 列表画出组件树,再逐个击破叶子。</strong></p>
+<h2>动手练习</h2>
+<ol>
+<li><p>在 <code>src/renderer/src/components/</code> 新建 <code>hello.tsx</code>:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">export</span> <span class="tok-k">default</span> <span class="tok-k">function</span> <span class="tok-t">Hello</span>() {
+  <span class="tok-k">const</span> name = <span class="tok-s">'NTE'</span>
+  <span class="tok-k">return</span> &lt;div style={{ padding: <span class="tok-n">8</span> }}&gt;你好,{name}!现在是练习组件。&lt;/div&gt;
+}</code></pre></div></li>
+<li><p>在 <code>App.tsx</code> 里 <code>import Hello from &#39;@/components/hello&#39;</code>,把 <code>&lt;Hello /&gt;</code> 插到 return 的某个可见位置,保存,HMR 会立刻显示它。</p>
+</li>
+<li><p>给 Hello 加一个 props 练习:改成 <code>function Hello({ place }: { place: string })</code>,渲染 <code>你好,{place}!</code>,然后在 App 里传 <code>&lt;Hello place=&quot;侧边栏&quot; /&gt;</code>。</p>
+</li>
+<li><p>练完<strong>删除你添加的所有代码</strong>,保持项目原状(后续章节的练习还要用它)。</p>
+</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>用一句话说出 React 和“手动改 DOM”的思路区别。</li>
+<li><code>{}</code> 里能放什么?写出一个条件渲染和列表渲染的例子。</li>
+<li>props 能被子组件修改吗?数据从哪流向哪?</li>
+<li><code>key</code> 是干什么的?为什么不该用数组下标?</li>
+</ul>
+<p>下一章:<a href="#ch-08-react-state">第 8 章 · React 进阶:状态与 Hooks</a></p>
+
+<div class="ch-nav"><a href="#ch-06-vite"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 6 章 · Vite 与现代工程化</span></a><a class="next" href="#ch-08-react-state"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 8 章 · React 进阶:状态与 Hooks</span></a></div>
+</section>
+<section class="chapter" id="ch-08-react-state" data-title="React 进阶:状态与 Hooks">
+<div class="ch-eyebrow"><span class="ch-chip">第 8 章</span><span class="ch-pos">9 / 13</span></div>
+<h1>React 进阶:状态与 Hooks</h1>
+<blockquote>
+<p>对照文件:<code>src/renderer/src/components/mod-card.tsx</code>、<code>src/renderer/src/App.tsx</code>、<code>src/renderer/src/components/fps-counter.tsx</code></p>
+</blockquote>
+<h2>8.1 useState:让组件“记住”事</h2>
+<p>第 7 章的组件是“死”的——props 不变,画面永远一样。**状态(state)**是组件私有的、可变的记忆,它一变,React 自动重渲染该组件。</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> [expanded, setExpanded] = useState(<span class="tok-k">false</span>)
+<span class="tok-c">//     ↑读值        ↑写值函数        ↑初始值</span></code></pre></div><p><code>useState(false)</code> 返回一对值(所以用数组解构接):当前状态和更新函数。<strong>唯一合法的改状态方式是调 set 函数</strong>——直接 <code>expanded = true</code> 不但无效还违纪,因为 React 靠 set 函数感知变化。</p>
+<p><code>mod-card.tsx</code> 卡片展开/收起的真实代码,三行讲完一个交互:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> [expanded, setExpanded] = useState(<span class="tok-k">false</span>)
+
+&lt;button onClick={() =&gt; setExpanded((value) =&gt; !value)}&gt;</code></pre></div><p>点击 → set 函数触发 → React 用新值重渲染卡片 → 展开区那段的 className 变了 → 界面出现文件树。全程没有一行“操作 DOM”的代码。</p>
+<blockquote>
+<p><strong>set 函数的函数式写法</strong>:<code>setExpanded((value) =&gt; !value)</code> 基于“上一个值”算新值,比 <code>setExpanded(!expanded)</code> 安全(避免连续 set 时拿到旧值)。新值由旧值计算时,一律用这种写法。</p>
+</blockquote>
+<h3>状态变化 → 重渲染,是“重新执行整个函数”</h3>
+<p>心智模型很重要:状态一变,React <strong>把这个组件函数从头再执行一遍</strong>(返回新的 JSX),然后和上一轮比对,只把差异补进 DOM。所以:</p>
+<ul>
+<li>函数体里<strong>不要做昂贵计算</strong>(每次渲染都会重跑;要缓存见 8.4);</li>
+<li>变量不会在两次渲染之间保留——要保留,放 state 或 ref。</li>
+</ul>
+<h2>8.2 useEffect:与“外部世界”同步</h2>
+<p>组件函数管“渲染”,但还有些事发生在渲染之外:订阅推送、启动定时器、读写外部系统。<strong>useEffect 专门干这个</strong>:告诉 React“渲染完成后,顺手做这件事”。</p>
+<p>本项目最教学友好的例子是 <code>fps-counter.tsx</code>(去掉细节注释):</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">useEffect(() =&gt; {
+  <span class="tok-k">let</span> raf = <span class="tok-n">0</span>
+  <span class="tok-k">const</span> loop = (now: <span class="tok-k">number</span>) =&gt; {
+    <span class="tok-c">// ...统计这一秒的帧数,每 500ms 调一次 setFps(...)</span>
+    raf = requestAnimationFrame(loop)
+  }
+  raf = requestAnimationFrame(loop)
+
+  <span class="tok-k">return</span> () =&gt; cancelAnimationFrame(raf)   <span class="tok-c">// 清理函数</span>
+}, [])</code></pre></div><p>结构三件套:</p>
+<ol>
+<li><strong>副作用函数</strong>:起一个 <code>requestAnimationFrame</code> 循环持续统计帧率;</li>
+<li><strong>清理函数</strong>(return 的那个):组件从界面移除时 React 会调用它,取消循环。<strong>起了什么就得收什么</strong>,否则内存泄漏;</li>
+<li><strong>依赖数组</strong> <code>[]</code>:空数组 = “只在挂载时执行一次、卸载时清理一次”。</li>
+</ol>
+<h3>依赖数组的几种形态</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">useEffect(() =&gt; {...}, [])          <span class="tok-c">// 挂载后执行一次(订阅一次推送、启动一次轮询)</span>
+useEffect(() =&gt; {...}, [search])    <span class="tok-c">// search 变化后执行(防抖保存搜索词等)</span>
+useEffect(() =&gt; {...})              <span class="tok-c">// 每次渲染后都执行(极少用,写错容易死循环)</span></code></pre></div><p><code>App.tsx</code> 里有个更“业务”的例子——订阅主进程的日志推送,组件卸载时退订:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">useEffect(() =&gt; {
+  <span class="tok-k">const</span> unsubscribe = window.api.onLogEntry((entry) =&gt; {
+    setLogs((prev) =&gt; [...prev, entry])
+  })
+  <span class="tok-k">return</span> unsubscribe      <span class="tok-c">// onLogEntry 返回的正是退订函数,直接当清理函数</span>
+}, [])</code></pre></div><p>这段还演示了<strong>数组展开</strong>: <code>[...prev, entry]</code> 生成“旧日志 + 新一条”的新数组。<strong>React 里改数组必须给新数组</strong>(<code>setLogs(新数组)</code>),原地 <code>prev.push(entry)</code> 不算变化,React 察觉不到。</p>
+<h2>8.3 useRef:不触发重渲染的记忆</h2>
+<p>有的值要跨渲染保留,但<strong>不该</strong>引起界面刷新(比如“现在是否正在忙”的标记)。<code>useRef</code> 就是个可变的小盒子:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> busyRef = useRef(<span class="tok-k">false</span>)
+
+busyRef.current = <span class="tok-k">true</span>     <span class="tok-c">// 改 .current,界面纹丝不动</span></code></pre></div><p><code>App.tsx</code> 的 <code>withBusy</code> 用它防止并发操作:上一次操作没结束( <code>busyRef.current === true</code>),再点按钮直接弹 toast “已有操作正在进行中”。state 也能存这个标记,但 state 变化会触发重渲染——用 ref 表达“与画面无关的运行时事实”更准确、更省。</p>
+<h2>8.4 三对性能搭档:useCallback / memo / useMemo</h2>
+<p>先说结论:<strong>初学阶段不用主动用它们,但要看得懂</strong>。它们解决同一个问题——React 默认“父渲染则子全部重渲染”,界面元素一多(本项目上百张玻璃卡片)就需要精准跳过无关渲染。</p>
+<ul>
+<li><code>useCallback(fn, [deps])</code>:把一个函数<strong>记住</strong>,依赖不变就返回同一个函数实例。<code>App.tsx</code> 把传给所有卡片的一堆操作函数都包了它,避免“每次渲染都造新函数 → 所有卡片被迫重渲染”。</li>
+<li><code>memo(组件)</code>:给组件加“props 没变就跳过渲染”的护盾,<code>mod-card.tsx</code> 最后一行 <code>export default memo(ModCard)</code>。它和 useCallback 是配套的——App 那边不把函数记住,这边的 props 永远“变了”,memo 形同虚设。</li>
+<li><code>useMemo(() =&gt; 计算结果, [deps])</code>:把<strong>计算结果</strong>记住。<code>App.tsx</code> 里过滤+排序后的模组列表、分类统计都包了它:模组几百个时,不相关的状态(比如日志推了一条)不该让全列表重算。</li>
+</ul>
+<p><strong>优化铁律:先写对,量小不优化;出现卡顿,再上这三件套。</strong> 本项目给它们写了不少注释,以后读代码时顺带体会“为什么要在这里包一层”。</p>
+<h2>8.5 状态提升:兄弟组件怎么共享数据</h2>
+<p>经典问题:侧边栏点了分类,卡片列表要跟着筛——两个兄弟组件,数据放谁的 state 里都不对。</p>
+<p>答案:<strong>把状态提到最近的共同父级(App),通过 props 下发</strong>。App.tsx 顶上那排 useState 就是全应用的心脏:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> [mods, setMods] = useState&lt;<span class="tok-t">ModInfo</span>[]&gt;([])          <span class="tok-c">// 全部模组</span>
+<span class="tok-k">const</span> [currentCategory, setCurrentCategory] = useState(<span class="tok-t">ALL_CATEGORY</span>)  <span class="tok-c">// 当前分类</span>
+<span class="tok-k">const</span> [search, setSearch] = useState(<span class="tok-s">''</span>)                  <span class="tok-c">// 搜索词</span>
+<span class="tok-k">const</span> [busy, setBusy] = useState(<span class="tok-k">false</span>)                   <span class="tok-c">// 是否操作中</span></code></pre></div><p>然后单向流下去:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">App(持有 mods/currentCategory/search)
+│  props 下发
+├─ Sidebar      ← currentCategory,onChange={setCurrentCategory}
+└─ 列表区        ← 过滤排序后的 mods</code></pre></div><p>Sidebar 里点分类 → 调 props 里的 <code>onChange(&#39;角色扮演&#39;)</code> → App 的 state 变了 → 重渲染 → 列表自动变成新分类的内容。<strong>数据永远从上往下流,事件从下往上报告</strong>——React 应用的全部架构,一句话。</p>
+<p><code>mod-card.tsx</code> 的 <code>ModCardActions</code> 接口是“事件向上报告”的合同:卡片自己不会安装/删除模组,只回调 App 传下来的 <code>actions.onToggleInstall(mod)</code>,由 App 统一执行并更新数据。子组件保持“傻”,架构就简单。</p>
+<h3>受控输入</h3>
+<p>搜索框是状态提升的日常形态:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> [search, setSearch] = useState(<span class="tok-s">''</span>)
+&lt;input value={search} onChange={(e) =&gt; setSearch(e.target.value)} /&gt;</code></pre></div><p>输入框的值<strong>由 state 驱动</strong>(value 绑 state),每次击键经 onChange 写回 state。数据单向闭环,永远以 state 为准——这叫<strong>受控组件</strong>,React 处理一切输入框的标准姿势。</p>
+<h2>8.6 自定义 Hook:复用“带状态的逻辑”</h2>
+<p>当一段“useState+useEffect 组合拳”要在多处使用,就把它抽成自定义 Hook——<strong>名字以 use 开头的普通函数,内部调用其他 Hook</strong>。本项目 <code>App.tsx</code> 里的 <code>refreshMods</code> 就是一例(把“扫描模组 + 写入 state”打包):</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> refreshMods = useCallback(<span class="tok-k">async</span> (): <span class="tok-t">Promise</span>&lt;<span class="tok-t">ModInfo</span>[]&gt; =&gt; {
+  <span class="tok-k">const</span> scanned = <span class="tok-k">await</span> window.api.scanMods()
+  setMods(scanned)
+  <span class="tok-k">return</span> scanned
+}, [])</code></pre></div><p>规则两条:<strong>只在组件(或其他 Hook)顶层调用 Hook</strong>;<strong>名字必须 use 开头</strong>(lint 靠名字识别违规,比如把 Hook 写进 if 分支会漏挂载)。</p>
+<h2>8.7 读大组件的路线图</h2>
+<p>现在你可以正面强攻 <code>App.tsx</code> 了(1000+ 行,本项目唯一的大文件)。推荐读法:</p>
+<ol>
+<li><strong>先读顶部 useState 群</strong>(58~82 行附近):这一屏就是应用的全部“心脏”,每个 state 猜测它管什么画面;</li>
+<li><strong>再读每个 <code>useCallback</code>/普通函数</strong>:都是“改心脏”的动作(导入、安装、删除、重命名……),命名即文档;</li>
+<li><strong>最后读 return 的 JSX</strong>:纯粹是把上面的数据往第 7 章那棵组件树上挂。</li>
+</ol>
+<p>看不懂某行就顺着 import 跳进对应组件——你现在已经有完整的能力读懂本项目渲染端的每一行了。</p>
+<h2>动手练习</h2>
+<ol>
+<li><strong>计数器</strong>(经典热身):新建 <code>practice-counter.tsx</code>,做一个按钮,显示“点了 N 次”,点击 +1。只用 useState 和 onClick。</li>
+<li><strong>秒表</strong>:在 1 的基础上加 useEffect + <code>setInterval</code>,每秒让另一个数字 +1;再加一个“清零”按钮。记得 return 清理函数。</li>
+<li><strong>可控输入</strong>:做一个输入框 + 实时回显“你输入了:N 个字”(提示:<code>value.length</code>)。</li>
+<li><strong>读代码</strong>:打开 <code>mod-card.tsx</code>,回答:哪个 state 管展开?<code>useEffect</code> 在等什么?为什么最后要 <code>memo</code>?</li>
+<li>练习文件用完删除,App.tsx 里临时加的行还原。</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>state 和 props 的本质区别?为什么不能直接改 state?</li>
+<li>useEffect 的依赖数组三种写法各意味着什么?清理函数防什么?</li>
+<li>ref 和 state 都能“记住”,选哪个的判断标准是什么?</li>
+<li>两个兄弟组件要共享数据,标准的解决模式叫什么?数据怎么流?</li>
+<li><code>setMods([...prev, m])</code> 里 <code>[...prev, m]</code> 是什么操作?为什么不 <code>prev.push(m)</code>?</li>
+</ul>
+<p>下一章:<a href="#ch-09-tailwind-shadcn">第 9 章 · Tailwind CSS 4 与 shadcn/ui</a></p>
+
+<div class="ch-nav"><a href="#ch-07-react-basics"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 7 章 · React 入门:组件与 JSX</span></a><a class="next" href="#ch-09-tailwind-shadcn"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 9 章 · Tailwind CSS 4 与 shadcn/ui</span></a></div>
+</section>
+<section class="chapter" id="ch-09-tailwind-shadcn" data-title="Tailwind CSS 4 与 shadcn/ui">
+<div class="ch-eyebrow"><span class="ch-chip">第 9 章</span><span class="ch-pos">10 / 13</span></div>
+<h1>Tailwind CSS 4 与 shadcn/ui</h1>
+<blockquote>
+<p>对照文件:<code>src/renderer/src/index.css</code>(Tailwind 4 配置与主题)、<code>src/renderer/src/components/ui/button.tsx</code>(shadcn 组件)、<code>src/renderer/src/lib/utils.ts</code>(cn 函数)</p>
+</blockquote>
+<h2>9.1 Tailwind:把 CSS 搬进 className</h2>
+<p><strong>Tailwind CSS</strong> 是“原子化 CSS”框架:它不让你写 <code>.card { ... }</code> 规则,而是提供海量超小工具类,直接在元素的 class 里拼装样式:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;div className=<span class="tok-s">"flex items-center gap-3 px-4 py-3 text-sm text-muted-foreground"</span>&gt;</code></pre></div><p>每个类只干一件小事:<code>flex</code>=弹性布局、<code>items-center</code>=垂直居中、<code>gap-3</code>=子元素间距 12px、<code>px-4 py-3</code>=内边距 16/12px、<code>text-sm</code>=小号字、<code>text-muted-foreground</code>=主题里的“次要文字色”。</p>
+<p>对比第 2 章的传统写法,优劣一眼见:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>传统 CSS</th>
+<th>Tailwind</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>心智</td>
+<td>起名、找文件、防冲突</td>
+<td>就地拼装,所见即所得</td>
+</tr>
+<tr>
+<td>改样式</td>
+<td>跳到 CSS 文件找规则</td>
+<td>当场改 className</td>
+</tr>
+<tr>
+<td>删元素</td>
+<td>CSS 可能留孤儿</td>
+<td>类名随元素一起消失</td>
+</tr>
+<tr>
+<td>门槛</td>
+<td>要懂 CSS 体系</td>
+<td>还是要懂 CSS 概念,只是换了个写法</td>
+</tr>
+</tbody></table></div>
+<p>最后一行是关键:<strong>Tailwind 不会让你免学 CSS</strong>——第 2 章的盒模型、flex、颜色、层叠,一个都少不了;它只是把“写规则”变成“挑词”。</p>
+<h2>9.2 Tailwind 4 在本项目怎么配置</h2>
+<p>Tailwind 4 的配置方式:CSS 文件即配置。本项目全部配置就在 <code>index.css</code> 开头几行:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">CSS</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-css"><span class="tok-k">@import</span> <span class="tok-s">"tailwindcss"</span>;        <span class="tok-c">/* 引入 Tailwind 本体(4.0 起不再需要 tailwind.config.js) */</span>
+<span class="tok-k">@import</span> <span class="tok-s">"tw-animate-css"</span>;     <span class="tok-c">/* 动画工具类补充包 */</span>
+
+<span class="tok-k">@theme</span> inline {
+  <span class="tok-a">--color-primary</span>: <span class="tok-t">hsl</span>(<span class="tok-t">var</span>(<span class="tok-a">--primary</span>));   <span class="tok-c">/* 主题映射:工具类 text-primary 从哪取色 */</span>
+  <span class="tok-a">--color-card</span>: <span class="tok-t">hsl</span>(<span class="tok-t">var</span>(<span class="tok-a">--card</span>));
+  <span class="tok-a">--radius-lg</span>: <span class="tok-t">var</span>(<span class="tok-a">--radius</span>);             <span class="tok-c">/* 圆角刻度:全部指向全局 --radius */</span>
+  ...
+}</code></pre></div><p>第 2 章埋的线头在这里收口:</p>
+<blockquote>
+<p><code>:root</code> 里的 CSS 变量(<code>--primary: 258 90% 66%</code>)→ <code>@theme</code> 映射成 Tailwind 主题色(<code>--color-primary</code>)→ 生成工具类 <code>text-primary</code> / <code>bg-primary</code> / <code>border-primary</code>。</p>
+</blockquote>
+<p>于是整个链路变成:<strong>设置界面改 <code>--radius</code> → 全 UI 圆角联动;改 <code>--primary</code> → 全 UI 主题色联动</strong>。这套“变量单点派生”的设计就是这个项目换肤、改圆角滑杆能即时生效的原理。</p>
+<p>Vite 那边的配合只有一处:<code>electron.vite.config.ts</code> renderer 段的 <code>plugins: [react(), tailwindcss()]</code>——<code>tailwindcss()</code> 插件让 Vite 扫描所有源码里出现的类名、现场生成对应 CSS。</p>
+<h2>9.3 工具类速读:能看懂本项目每一行 className</h2>
+<p>本项目 className 密度很高,拿真句子练. 逐个词拆 <code>mod-card.tsx</code> 的安装按钮:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">'group relative flex h-<span class="tok-n">8</span> shrink-<span class="tok-n">0</span> items-center gap-<span class="tok-n">1.5</span> rounded-md px-<span class="tok-n">3.5</span> text-xs
+ font-semibold transition-all duration-<span class="tok-n">150</span> active:scale-<span class="tok-n">95</span> ...'</code></pre></div><div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类</th>
+<th>意思</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>group</code></td>
+<td>给自己挂牌“我是 group”,子孙可用 <code>group-hover:</code> 响应我的悬停</td>
+</tr>
+<tr>
+<td><code>relative</code></td>
+<td><code>position: relative</code>,作子元素定位的参照系</td>
+</tr>
+<tr>
+<td><code>flex items-center gap-1.5</code></td>
+<td>弹性布局、垂直居中、子项间距 6px</td>
+</tr>
+<tr>
+<td><code>h-8 shrink-0 px-3.5</code></td>
+<td>高 32px、flex 收缩时不许变窄、左右内边距 14px</td>
+</tr>
+<tr>
+<td><code>rounded-md</code></td>
+<td>圆角 = 主题 <code>--radius</code>(被 @theme 重定向了)</td>
+</tr>
+<tr>
+<td><code>text-xs font-semibold</code></td>
+<td>12px 字号、半粗字重</td>
+</tr>
+<tr>
+<td><code>transition-all duration-150</code></td>
+<td>一切属性变化加 150ms 过渡</td>
+</tr>
+<tr>
+<td><code>active:scale-95</code></td>
+<td><strong>被按下时</strong>缩到 95%(前缀=伪类/状态修饰)</td>
+</tr>
+</tbody></table></div>
+<h3>状态前缀与响应式前缀</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">disabled:pointer-events-none disabled:opacity-<span class="tok-n">100</span>   <span class="tok-c">// 禁用时:不响应鼠标</span>
+hover:bg-secondary                                  <span class="tok-c">// 悬停时:换底色</span>
+group-disabled:opacity-<span class="tok-n">50</span>                           <span class="tok-c">// 祖先 group 被禁用时:内容淡出</span>
+dark:text-amber-<span class="tok-n">400</span>                                 <span class="tok-c">// 深色模式下:换琥珀色</span></code></pre></div><p>前缀就是第 2 章“选择器越具体越强”的工程化包装:<code>hover:bg-x</code> 编译后即 <code>.x:hover</code>。</p>
+<h3>任意值与透明度修饰</h3>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">h-<span class="tok-n">4</span> w-<span class="tok-n">4</span>                    <span class="tok-c">// 16px(数字 × 4px 是尺寸刻度)</span>
+text-[15px]                <span class="tok-c">// 方括号=任意值:刻度表里没有的 15px</span>
+grid-rows-[1fr]            <span class="tok-c">// 任意 grid 行高(卡片展开动画用)</span>
+bg-primary/<span class="tok-n">80</span>              <span class="tok-c">// 主题色 + 80% 不透明度</span>
+border-foreground/[<span class="tok-n">0.08</span>]   <span class="tok-c">// 8% 不透明度的描边</span></code></pre></div><h3>cn():条件拼类名的标配</h3>
+<p>类名经常需要“基础 + 条件附加”:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">className={cn(
+  <span class="tok-s">'h-4 w-4 shrink-0 transition-transform duration-200'</span>,
+  !expanded &amp;&amp; <span class="tok-s">'-rotate-90'</span>      <span class="tok-c">// 收起时逆时针转 90°(箭头朝右)</span>
+)}</code></pre></div><p><code>cn</code> 定义在 <code>lib/utils.ts</code>,全文 6 行:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">import</span> { clsx, <span class="tok-k">type</span> <span class="tok-t">ClassValue</span> } <span class="tok-k">from</span> <span class="tok-s">'clsx'</span>
+<span class="tok-k">import</span> { twMerge } <span class="tok-k">from</span> <span class="tok-s">'tailwind-merge'</span>
+
+<span class="tok-k">export</span> <span class="tok-k">function</span> cn(...inputs: <span class="tok-t">ClassValue</span>[]): <span class="tok-k">string</span> {
+  <span class="tok-k">return</span> twMerge(clsx(inputs))
+}</code></pre></div><p>两个包各司其职:<code>clsx</code> 把各种输入(字符串、false、undefined、条件表达式)拼成一条;<code>twMerge</code> 解决“后者覆盖前者”——同时出现 <code>px-4 px-2</code> 时保留后者,否则 Tailwind 里两个都生效、谁赢看运气。<strong>项目里所有动态类名一律走 <code>cn()</code></strong>,这也解释了为什么每个组件都 import 它。</p>
+<h2>9.4 shadcn/ui:不是组件库,是“源码自提柜”</h2>
+<p>传统 UI 库(如 antd)是 <code>npm install</code> 后引包,样式藏在黑盒里,定制要靠它的配置项往外抠。<strong>shadcn/ui 走了相反的路:运行 <code>npx shadcn add button</code>,它把按钮组件的完整源码直接复制进你的项目</strong>(<code>components/ui/button.tsx</code>),从 此归你所有,想怎么改就怎么改。</p>
+<p>本项目的 <code>components/ui/</code> 目录就是这样一个“自提柜”,存放着 button、dialog、dropdown-menu、select、switch、slider、tooltip 等十余个基础件。它们共同的模式值得掌握:</p>
+<h3>模式一:cva 管理变体</h3>
+<p>打开 <code>ui/button.tsx</code> 看 <code>buttonVariants</code>:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> buttonVariants = cva(
+  <span class="tok-s">'inline-flex items-center ... active:scale-[0.98]'</span>,   <span class="tok-c">// 所有变体共有的基础类</span>
+  {
+    variants: {
+      variant: {
+        <span class="tok-k">default</span>:   <span class="tok-s">'bg-primary/80 text-primary-foreground ...'</span>,   <span class="tok-c">// 主按钮:实底紫</span>
+        destructive:<span class="tok-s">'bg-destructive/80 ...'</span>,                       <span class="tok-c">// 危险操作:红</span>
+        outline:   <span class="tok-s">'border border-border bg-transparent ...'</span>,      <span class="tok-c">// 描边按钮</span>
+        ghost:     <span class="tok-s">'hover:bg-secondary/60 ...'</span>,                    <span class="tok-c">// 幽灵:无底色</span>
+        glass:     <span class="tok-s">'text-foreground'</span>,                              <span class="tok-c">// 本项目自定义的玻璃按钮</span>
+        link:      <span class="tok-s">'text-primary underline-offset-4 hover:underline'</span>
+      },
+      size: { <span class="tok-k">default</span>: <span class="tok-s">'h-9 px-4 py-2'</span>, sm: <span class="tok-s">'h-8 ...'</span>, lg: <span class="tok-s">'h-10 ...'</span>, icon: <span class="tok-s">'h-9 w-9'</span> }
+    },
+    defaultVariants: { variant: <span class="tok-s">'default'</span>, size: <span class="tok-s">'default'</span> }
+  }
+)</code></pre></div><p><strong>cva(class-variance-authority)把“一个组件的多种外观”组织成查表</strong>:使用处一句 <code>&lt;Button variant=&quot;ghost&quot; size=&quot;icon&quot; /&gt;</code>,不需要自己拼类名。这是管理 UI 变体的标准模式,你以后会在各种项目里反复见到。</p>
+<h3>模式二:Radix 管行为,shadcn 管皮肤</h3>
+<p><code>ui/</code> 里的组件全部 import 自 <code>@radix-ui/react-*</code> 包。<strong>Radix 是“无头组件”(headless)</strong>:它把弹层定位、焦点管理、键盘导航(Esc 关弹窗、方向键切选项)、ARIA 无障碍属性这些<strong>最难写对的行为</strong>全包了,但不渲染任何像素;shadcn 在它外面套上带 Tailwind 类的壳。本项目下拉菜单的用法:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;<span class="tok-t">DropdownMenu</span>&gt;                          {<span class="tok-c">/* Radix:管开合、管焦点 */</span>}
+  &lt;<span class="tok-t">DropdownMenuTrigger</span> asChild&gt;        {<span class="tok-c">/* 触发器,asChild=不额外包一层元素,直接修饰子元素 */</span>}
+    &lt;<span class="tok-t">Button</span> variant=<span class="tok-s">"ghost"</span> size=<span class="tok-s">"icon"</span>&gt;&lt;<span class="tok-t">MoreHorizontal</span> /&gt;&lt;/<span class="tok-t">Button</span>&gt;
+  &lt;/<span class="tok-t">DropdownMenuTrigger</span>&gt;
+  &lt;<span class="tok-t">DropdownMenuContent</span> align=<span class="tok-s">"end"</span> className=<span class="tok-s">"w-48"</span>&gt;
+    &lt;<span class="tok-t">DropdownMenuItem</span> onClick={() =&gt; actions.onRename(mod)}&gt;
+      &lt;<span class="tok-t">Pencil</span> /&gt; 重命名...
+    &lt;/<span class="tok-t">DropdownMenuItem</span>&gt;
+    ...
+    &lt;<span class="tok-t">DropdownMenuItem</span> destructive onClick={() =&gt; actions.onDelete(mod)}&gt;
+      &lt;<span class="tok-t">Trash2</span> /&gt; 删除
+    &lt;/<span class="tok-t">DropdownMenuItem</span>&gt;
+  &lt;/<span class="tok-t">DropdownMenuContent</span>&gt;
+&lt;/<span class="tok-t">DropdownMenu</span>&gt;</code></pre></div><p>对照第 7 章的组件树:<strong>Radix 提供骨架与大脑,shadcn/ui 提供皮肤,你的业务组件再把它们组装进界面</strong>。分层清晰,各改各的。</p>
+<h3>模式三:forwardRef 与 asChild(看懂即可)</h3>
+<p><code>ui/button.tsx</code> 里有两个 shadcn 全家桶的固定动作:</p>
+<ul>
+<li><code>React.forwardRef(...)</code>:让父组件能拿到底层真实 DOM 的 ref——<code>mod-card.tsx</code> 里 <code>useRef</code> + <code>ref</code> 传给组件就是这么接上的;</li>
+<li><code>asChild</code> 属性(基于 <code>@radix-ui/react-slot</code>):<code>&lt;DropdownMenuTrigger asChild&gt;&lt;Button/&gt;&lt;/DropdownMenuTrigger&gt;</code> 表示“别给我额外包一层 div,把触发行为直接注入 Button”。好处是 DOM 结构干净、样式不串位。</li>
+</ul>
+<p>初学不必会写,见到不慌即可。</p>
+<h2>9.5 图标:lucide-react</h2>
+<p>项目里所有图标(<code>ChevronDown</code>、<code>Trash2</code>、<code>Package</code>……)来自 <code>lucide-react</code>,本质是几千个现成的 SVG 组件:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">import</span> { <span class="tok-t">Trash2</span> } <span class="tok-k">from</span> <span class="tok-s">'lucide-react'</span>
+&lt;<span class="tok-t">Trash2</span> className=<span class="tok-s">"h-4 w-4"</span> /&gt;     {<span class="tok-c">/* 图标=普通组件,用 Tailwind 定尺寸 */</span>}</code></pre></div><h2>动手练习</h2>
+<ol>
+<li><p>打开本项目,<code>npm run dev</code> 后在 <code>index.css</code> 里实验(改完还原):</p>
+<ul>
+<li>把 <code>--radius</code> 改成 <code>4px</code>,观察全 UI 变“方”;再改成 <code>32px</code>,变“果冻”。</li>
+<li>把 <code>--primary</code> 换个色相,观察全应用换肤。</li>
+</ul>
+</li>
+<li><p><strong>改造 hello 组件</strong>(第 7 章练过):用纯 Tailwind 重写,不许写一行 CSS:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">export</span> <span class="tok-k">default</span> <span class="tok-k">function</span> <span class="tok-t">Hello</span>() {
+  <span class="tok-k">return</span> (
+    &lt;div className=<span class="tok-s">"rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm"</span>&gt;
+      &lt;span className=<span class="tok-s">"text-primary font-semibold"</span>&gt;你好 <span class="tok-t">Tailwind</span>!&lt;/span&gt;
+      &lt;span className=<span class="tok-s">"ml-2 text-xs text-muted-foreground hover:text-foreground"</span>&gt;
+        悬停试试
+      &lt;/span&gt;
+    &lt;/div&gt;
+  )
+}</code></pre></div></li>
+<li><p>在 F12 里检查你写的元素,点开其 class 列表,再在 Styles 面板找到 Tailwind 为 <code>rounded-lg</code> 生成的真实 CSS 规则——把“工具类”和“编译产物”对上号。</p>
+</li>
+<li><p>练完删除,项目还原。</p>
+</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>Tailwind 和传统 CSS 各自的工作流是什么?它取代了第 2 章的哪些知识、没取代哪些?</li>
+<li>从设置里改“全局圆角”到界面生效,中间经过哪条变量链?</li>
+<li><code>cn()</code> 解决哪两个问题?为什么动态类名必须用它而不是字符串模板?</li>
+<li>shadcn/ui 和传统 npm 组件库的本质区别?</li>
+<li>Radix 在 <code>ui/</code> 组件里承担哪半边工作?</li>
+</ul>
+<p>下一章:<a href="#ch-10-electron">第 10 章 · Electron:把网页变成桌面应用</a></p>
+
+<div class="ch-nav"><a href="#ch-08-react-state"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 8 章 · React 进阶:状态与 Hooks</span></a><a class="next" href="#ch-10-electron"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 10 章 · Electron:把网页变成桌面应用</span></a></div>
+</section>
+<section class="chapter" id="ch-10-electron" data-title="Electron:把网页变成桌面应用">
+<div class="ch-eyebrow"><span class="ch-chip">第 10 章</span><span class="ch-pos">11 / 13</span></div>
+<h1>Electron:把网页变成桌面应用</h1>
+<blockquote>
+<p>对照文件:<code>src/main/index.ts</code>(主进程)、<code>src/preload/index.ts</code>(桥梁)、<code>src/main/ipc.ts</code>(后端接口)</p>
+</blockquote>
+<h2>10.1 Electron 是什么</h2>
+<p><strong>Electron = Chromium(渲染网页)+ Node.js(系统能力)+ 原生外壳(窗口、托盘、菜单)</strong>。VS Code、Discord、QQ NT 都是 Electron 应用。它让“会 Web 开发”直接等于“会写桌面应用”——本项目管理器就是证据:界面是一个 React 网页,安装模组、扫描文件夹是 Node.js 代码,合起来是个 .exe。</p>
+<p>代价也要知道:应用自带一个完整 Chromium,安装包和内存占用都比原生应用大。换来的是一份代码、全平台运行、生态全是 Web 技术。</p>
+<h2>10.2 三个世界:main / preload / renderer</h2>
+<p>Electron 应用被切分成三个<strong>相互隔离的进程</strong>,对照第 6 章的三段构建配置:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">┌─────────────────────────────────────────────────┐
+│  main 主进程(Node.js)src/main/                │
+│  应用的"后端 + 管家":唯一有权碰系统            │
+│  建窗口、读写磁盘、扫描模组、弹文件对话框、启动游戏│
+└──────────────┬──────────────────────────────────┘
+               │ IPC(进程间通信)
+┌──────────────┴──────────────────────────────────┐
+│  preload 预加载脚本 src/preload/                │
+│  "海关":在 renderer 里开一个受控的 API 窗口     │
+└──────────────┬──────────────────────────────────┘
+               │ window.api.*
+┌──────────────┴──────────────────────────────────┐
+│  renderer 渲染进程 src/renderer/                │
+│  就是一个网页:React 界面,没有任何系统能力      │
+└─────────────────────────────────────────────────┘</code></pre></div><p>为什么要切?<strong>安全</strong>。网页天然可能被注入恶意内容;如果渲染进程能直接碰磁盘,一个漏洞就能删光用户文件。Electron 的默认架构(本项目严格遵循)是:renderer 是个“裸网页”,<strong>一切系统能力都必须经由主进程代办</strong>。</p>
+<h2>10.3 主进程:创建窗口</h2>
+<p>看 <code>src/main/index.ts</code> 的 <code>createWindow</code>(节选):</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">import</span> { <span class="tok-t">BrowserWindow</span>, app, protocol } <span class="tok-k">from</span> <span class="tok-s">'electron'</span>
+
+<span class="tok-k">function</span> createWindow(): <span class="tok-k">void</span> {
+  mainWindow = <span class="tok-k">new</span> <span class="tok-t">BrowserWindow</span>({
+    name: <span class="tok-s">'main'</span>,
+    windowStatePersistence: <span class="tok-k">true</span>,   <span class="tok-c">// Electron 44+:记住窗口位置/大小/最大化</span>
+    width: <span class="tok-n">1315</span>,
+    height: <span class="tok-n">1000</span>,
+    webPreferences: {
+      preload: join(__dirname, <span class="tok-s">'../preload/index.js'</span>),
+      contextIsolation: <span class="tok-k">true</span>,      <span class="tok-c">// 安全开关 ①:渲染层与 Electron API 隔离(默认)</span>
+      nodeIntegration: <span class="tok-k">false</span>       <span class="tok-c">// 安全开关 ②:网页里不许直接用 Node(默认)</span>
+    },
+    ...
+  })
+  <span class="tok-c">// dev 时 ELECTRON_RENDERER_URL 指向 Vite dev server;打包后加载本地文件</span>
+  <span class="tok-k">if</span> (process.env.<span class="tok-t">ELECTRON_RENDERER_URL</span>) {
+    mainWindow.loadURL(process.env.<span class="tok-t">ELECTRON_RENDERER_URL</span>)
+  } <span class="tok-k">else</span> {
+    mainWindow.loadFile(join(__dirname, <span class="tok-s">'../renderer/index.html'</span>))
+  }
+}
+
+app.whenReady().then(<span class="tok-c">/* ... */</span>)     <span class="tok-c">// Electron 就绪后建窗口</span></code></pre></div><p>主进程的代码风格就是第 5 章说的“纯 Node”——<code>app</code>、<code>BrowserWindow</code> 这些来自 <code>electron</code> 包,<code>join</code>/<code>existsSync</code> 来自 Node 内置模块。</p>
+<p>这个文件里还有两段值得留意的“加固”代码(初学了解意图即可):</p>
+<ul>
+<li><strong>GPU 开关</strong>:<code>app.commandLine.appendSwitch(&#39;enable-gpu-rasterization&#39;)</code> 等——本项目界面重度使用玻璃模糊特效,强制走 GPU 光栅化防止掉进软件渲染、帧率崩盘;</li>
+<li><strong>导航拦截</strong>:<code>app.on(&#39;web-contents-created&#39;, ...)</code> 里把 <code>window.open</code> 一律拒绝、把渲染层发起的陌生网址导航拦下——“界面只允许加载本地内容”,这是 Electron 官方安全清单的第一条。</li>
+</ul>
+<h2>10.4 IPC:两个世界怎么说话</h2>
+<p>renderer 想扫模组文件夹,但它碰不到磁盘;main 能碰磁盘,但看不见界面。<strong>IPC(Inter-Process Communication)</strong> 就是两者之间的电话线,本项目全部采用最常用的一对原语:</p>
+<ul>
+<li>渲染端:<code>ipcRenderer.invoke(频道名, 参数)</code> —— 像发请求,等一个 Promise;</li>
+<li>主进程:<code>ipcMain.handle(频道名, 处理函数)</code> —— 像注册路由,返回结果。</li>
+</ul>
+<p><code>src/main/ipc.ts</code> 里注册了 30 多个 handler,格式高度统一(挑最短的两个):</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts">ipcMain.handle(<span class="tok-s">'mods:scan'</span>, () =&gt; repository.scan())
+ipcMain.handle(<span class="tok-s">'mods:install'</span>, (_event, name: <span class="tok-k">string</span>) =&gt; withBusy(name, () =&gt; operations.install(name)))</code></pre></div><p>频道名约定 <code>域:动作</code>(如 <code>mods:scan</code>、<code>config:update</code>)。invoke 的 Promise 语义和第 3 章的 <code>await</code> 无缝衔接——<strong>对前端代码来说,“调 IPC”和“调后端 HTTP 接口”手感完全一样</strong>。</p>
+<h2>10.5 preload 与 contextBridge:受控的 API 窗口</h2>
+<p>那 renderer 里的 <code>window.api.scanMods()</code> 是哪来的?它并不存在——是 preload <strong>暴露</strong>给它的。看 <code>src/preload/index.ts</code> 的结构与结尾:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">import</span> { contextBridge, ipcRenderer } <span class="tok-k">from</span> <span class="tok-s">'electron'</span>
+
+<span class="tok-k">const</span> api = {
+  bootstrap: (): <span class="tok-t">Promise</span>&lt;<span class="tok-t">BootstrapPayload</span>&gt; =&gt; ipcRenderer.invoke(<span class="tok-s">'app:bootstrap'</span>),
+  scanMods: (): <span class="tok-t">Promise</span>&lt;<span class="tok-t">ModInfo</span>[]&gt; =&gt; ipcRenderer.invoke(<span class="tok-s">'mods:scan'</span>),
+  installMod: (name: <span class="tok-k">string</span>): <span class="tok-t">Promise</span>&lt;<span class="tok-t">OperationResult</span>&gt; =&gt; ipcRenderer.invoke(<span class="tok-s">'mods:install'</span>, name),
+  <span class="tok-c">// ...约 40 个方法,每个都是对一条 IPC 频道的薄封装</span>
+  onLogEntry: (callback: (entry: <span class="tok-t">LogEntry</span>) =&gt; <span class="tok-k">void</span>): (() =&gt; <span class="tok-k">void</span>) =&gt; {
+    <span class="tok-k">const</span> listener = (_event: <span class="tok-k">unknown</span>, entry: <span class="tok-t">LogEntry</span>) =&gt; callback(entry)
+    ipcRenderer.on(<span class="tok-s">'log:entry'</span>, listener)
+    <span class="tok-k">return</span> () =&gt; ipcRenderer.removeListener(<span class="tok-s">'log:entry'</span>, listener)
+  }
+}
+
+contextBridge.exposeInMainWorld(<span class="tok-s">'api'</span>, api)   <span class="tok-c">// 把 api 挂到 renderer 的 window.api 上</span></code></pre></div><p>三个要点:</p>
+<ol>
+<li><strong>contextBridge 是唯一合法的桥梁</strong>。preload 运行在一个特殊环境里,同时够得到 Node(<code>ipcRenderer</code>)和页面(<code>window</code>),用 <code>exposeInMainWorld</code> 精确地递出一个白名单对象。页面拿不到 <code>ipcRenderer</code> 本体,只能调这些预定义方法——<strong>攻击面被压到最小</strong>。</li>
+<li><strong><code>window.api</code> 的类型从哪来?</strong> <code>preload</code> 里的 <code>export type Api = typeof api</code> 加上 <code>src/renderer/src/types/api.d.ts</code> 里的全局声明,让 renderer 里写 <code>window.api.scanMods()</code> 时 TS 能完整补全和检查——第 4 章“一份合同管两个世界”的又一个实例。</li>
+<li><strong><code>onLogEntry</code> 演示了“主进程主动推送”</strong>。invoke 是前端发起、后端应答;反过来(后端事件推给前端)用 <code>ipcRenderer.on</code> 订阅。这里包装成“订阅函数返回退订函数”的形态,正好接上第 8 章 useEffect 的清理模式(<code>return unsubscribe</code>)。背景图轮播(<code>onBackgroundState</code>)同理:主进程每换一张背景,推一帧状态过来。</li>
+</ol>
+<h3>整条链路连起来读一遍</h3>
+<p>以“点击『已安装』按钮卸载模组”为例,数据流贯穿全书:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">点击按钮(mod-card.tsx,onClick)
+→ actions.onToggleInstall(mod)          (第 7 章 props 回调)
+→ App 里的处理函数,await window.api.uninstallMod(name)   (第 8 章)
+→ preload:ipcRenderer.invoke('mods:uninstall', name)     (本章,桥梁)
+→ ipc.ts:ipcMain.handle('mods:uninstall', ...)           (本章,Node 执行文件操作)
+→ 返回 OperationResult → resolve 回 App → setMods 更新列表 → 卡片变回"未安装"</code></pre></div><h2>10.6 浏览器模式:window.api 不存在怎么办</h2>
+<p>还记得 <code>main.tsx</code> 里那段吗?</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">if</span> (<span class="tok-k">import</span>.meta.env.<span class="tok-t">DEV</span> &amp;&amp; !window.api) {
+  installBrowserApiMock()
+}</code></pre></div><p><code>npm run dev</code> 只起网页、不启动 Electron,<code>window.api</code> 天然不存在——于是注入一个<strong>内存版假后端</strong>(<code>lib/browser-api-mock.ts</code>):接口签名一模一样,数据存在内存里。这带来本项目最重要的开发体验:</p>
+<ul>
+<li><strong>日常改界面完全不需要 Electron</strong>,浏览器 dev 即可,热更新照常;</li>
+<li>mock 与真 API 同型,切回 <code>dev:electron</code> 无需改一行界面代码。</li>
+</ul>
+<p>这是“依赖接口而非实现”在日常开发中的实战价值:界面只认 <code>window.api</code> 的<strong>形状</strong>(类型),背后接真后端还是 mock,界面无感。</p>
+<h2>动手练习</h2>
+<ol>
+<li>打开本项目跑 <code>dev:electron</code>(完整桌面模式),F12 打开 devtools,在 Console 输入 <code>window.api</code>,展开看看海关递出了什么;再输入 <code>await window.api.getConfig()</code> 看真实配置。</li>
+<li>在同一 Console 里 <code>await window.api.scanMods()</code>,拿到真实模组列表——你刚刚手动走了一遍完整 IPC 链路。</li>
+<li>读代码:从 <code>preload/index.ts</code> 里挑 <code>renameMod</code>,在 <code>src/main/ipc.ts</code> 里找到同名 handler,把“invoke → handle”两端连起来讲一遍。若想更深,再跳进 <code>src/main/operations.ts</code> 看它真正干了什么。</li>
+<li>思考题:为什么 <code>dialog:pickArchive</code>(弹系统文件选择框)必须在 main 里做,renderer 做不了?</li>
+</ol>
+<h2>自测</h2>
+<ul>
+<li>Electron 三进程各自职责?为什么必须隔离?</li>
+<li><code>invoke/handle</code> 与 <code>on/send</code> 各是哪种通信方向?</li>
+<li>contextBridge 暴露 API 时,为什么暴露一个方法白名单比暴露 <code>ipcRenderer</code> 本身安全?</li>
+<li><code>npm run dev</code>(浏览器模式)下 <code>window.api</code> 是什么?这个设计给开发体验带来什么?</li>
+</ul>
+<p>下一章:<a href="#ch-11-practice">第 11 章 · 实战:给项目加一个新功能</a></p>
+
+<div class="ch-nav"><a href="#ch-09-tailwind-shadcn"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 9 章 · Tailwind CSS 4 与 shadcn/ui</span></a><a class="next" href="#ch-11-practice"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 11 章 · 实战:给项目加一个新功能</span></a></div>
+</section>
+<section class="chapter" id="ch-11-practice" data-title="实战:给项目加一个新功能">
+<div class="ch-eyebrow"><span class="ch-chip">第 11 章</span><span class="ch-pos">12 / 13</span></div>
+<h1>实战:给项目加一个新功能</h1>
+<blockquote>
+<p>涉及文件:<code>mod-card.tsx</code>、<code>App.tsx</code>、<code>ipc.ts</code>、<code>preload/index.ts</code>、<code>settings-dialog.tsx</code></p>
+</blockquote>
+<p>前三步(主任务)是<strong>手把手</strong>的完整演示,请务必亲手敲一遍;后面 A/B/C 是<strong>独立练习</strong>,附提示与验收标准,难度递进,C 是贯穿三层的全栈练习。</p>
+<p>开工前老规矩:<code>cd app &amp;&amp; npm run dev</code>,所有改动都用浏览器模式验证;每完成一步按 <code>Ctrl+S</code> 看 HMR 效果。</p>
+<h2>主任务:给模组卡片加“复制模组名称”</h2>
+<p><strong>需求</strong>:卡片右上角的“⋯”菜单里加一项“复制名称”,点击后模组名进剪贴板,并弹 toast 提示。</p>
+<p><strong>动工前先做设计决策</strong>(真实项目里这一步比写代码重要):这个行为放在哪?</p>
+<ul>
+<li>选项一:卡片组件内部直接 <code>navigator.clipboard.writeText(...)</code>,自给自足;</li>
+<li>选项二:遵循项目现有惯例——卡片只<strong>报告意图</strong>(<code>actions.onCopyName(mod)</code>),行为统一由 App 实现。</li>
+</ul>
+<p>回忆第 8 章的架构原则(“子组件保持傻,行为统一在 App”),选二。于是改动清单:<strong>两处组件文件,零新依赖</strong>。</p>
+<h3>第 1 步:扩展卡片的行为合同(<code>mod-card.tsx</code>)</h3>
+<p>找到文件顶部的 <code>ModCardActions</code> 接口(约 31 行),在 <code>onRename</code> 旁边加一行:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts"><span class="tok-k">export</span> <span class="tok-k">interface</span> <span class="tok-t">ModCardActions</span> {
+  onToggleInstall: (mod: <span class="tok-t">ModInfo</span>) =&gt; <span class="tok-k">void</span>
+  onReinstall: (mod: <span class="tok-t">ModInfo</span>) =&gt; <span class="tok-k">void</span>
+  onRename: (mod: <span class="tok-t">ModInfo</span>) =&gt; <span class="tok-k">void</span>
+  onCopyName: (mod: <span class="tok-t">ModInfo</span>) =&gt; <span class="tok-k">void</span>      <span class="tok-c">// ← 新增</span>
+  ...
+}</code></pre></div><p>保存。此刻 App.tsx 立刻标红:它实现的 <code>modCardActions</code> 缺了新方法——<strong>第 4 章的类型护栏第一次实战护住了你</strong>,TS 把“该改哪”直接指给你看。</p>
+<h3>第 2 步:加菜单项(<code>mod-card.tsx</code>)</h3>
+<p>在文件顶部 <code>lucide-react</code> 的 import 里补一个 <code>Copy</code> 图标,然后在 <code>DropdownMenuContent</code> 里、<code>重命名...</code> 那一项下面照葫芦画瓢:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;<span class="tok-t">DropdownMenuItem</span> onClick={() =&gt; actions.onCopyName(mod)}&gt;
+  &lt;<span class="tok-t">Copy</span> /&gt;
+  复制名称
+&lt;/<span class="tok-t">DropdownMenuItem</span>&gt;</code></pre></div><p>保存,HMR 生效。现在点开“⋯”菜单能看到新项,但点了没反应(合同有了、实现还没写)——注意菜单项<strong>没有被红色报错卡住</strong>,因为接口层面它已经合法。这种“两端各自合法、中间悬空”的状态是联调期的常态,靠类型系统的下一步提示来收口。</p>
+<h3>第 3 步:实现行为(<code>App.tsx</code>)</h3>
+<p>找到 <code>modCardActions = useMemo&lt;ModCardActions&gt;(...)</code>(约 455 行),在对象里补上实现:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">onCopyName: (mod) =&gt; {
+  <span class="tok-k">void</span> navigator.clipboard.writeText(mod.name)
+  toast.success(<span class="tok-s">`已复制:${mod.name}`</span>)
+},</code></pre></div><p>三个知识点现场用上:</p>
+<ul>
+<li><code>navigator.clipboard.writeText()</code> 是浏览器标准 API,<strong>返回 Promise</strong>,所以前面挂 <code>void</code>(表示“我知道这是异步、故意不等它”,项目里到处是这个写法);</li>
+<li><code>toast.success(...)</code> 来自第 5 章依赖表里的 <code>sonner</code> 库——App.tsx 顶部已 import,直接用;</li>
+<li>回忆第 10 章浏览器模式:剪贴板是浏览器能力,不走 <code>window.api</code>,所以 mock 无关,浏览器和桌面两端都天然可用。</li>
+</ul>
+<h3>第 4 步:验证与收尾</h3>
+<ol>
+<li>浏览器里点开某卡片“⋯”→ 复制名称 → 看到 toast,在任意输入框 <code>Ctrl+V</code> 验证剪贴板;</li>
+<li>终端跑 <code>npm run typecheck</code>,确认全绿;</li>
+<li><code>git diff</code> 看一眼:总共 3 个文件里 10 行上下的改动——真实项目的功能迭代,大多就是这个体量。</li>
+</ol>
+<h3>复盘:这 10 行穿过了几章的知识</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>改动</th>
+<th>用到的知识</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ModCardActions</code> 加方法</td>
+<td>第 4 章 interface、类型护栏报错</td>
+</tr>
+<tr>
+<td>菜单项 JSX</td>
+<td>第 7 章 JSX、第 9 章 Radix/shadcn</td>
+</tr>
+<tr>
+<td><code>onClick={() =&gt; actions.onCopyName(mod)}</code></td>
+<td>第 3 章箭头函数、第 8 章回调上行</td>
+</tr>
+<tr>
+<td><code>navigator.clipboard</code> + <code>void</code></td>
+<td>第 3 章 Promise、项目惯例</td>
+</tr>
+<tr>
+<td><code>toast.success</code></td>
+<td>依赖管理、App 统一处理反馈</td>
+</tr>
+<tr>
+<td>HMR 全程验证</td>
+<td>第 6 章开发循环</td>
+</tr>
+</tbody></table></div>
+<p><strong>以后你接到任何“加个按钮”的需求,走的都是这条完全相同的路。</strong></p>
+<h2>练习 A(纯展示):卡片副标题显示文件数</h2>
+<p><strong>需求</strong>:卡片副标题现在是 <code>大小 · 导入于 时间</code>,改成 <code>大小 · N 个文件 · 导入于 时间</code>。</p>
+<ul>
+<li>位置:<code>mod-card.tsx</code> 里那行 <code>formatFileSize(mod.sizeBytes) · 导入于 ...</code>;</li>
+<li>提示:<code>mod.files</code> 是数组(第 3 章 <code>.length</code>);文件数为 0 时显示“空文件夹”而不是“0 个文件”(第 7 章三元);</li>
+<li>验收:两种卡片状态显示正确,typecheck 绿。</li>
+</ul>
+<h2>练习 B(读 App 的数据):加“复制安装路径”</h2>
+<p><strong>需求</strong>:菜单再加一项“复制安装路径”,内容为 <code>modsDirectory/模组名</code>。</p>
+<ul>
+<li>难点:路径目录在<strong>配置</strong>里。回忆第 8 章状态提升——<code>config</code> 是 App 的 state,<code>modCardActions</code> 的闭包能直接读到;若 <code>config</code> 还是 null(启动瞬间)就 <code>return</code>;</li>
+<li>拼路径用现成工具:<code>import { joinPath } from &#39;@/lib/format&#39;</code>(第 3 章读过它怎么处理 <code>/</code> 和 <code>\</code>);</li>
+<li>提示:路径不存在安装概念(未安装时 <code>sourcePath</code> 也可复制),不必纠结语义,重点是<strong>在回调里读到 App 的另一个 state</strong>;</li>
+<li>验收:复制出的路径粘贴到资源管理器能定位(如果已安装该模组)。</li>
+</ul>
+<h2>练习 C(全栈):设置弹窗显示应用版本号</h2>
+<p><strong>需求</strong>:设置弹窗标题“设置”旁边显示当前应用版本(如“设置 · 2.0.0”)。版本号只有主进程知道(在 <code>package.json</code> 里),所以要<strong>新开一条 IPC 频道</strong>——完整穿过 Electron 三层:</p>
+<ol>
+<li><p><strong>主进程</strong> <code>src/main/ipc.ts</code>:顶部 import 里补上 <code>app</code>(<code>import { app, dialog, ... } from &#39;electron&#39;</code>),在 <code>registerIpcHandlers</code> 里挑个顺眼位置加:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts">ipcMain.handle(<span class="tok-s">'app:version'</span>, () =&gt; app.getVersion())</code></pre></div></li>
+<li><p><strong>桥梁</strong> <code>src/preload/index.ts</code>:在 <code>api</code> 对象里加:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TypeScript</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-ts">getAppVersion: (): <span class="tok-t">Promise</span>&lt;<span class="tok-k">string</span>&gt; =&gt; ipcRenderer.invoke(<span class="tok-s">'app:version'</span>),</code></pre></div><p>保存后注意:<code>window.api</code> 的类型<strong>自动</strong>长出了新方法——因为 <code>types/api.d.ts</code> 是直接从 preload 的 <code>Api</code> 类型推导的(第 4 章“一份合同”的机制红利)。</p>
+</li>
+<li><p><strong>界面</strong> <code>settings-dialog.tsx</code>:它已 import 了 <code>useState</code>/<code>useEffect</code>/<code>toast</code>,在组件体内加:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx"><span class="tok-k">const</span> [version, setVersion] = useState&lt;<span class="tok-k">string</span> | <span class="tok-k">null</span>&gt;(<span class="tok-k">null</span>)
+useEffect(() =&gt; {
+  <span class="tok-k">void</span> window.api.getAppVersion().then(setVersion)
+}, [])</code></pre></div><p>然后把 <code>&lt;DialogTitle&gt;设置&lt;/DialogTitle&gt;</code> 改成:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">TSX</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-tsx">&lt;<span class="tok-t">DialogTitle</span>&gt;设置{version ? <span class="tok-s">` · ${version}`</span> : <span class="tok-s">''</span>}&lt;/<span class="tok-t">DialogTitle</span>&gt;</code></pre></div></li>
+<li><p><strong>验证</strong>:浏览器模式下 mock 没有 <code>getAppVersion</code> 会报错——这本身就是教学点:mock 是接口的另一份实现,<strong>接口长了他没长</strong>。去 <code>lib/browser-api-mock.ts</code> 给 mock 对象补一个假实现(返回任意字符串)即可;真正验收用 <code>npm run dev:electron</code> 看真实版本号。</p>
+</li>
+<li><p>顺手理解:为什么浏览器模式这里会“假数据”、桌面模式“真数据”,而界面代码一行没改?(第 10 章:界面只依赖接口形状。)</p>
+</li>
+</ol>
+<p><strong>验收</strong>:两种模式设置弹窗都显示版本;<code>npm run typecheck</code> 与 <code>npm run typecheck:node</code> 全绿。</p>
+<h2>收尾纪律(真实工程习惯)</h2>
+<p>每完成一个练习,把改动<strong>安全地</strong>收起来,别让练习残留污染工作区:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">git</span> <span class="tok-k">stash</span> push -m <span class="tok-s">"web教程练习A"</span>   <span class="tok-c"># 把当前改动暂存起来,工作区恢复干净</span>
+<span class="tok-k">git</span> <span class="tok-k">stash</span> list                     <span class="tok-c"># 以后想回看:git stash list / git stash pop</span></code></pre></div><blockquote>
+<p>⚠️ <strong>不要用 <code>git checkout -- src</code> 这类“整体还原”命令</strong>:它们会把工作区里<strong>所有</strong>未提交改动(包括你自己正在进行的工作)一并丢弃,不可恢复。练习改的文件少且明确,更稳妥的做法是只还原你动过的那几个文件:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">Bash</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-bash"><span class="tok-k">git</span> <span class="tok-k">checkout</span> -- src/renderer/src/components/mod-card.tsx src/renderer/src/App.tsx</code></pre></div><p>开始做练习前,如果工作区已有进行中的修改,建议先 <code>git stash</code> 或提交一次,给练习一个干净的起点。</p>
+</blockquote>
+<p>**练习的价值在过程,不在把仓库改得到处是练习残留。**下一章我们聊怎么调试、怎么打包,以及学完之后往哪走。</p>
+<p>上一章:<a href="#ch-10-electron">第 10 章 · Electron</a> · 下一章:<a href="#ch-12-next-steps">第 12 章 · 调试、打包与后续路线</a></p>
+
+<div class="ch-nav"><a href="#ch-10-electron"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 10 章 · Electron:把网页变成桌面应用</span></a><a class="next" href="#ch-12-next-steps"><span class="ch-nav-label">下一章 →</span><span class="ch-nav-title">第 12 章 · 调试、打包与后续学习路线</span></a></div>
+</section>
+<section class="chapter" id="ch-12-next-steps" data-title="调试、打包与后续学习路线">
+<div class="ch-eyebrow"><span class="ch-chip">第 12 章</span><span class="ch-pos">13 / 13</span></div>
+<h1>调试、打包与后续学习路线</h1>
+<blockquote>
+<p>涉及文件:Vite/electron-vite 的 dev 与 build 命令、<code>electron-builder.yml</code></p>
+</blockquote>
+<h2>12.1 调试:你的三块仪表盘</h2>
+<h3>① DevTools(F12)——最常用</h3>
+<p><code>npm run dev</code> 的浏览器窗口里按 F12,四个面板解决九成问题:</p>
+<ul>
+<li><strong>Console</strong>:所有 <code>console.log(...)</code> 的输出、红色报错都在这。<strong>调试第一定律:先读 Console,再读终端</strong>。你可以把它当草稿本,直接输入表达式试验(第 3 章练过);</li>
+<li><strong>Elements</strong>:实时 DOM 树(第 1 章)。选中元素 → 右侧看它的 class 与生效 CSS(第 2、9 章),勾选/改值即时生效——排查“样式为什么没生效”的主战场;</li>
+<li><strong>Network</strong>:页面加载了哪些资源、接口请求的参数与响应。本项目浏览器模式下这里能看到 <code>/test-images/</code> 等请求(第 6 章那个插件伺服的);</li>
+<li><strong>Sources</strong>:源码打断点。或在代码里写一行 <code>debugger;</code>,程序跑到那会自动停下,可逐行步进、查看每个变量。比 <code>console.log</code> 撒一地体面得多。</li>
+</ul>
+<p>React 专属推荐:浏览器装 <strong>React Developer Tools</strong> 扩展,可直接查看组件树、每个组件的 props 与 state——第 8 章的“状态提升”看得见摸得着。</p>
+<h3>② 终端</h3>
+<p>Vite/TS 的<strong>编译期</strong>错误(类型错、import 路径错)只出现在终端里。改完没反应?先瞄终端。IPC 这边的问题(<code>No handler registered for ...</code>)也会打到主进程日志里。</p>
+<h3>③ 有效提问的姿势</h3>
+<p>报错解决不了时,把<strong>完整报错文本 + 最近改动</strong>拿去搜或问 AI,比“我这里不对了”有效一百倍。90% 的报错信息里直接写着文件名和行号。</p>
+<h3>常见“灵异事件”排查单</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>症状</th>
+<th>先检查</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>改了代码界面没变</td>
+<td>文件保存了吗?终端有报错吗?浏览器硬刷新(Ctrl+Shift+R)</td>
+</tr>
+<tr>
+<td>组件该显示却没显示</td>
+<td>Console 有没有红字?条件渲染的条件是不是 false?列表 <code>key</code> 唯一吗?</td>
+</tr>
+<tr>
+<td>样式完全没生效</td>
+<td>类名拼对了吗?动态类名过 <code>cn()</code> 了吗?浏览器模式 mock 是否在报错中断了渲染</td>
+</tr>
+<tr>
+<td><code>window.api</code> 报 undefined</td>
+<td>你在浏览器模式调了 mock 没有的接口(第 11 章练习 C 的体验)</td>
+</tr>
+<tr>
+<td>typecheck 过了运行还是错</td>
+<td>那是运行时逻辑问题——回 DevTools 断点排查</td>
+</tr>
+</tbody></table></div>
+<h2>12.2 打包发布:从源码到安装包</h2>
+<p>开发态(<code>npm run dev</code>)的一切便利——HMR、未压缩源码、dev server——都不能带给用户。发布走两条构建流水线:</p>
+<div class="codeblock"><div class="code-head"><span class="code-lang">文本</span><button type="button" class="copy-btn">复制</button></div><pre><code class="language-text">npm run build                 → electron-vite build
+   三段配置各自打包(第 6 章的表):main/preload → out/main|preload,renderer → out/renderer
+npm run dist                  → scripts/dist.mjs 编排:build + electron-builder
+   electron-builder(配置在 electron-builder.yml)把 out/ + Electron 运行时
+   打成 Windows 安装包,产物在 app/dist/ 目录</code></pre></div><p>期间发生的本质是:<strong>把你写的源码翻译成优化过的静态文件,连同整个 Chromium+Node 运行时一起装进安装包</strong>——这就是 Electron 应用体积大的原因,也是“用户无需装 Node.js 和浏览器”的原因。</p>
+<p>初次体验打包注意两点:第一次构建要下载 Electron 二进制,国内网络较慢属正常;打包版与 dev 行为有差异(资源路径、安全策略更严格),所以本项目有条测试铁律——<strong>开发验证一律走 <code>npm run dev</code> 族,打包版只用于发布前冒烟</strong>。</p>
+<blockquote>
+<p>本项目还有个进阶产物:<code>npm run dist:bg-server</code> 会额外打包一个无界面的背景图服务进程(见 <code>docs/background-image-service.md</code>),属于“Electron 也能写后台服务”的实例,学完本书有余力可去读 <code>src/bg-server/</code>。</p>
+</blockquote>
+<h2>12.3 本书没讲、但很快会遇到的</h2>
+<p>诚实地列出来,给你下一步的地图(按遇到的概率排序):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>主题</th>
+<th>一句话解释</th>
+<th>什么时候需要</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HTTP 与网络请求</td>
+<td>浏览器怎么和服务器交换数据(<code>fetch</code>)</td>
+<td>一旦你的应用要联网</td>
+</tr>
+<tr>
+<td>路由(routing)</td>
+<td>SPA 里“多个页面”的实现(<code>react-router</code>)</td>
+<td>做多页面网站时</td>
+</tr>
+<tr>
+<td>全局状态管理</td>
+<td>跨组件共享状态的进阶方案(zustand、Redux)</td>
+<td>应用大了、props 层层传太深时</td>
+</tr>
+<tr>
+<td>测试</td>
+<td>用代码验证代码(Vitest、Testing Library)</td>
+<td>团队协作、重构前</td>
+</tr>
+<tr>
+<td>后端开发</td>
+<td>服务器端的 API 怎么写(Node.js + Express/Nest)</td>
+<td>想做全栈</td>
+</tr>
+<tr>
+<td>Git 版本控制</td>
+<td>代码的“存档/回滚/协作”系统</td>
+<td>立刻、马上</td>
+</tr>
+<tr>
+<td>无障碍(a11y)</td>
+<td>让读屏器等辅助工具能用的界面</td>
+<td>商业项目的基本要求</td>
+</tr>
+</tbody></table></div>
+<h2>12.4 推荐资源(都是免费、官方、中文友好)</h2>
+<ul>
+<li><strong>MDN Web Docs</strong>(developer.mozilla.org)——HTML/CSS/JS 的权威字典,本书多章引用过,遇到任何 Web API 先查它;</li>
+<li><strong>React 官方文档</strong>(react.dev,有中文)——质量极高,本书第 7、8 章的官方延伸阅读;</li>
+<li><strong>TypeScript 官方手册</strong>(typescriptlang.org/docs)——第 4 章之后想深入类型系统看它;</li>
+<li><strong>Tailwind CSS 文档</strong>(tailwindcss.com/docs)——当词典用:想知道“间距 12px 的类名是什么”,搜它;</li>
+<li><strong>shadcn/ui 文档</strong>(ui.shadcn.com)——想给项目添加新基础组件(如 checkbox、tabs)时按文档操作;</li>
+<li><strong>Electron 官方文档</strong>(electronjs.org/docs)——第 10 章所有 API 的权威出处,安全清单必读。</li>
+</ul>
+<h2>12.5 结业清单</h2>
+<p>全部打勾,说明你已经具备独立开发 Web/桌面应用的基础能力:</p>
+<ul>
+<li><input disabled="" type="checkbox"> 能手写一个含 HTML/CSS/JS 的静态页面(第 1~3 章练习)</li>
+<li><input disabled="" type="checkbox"> 能读懂 <code>interface</code>/泛型/枚举,会跑 <code>npm run typecheck</code>(第 4 章)</li>
+<li><input disabled="" type="checkbox"> 能解释 package.json 每一段的作用,会装包、会跑 scripts(第 5 章)</li>
+<li><input disabled="" type="checkbox"> 理解 dev/build 两种模式的区别,会读 Vite 报错(第 6 章)</li>
+<li><input disabled="" type="checkbox"> 能从 import 列表画出组件树,会写带 props 的组件(第 7 章)</li>
+<li><input disabled="" type="checkbox"> 会用 useState/useEffect/useRef,理解状态提升与单向数据流(第 8 章)</li>
+<li><input disabled="" type="checkbox"> 能读懂本项目任意 className,理解主题变量链与 shadcn 三模式(第 9 章)</li>
+<li><input disabled="" type="checkbox"> 能完整讲出一次点击从卡片到磁盘的 IPC 旅程(第 10 章)</li>
+<li><input disabled="" type="checkbox"> 独立完成第 11 章主任务与至少练习 A、B(第 11 章)</li>
+<li><input disabled="" type="checkbox"> 会用 DevTools 四面板与断点定位问题(第 12 章)</li>
+</ul>
+<h2>12.6 毕业建议:接下来做什么项目</h2>
+<p>学习编程的唯一捷径是<strong>做项目</strong>。由近及远三个建议:</p>
+<ol>
+<li><strong>继续深耕本仓库</strong>:第 11 章的练习做完后,挑一个真实痛点做完整功能(先在 issue 里描述设计再动手)——给真实项目贡献代码是最快的成长方式;</li>
+<li><strong>做一个纯网页小应用</strong>(不依赖 Electron):比如个人书签管理、番茄钟。技术栈完全复用:Vite + React + TS + Tailwind + shadcn/ui,你会惊讶于“第 10 章以外的所有知识原样通用”;</li>
+<li><strong>给书签应用补一个后端</strong>:Node.js + Express 存数据,从此理解“前后端分离”里两端各自的角色——你就真正走完 Web 开发的第一圈了。</li>
+</ol>
+<p>遇到问题就回来翻对应章节——这份教程的每一章都锚定着本仓库里活生生的代码,它们不会过期。</p>
+<p><a href="#ch-readme">返回目录</a></p>
+
+<div class="ch-nav"><a href="#ch-11-practice"><span class="ch-nav-label">← 上一章</span><span class="ch-nav-title">第 11 章 · 实战:给项目加一个新功能</span></a><div class="ch-nav-spacer"></div></div>
+</section><footer class="site-foot">NTE 模组管理器 · Web 开发教程 · 源文件位于 docs/web-tutorial/</footer></main>
+</div>
+<script>
+(function () {
+  var bar = document.getElementById('progress')
+  function onScroll() {
+    var h = document.documentElement
+    var max = h.scrollHeight - h.clientHeight
+    bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%'
+  }
+  document.addEventListener('scroll', onScroll, { passive: true })
+
+  // 单章翻页路由:location.hash 决定当前显示的章节
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'))
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.chapter'))
+  var byId = {}
+  sections.forEach(function (s) { byId[s.id] = s })
+
+  function currentId() {
+    var h = location.hash.replace(/^#/, '')
+    return byId[h] ? h : sections[0].id
+  }
+
+  function show() {
+    var id = currentId()
+    sections.forEach(function (s) { s.style.display = s.id === id ? '' : 'none' })
+    links.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('data-target') === id)
+    })
+    var title = byId[id] ? byId[id].getAttribute('data-title') : ''
+    document.title = title ? title + ' · Web 开发教程' : 'Web 开发教程 · NTE 模组管理器'
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    onScroll()
+  }
+
+  window.addEventListener('hashchange', show)
+
+  // 点击指向当前章节的链接(hash 不变化,不触发 hashchange)时回到顶部
+  document.addEventListener('click', function (ev) {
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[href^="#"]') : null
+    if (!a) return
+    var id = a.getAttribute('href').slice(1)
+    if (byId[id] && id === currentId()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  })
+
+  // 键盘 ← / → 翻章
+  document.addEventListener('keydown', function (ev) {
+    if (ev.altKey || ev.ctrlKey || ev.metaKey) return
+    var tag = ((ev.target && ev.target.tagName) || '').toLowerCase()
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return
+    var cur = currentId()
+    var idx = -1
+    for (var k = 0; k < sections.length; k++) {
+      if (sections[k].id === cur) { idx = k; break }
+    }
+    var n = ev.key === 'ArrowRight' ? idx + 1 : idx - 1
+    if (n < 0 || n >= sections.length) return
+    if (('#' + sections[n].id) === location.hash) return
+    location.hash = sections[n].id
+  })
+
+  function fallbackCopy(text, done) {
+    var ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    var ok = false
+    try { ok = document.execCommand('copy') } catch (e) {}
+    document.body.removeChild(ta)
+    done(ok)
+  }
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.copy-btn') : null
+    if (!btn) return
+    var block = btn.closest('.codeblock')
+    var pre = block ? block.querySelector('pre') : null
+    if (!pre) return
+    var text = pre.innerText
+    var done = function (ok) {
+      btn.textContent = ok ? '已复制' : '复制失败'
+      btn.classList.toggle('copied', ok)
+      setTimeout(function () {
+        btn.textContent = '复制'
+        btn.classList.remove('copied')
+      }, 1600)
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true) }, function () { fallbackCopy(text, done) })
+    } else {
+      fallbackCopy(text, done)
+    }
+  })
+
+  show()
+})()
+</script>
+</body>
+</html>

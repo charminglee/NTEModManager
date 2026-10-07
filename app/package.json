@@ -14,7 +14,8 @@
     "preview": "node scripts/test-images.mjs on && electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web"
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "docs:tutorial": "node scripts/build-tutorial.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.4.7",
