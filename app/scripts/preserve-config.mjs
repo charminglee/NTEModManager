@@ -1,11 +1,17 @@
 import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-// electron-builder 打包前会清空 dist/win-unpacked,exe 旁边的 NteModManager.ini
+// electron-builder 打包前会清空 win-unpacked,exe 旁边的 NteModManager.ini
 // (窗口状态、各类路径设置)会一起丢失。打包前 stash、打包后 restore。
+//
+// 用法: node scripts/preserve-config.mjs <stash|restore> [ini 路径]
+// ini 路径缺省为主程序的 dist/win-unpacked/NteModManager.ini;
+// 背景服务(dist-bg-server)打包时传入自己的 unpacked 目录下的 ini。
 
 const appDir = dirname(dirname(fileURLToPath(import.meta.url)))
-const liveConfig = join(appDir, 'dist', 'win-unpacked', 'NteModManager.ini')
+const liveConfig = process.argv[3]
+  ? resolve(process.argv[3])
+  : join(appDir, 'dist', 'win-unpacked', 'NteModManager.ini')
 const stashPath = join(appDir, 'node_modules', '.cache', 'NteModManager.ini')
 
 const command = process.argv[2]
@@ -19,13 +25,13 @@ if (command === 'stash') {
 } else if (command === 'restore') {
   if (existsSync(stashPath)) {
     if (!existsSync(liveConfig)) {
-      // 打包中途失败时 dist/win-unpacked 可能尚未创建,先补齐目录再回填
+      // 打包中途失败时 unpacked 目录可能尚未创建,先补齐目录再回填
       mkdirSync(dirname(liveConfig), { recursive: true })
       copyFileSync(stashPath, liveConfig)
     }
     rmSync(stashPath)
   }
 } else {
-  console.error('用法: node scripts/preserve-config.mjs <stash|restore>')
+  console.error('用法: node scripts/preserve-config.mjs <stash|restore> [ini 路径]')
   process.exit(1)
 }

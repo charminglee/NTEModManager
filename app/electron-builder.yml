@@ -4,6 +4,8 @@ directories:
   output: dist
 files:
   - out/**
+  # 背景图服务(out/bg-server)由 electron-builder.bg-server.yml 单独打包,不混进主程序
+  - '!out/bg-server/**'
 extraResources:
   - from: ../img/bg
     to: category-bg
@@ -17,6 +19,10 @@ extraResources:
   - from: ../training/orientation/checkpoints/weighted_unfrozen/best.pt
     to: python/orientation-model/best.pt
 asar: true
+# Electron 压缩包走 npmmirror:与 install-electron 的下载 URL 同源,才能命中
+# %LOCALAPPDATA%\electron\Cache 的共享缓存(缓存键=下载 URL 的哈希,镜像不同则永远 miss)
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/
 win:
   icon: ../img/nte-mod-manager.ico
   target:

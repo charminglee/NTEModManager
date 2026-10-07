@@ -78,6 +78,13 @@ export function configFilePath(): string {
   if (cachedConfigPath) {
     return cachedConfigPath
   }
+  // NTEMM_CONFIG 显式指定 ini 位置(bg-server 的 --config= 参数会写入该环境变量),
+  // 供服务与主程序 exe 不同目录部署时指回主程序的配置
+  const override = process.env.NTEMM_CONFIG?.trim()
+  if (override) {
+    cachedConfigPath = override.replace(/\\/g, '/')
+    return cachedConfigPath
+  }
   const baseDir = app.isPackaged ? dirname(app.getPath('exe')) : app.getAppPath()
   cachedConfigPath = join(baseDir, CONFIG_FILE_NAME)
   return cachedConfigPath

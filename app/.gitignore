@@ -5,3 +5,4 @@ dist
 NteModManager.ini
 smoke-*.png
 electron-stderr.log
+dist-bg-server

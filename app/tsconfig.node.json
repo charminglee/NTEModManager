@@ -20,5 +20,12 @@
       "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": ["electron.vite.config.ts", "src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
+  "include": [
+    "electron.vite.config.ts",
+    "electron.vite.bg-server.config.ts",
+    "src/main/**/*",
+    "src/bg-server/**/*",
+    "src/preload/**/*",
+    "src/shared/**/*"
+  ]
 }
