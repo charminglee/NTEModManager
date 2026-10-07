@@ -323,7 +323,7 @@ function makeBackgroundState(): BackgroundState {
   const image = BACKGROUND_IMAGES[backgroundIndex % BACKGROUND_IMAGES.length]
   return {
     generation: backgroundGeneration,
-    path: `D:/pictures/test/${image.url.split('/').pop()}`,
+    path: `F:/pictures/test/${image.url.split('/').pop()}`,
     url: image.url,
     imageWidth: image.width,
     imageHeight: image.height,

@@ -49,7 +49,7 @@ npm run dist       # electron-builder 打包(dist/ 目录,绿色版)
 | `Preferences/auto_use_last_packaging_path` | 重新打包时自动复用上次的源文件夹 |
 | `Preferences/exclusive_install_exempt_groups` | 互斥安装豁免的二级名称分组 |
 | `Preferences/window_size` | 窗口尺寸(关闭时自动保存) |
-| `Debug/test_images` | 背景图改用 `D:/pictures/test`(调试);`npm run dev` 自动开启,`npm run dist` 自动关闭 |
+| `Debug/test_images` | 背景图改用 `F:/pictures/test`(调试);`npm run dev` 自动开启,`npm run dist` 自动关闭 |
 | `Paths/python_executable` | 视觉识别 Python 解释器;缺省用仓库 `.venv`(开发)或 `resources/python/python.exe`(打包) |
 | `Paths/visual_region_script` | `visual_region_detector.py` 路径(保持 Python 实现) |
 | `Paths/orientation_model` | 方向分类模型 `best.pt`;文件不存在时使用 fallback 检测 |

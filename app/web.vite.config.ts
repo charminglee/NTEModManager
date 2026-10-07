@@ -4,7 +4,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
 /** 调试图集目录(npm run dev 浏览器测试模式的全屏背景图来源) */
-const TEST_IMAGES_DIR = 'D:/pictures/test'
+const TEST_IMAGES_DIR = 'F:/pictures/test'
 
 const MIME: Record<string, string> = {
   '.jpg': 'image/jpeg',

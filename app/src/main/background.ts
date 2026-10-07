@@ -13,7 +13,7 @@ function isSupportedImage(name: string): boolean {
 }
 
 /** 调试图集目录(test_images=1 时的背景图来源;浏览器 dev 模式的 serveTestImages 同源) */
-export const TEST_IMAGES_ROOT = 'D:/pictures/test'
+export const TEST_IMAGES_ROOT = 'F:/pictures/test'
 
 /** 与原版 BackgroundImageCatalog::collect 相同:数值命名的子目录中的图片。 */
 export function collectBackgroundImages(): string[] {

@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// dev 命令自动打开 Debug/test_images(背景图改用 D:/pictures/test 调试图集),
+// dev 命令自动打开 Debug/test_images(背景图改用 F:/pictures/test 调试图集),
 // dist 命令自动关闭,避免调试背景混进正式体验。只改动 app/NteModManager.ini
 // 里的 test_images 键,文件其余内容(含注释与空行)原样保留。
 
