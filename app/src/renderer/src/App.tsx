@@ -5,10 +5,12 @@ import {
   ALL_CATEGORY,
   OTHER_CATEGORY,
   type AppConfigData,
+  type LiquidGlassConfig,
   type LogEntry,
   type ModInfo,
   type OperationResult,
-  type SortOrder
+  SortOrder,
+  UI_CORNER_RADIUS_DEFAULT
 } from '@shared/types'
 import {
   countByCategory,
@@ -23,8 +25,8 @@ import { LiquidGlass, LiquidGlassConfigProvider } from '@/components/liquid-glas
 import Sidebar from '@/components/sidebar'
 import ModListHeader from '@/components/mod-list-header'
 import ModCard, { type ModCardActions } from '@/components/mod-card'
-import StatusBar from '@/components/status-bar'
 import LogView from '@/components/log-view'
+import FpsCounter from '@/components/fps-counter'
 import PromptDialog from '@/components/prompt-dialog'
 import SettingsDialog from '@/components/settings-dialog'
 import {
@@ -65,6 +67,11 @@ export default function App() {
   const [chromeHidden, setChromeHidden] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  /** 设置对话框打开期间的实时预览草稿(圆角 + 玻璃效果,滑动/切换立即生效);null 表示用已保存值 */
+  const [settingsPreview, setSettingsPreview] = useState<{
+    uiCornerRadius: number
+    liquidGlass: LiquidGlassConfig
+  } | null>(null)
 
   const [categoryImages, setCategoryImages] = useState<Map<string, string | null>>(new Map())
   const [appIcon, setAppIcon] = useState<string | null>(null)
@@ -626,6 +633,13 @@ export default function App() {
     }
   }, [busy, handleImportArchives, isArchiveFile])
 
+  // 全局圆角:写入 :root 的 --radius,所有圆角刻度(rounded-* 工具类/滚动条/toast)由它单点派生;
+  // 液态玻璃的折射贴图半径经 UICornerRadiusProvider 同步给 vaso(见 liquid-glass.tsx)
+  const cornerRadius = settingsPreview?.uiCornerRadius ?? config?.uiCornerRadius ?? UI_CORNER_RADIUS_DEFAULT
+  useEffect(() => {
+    document.documentElement.style.setProperty('--radius', `${cornerRadius}px`)
+  }, [cornerRadius])
+
   // ============ 渲染 ============
   if (!config) {
     return (
@@ -636,7 +650,10 @@ export default function App() {
   }
 
   return (
-    <LiquidGlassConfigProvider config={config.liquidGlass}>
+    <LiquidGlassConfigProvider
+      config={settingsPreview?.liquidGlass ?? config.liquidGlass}
+      cornerRadius={cornerRadius}
+    >
       <TooltipProvider delayDuration={400}>
         <div className="flex h-full">
           <BackgroundLayer masked={!chromeHidden} />
@@ -670,6 +687,7 @@ export default function App() {
                   <ModListHeader
                     category={currentCategory}
                     count={visibleMods.length}
+                    installedCount={installedCount}
                     search={search}
                     sortOrder={config.sortOrder}
                     busy={busy}
@@ -687,7 +705,7 @@ export default function App() {
                       卡片的推入入场动画随挂载自然重放;顺带把滚动位置重置回顶部 */}
                   <div
                     key={`cards-${view}:${currentCategory}`}
-                    className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden px-8 pb-4"
+                    className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pl-4 pr-1.5 pb-4 [scrollbar-gutter:stable]"
                   >
                     {visibleMods.length === 0 ? (
                       <div
@@ -767,15 +785,17 @@ export default function App() {
                   <LogView logs={logs} uiHidden={chromeHidden} />
                 </div>
               )}
-
-              <StatusBar
-                totalMods={mods.length}
-                installedMods={installedCount}
-                fpsVisible={config?.fpsCounterEnabled ?? false}
-                uiHidden={chromeHidden}
-              />
             </main>
           </div>
+
+          {/* FPS 计数悬浮(性能诊断):状态栏已移除,改为独立悬浮角标,UI 隐藏时保持可见以便测量 */}
+          {config.fpsCounterEnabled && (
+            <div className="fixed top-0 left-0 z-30">
+              <div className="glass frosted rounded-md px-2 py-1 text-xs select-none tabular-nums text-foreground">
+                <FpsCounter />
+              </div>
+            </div>
+          )}
 
           {/* 拖放导入遮罩 */}
           <div
@@ -810,6 +830,7 @@ export default function App() {
             open={settingsOpen}
             config={config}
             onOpenChange={setSettingsOpen}
+            onPreview={setSettingsPreview}
             onSaved={(next, modsDirectoryChanged) => {
               setConfig(next)
               if (modsDirectoryChanged) {

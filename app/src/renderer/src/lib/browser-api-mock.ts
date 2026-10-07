@@ -4,6 +4,7 @@ import {
   LIQUID_GLASS_DEFAULTS,
   OTHER_CATEGORY,
   SortOrder,
+  UI_CORNER_RADIUS_DEFAULT,
   type AppConfigData,
   type BackgroundRect,
   type BackgroundState,
@@ -300,6 +301,7 @@ const config: AppConfigData = {
   backgroundImagesDirectory: 'D:/pictures/wallpapers',
   gameLauncher: 'D:/Games/NTE/NTE.exe',
   packagerDirectory: 'D:/Games/NTE/packager',
+  pythonExecutable: '',
   autoUseLastPackagingPath: true,
   exclusiveInstallExemptGroups: [],
   categories: [...CATEGORIES],
@@ -307,6 +309,7 @@ const config: AppConfigData = {
   sortOrder: SortOrder.InstalledFirst,
   testImagesEnabled: true,
   fpsCounterEnabled: false,
+  uiCornerRadius: UI_CORNER_RADIUS_DEFAULT,
   liquidGlass: { ...LIQUID_GLASS_DEFAULTS }
 }
 

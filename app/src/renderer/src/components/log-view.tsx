@@ -66,7 +66,7 @@ function LogView({ logs, uiHidden }: LogViewProps) {
       {/* 关闭液态玻璃时回退为对话框同款毛玻璃,保证日志仍浮在背景图上可读 */}
       <LiquidGlass
         area="logPanel"
-        className={cn('glass ui-fade h-full rounded-xl', uiHidden && 'ui-fade-hidden')}
+        className={cn('ui-fade h-full rounded-xl', uiHidden && 'ui-fade-hidden')}
         fallbackClassName="glass-dialog frosted"
         contentClassName="h-full"
         depth={1}

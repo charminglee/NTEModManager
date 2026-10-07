@@ -98,7 +98,14 @@ export default function BackgroundLayer({ masked = true }: { masked?: boolean })
       }
       setCurrent(slot)
     }
-    const handleState = (state: BackgroundState) => {
+    const handleState = (state: BackgroundState | null) => {
+      // 背景图目录被改空/不可用:主进程推送 null,清空全部图层回到纯底色
+      if (!state) {
+        currentRef.current = null
+        setCurrent(null)
+        setPrevious(null)
+        return
+      }
       const slot: BackgroundSlotView = {
         generation: state.generation,
         url: state.url,

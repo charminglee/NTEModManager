@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '@shared/types'
-import { LIQUID_GLASS_KEYS } from '@shared/types'
+import { LIQUID_GLASS_KEYS, UI_CORNER_RADIUS_MAX, UI_CORNER_RADIUS_MIN } from '@shared/types'
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,8 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void
   /** 保存成功后回调;modsDirectoryChanged 时调用方需刷新模组列表 */
   onSaved: (config: AppConfigData, modsDirectoryChanged: boolean) => void
+  /** 对话框打开期间把草稿里可实时预览的部分(圆角 + 玻璃效果)推给应用;关闭时传 null 回落到已保存值 */
+  onPreview: (preview: { uiCornerRadius: number; liquidGlass: LiquidGlassConfig } | null) => void
 }
 
 interface SettingsDraft {
@@ -37,10 +39,12 @@ interface SettingsDraft {
   backupsDirectory: string
   backgroundImagesDirectory: string
   packagerDirectory: string
+  pythonExecutable: string
   autoUseLastPackagingPath: boolean
   exemptGroupsText: string
   testImagesEnabled: boolean
   fpsCounterEnabled: boolean
+  uiCornerRadius: number
   liquidGlass: LiquidGlassConfig
 }
 
@@ -50,10 +54,12 @@ function toDraft(config: AppConfigData): SettingsDraft {
     backupsDirectory: config.backupsDirectory,
     backgroundImagesDirectory: config.backgroundImagesDirectory,
     packagerDirectory: config.packagerDirectory,
+    pythonExecutable: config.pythonExecutable,
     autoUseLastPackagingPath: config.autoUseLastPackagingPath,
     exemptGroupsText: config.exclusiveInstallExemptGroups.join(','),
     testImagesEnabled: config.testImagesEnabled,
     fpsCounterEnabled: config.fpsCounterEnabled,
+    uiCornerRadius: config.uiCornerRadius,
     liquidGlass: { ...config.liquidGlass }
   }
 }
@@ -67,16 +73,31 @@ const parseGroups = (text: string): string[] =>
     .filter(Boolean)
 
 /** 设置对话框:点击侧边栏「设置」打开,集中编辑路径与偏好,保存后写入配置文件。 */
-export default function SettingsDialog({ open, config, onOpenChange, onSaved }: SettingsDialogProps) {
+export default function SettingsDialog({
+  open,
+  config,
+  onOpenChange,
+  onSaved,
+  onPreview
+}: SettingsDialogProps) {
   const [draft, setDraft] = useState<SettingsDraft>(() => toDraft(config))
   const [saving, setSaving] = useState(false)
+  /** 正在拖动隔离预览的滑块 id(null=无):按下滑块隐藏整个对话框只留滑块,松开恢复 */
+  const [isolatedSlider, setIsolatedSlider] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
       setDraft(toDraft(config))
+      setIsolatedSlider(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // 打开期间随草稿实时预览可即时生效的部分:圆角(滑块/输入立即改 UI)与玻璃效果
+  // (滑块一拖,拖动隔离又恰好让对话框隐去,直接看到实际界面的玻璃实时变化);关闭回落
+  useEffect(() => {
+    onPreview(open ? { uiCornerRadius: draft.uiCornerRadius, liquidGlass: draft.liquidGlass } : null)
+  }, [open, draft.uiCornerRadius, draft.liquidGlass, onPreview])
 
   const dirty = useMemo(() => {
     const groupsChanged =
@@ -89,9 +110,11 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
       normPath(draft.backupsDirectory) !== config.backupsDirectory ||
       normPath(draft.backgroundImagesDirectory) !== config.backgroundImagesDirectory ||
       normPath(draft.packagerDirectory) !== config.packagerDirectory ||
+      normPath(draft.pythonExecutable) !== config.pythonExecutable ||
       draft.autoUseLastPackagingPath !== config.autoUseLastPackagingPath ||
       draft.testImagesEnabled !== config.testImagesEnabled ||
       draft.fpsCounterEnabled !== config.fpsCounterEnabled ||
+      draft.uiCornerRadius !== config.uiCornerRadius ||
       liquidGlassChanged ||
       groupsChanged
     )
@@ -134,10 +157,12 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
         backupsDirectory: normPath(draft.backupsDirectory),
         backgroundImagesDirectory: normPath(draft.backgroundImagesDirectory),
         packagerDirectory: normPath(draft.packagerDirectory),
+        pythonExecutable: normPath(draft.pythonExecutable),
         autoUseLastPackagingPath: draft.autoUseLastPackagingPath,
         exclusiveInstallExemptGroups: parseGroups(draft.exemptGroupsText),
         testImagesEnabled: draft.testImagesEnabled,
         fpsCounterEnabled: draft.fpsCounterEnabled,
+        uiCornerRadius: draft.uiCornerRadius,
         liquidGlass: draft.liquidGlass
       }
       const next = await window.api.updateConfig(patch)
@@ -156,7 +181,12 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
+      {/* 滑块拖动隔离(index.css 的 data-slider-isolated 规则):滑块值变化后隐藏遮罩
+          与面板、只留当前滑块,预览时看到的就是无遮拦的实际界面效果 */}
+      <DialogContent
+        className="max-w-xl"
+        data-slider-isolated={isolatedSlider !== null || undefined}
+      >
         <DialogHeader>
           <DialogTitle>设置</DialogTitle>
           <DialogDescription>修改应用的路径与偏好设置，保存后立即生效。</DialogDescription>
@@ -167,7 +197,7 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
           <SettingsSection title="路径">
             <PathField
               label="游戏安装目录"
-              description="模组安装到「游戏目录/Client/WindowsNoEditor/HT/Content/Paks/~mods」，启动器取「游戏目录/NTELauncher.exe」，随此目录自动更新。"
+              description="模组安装将到「游戏目录/Client/WindowsNoEditor/HT/Content/Paks/~mods」。"
               value={draft.gameDirectory}
               onChange={(value) => patchField('gameDirectory', value)}
               onBrowse={() => browseDirectory('gameDirectory')}
@@ -203,6 +233,9 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
             />
             <div className="grid gap-1.5">
               <Label htmlFor="settings-exempt-groups">独占安装豁免分组</Label>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                安装模组时会卸载同分组的其他模组；逗号分隔的豁免分组内的模组不会被卸载。
+              </p>
               <Input
                 id="settings-exempt-groups"
                 value={draft.exemptGroupsText}
@@ -210,10 +243,20 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
                 placeholder="UI，其他分组名"
                 spellCheck={false}
               />
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                安装模组时会卸载同分组的其他模组；逗号分隔的豁免分组内的模组不会被卸载。
-              </p>
             </div>
+            <SliderRow
+              label="全局圆角"
+              description={`所有界面控件（含玻璃面板）统一的圆角半径（${UI_CORNER_RADIUS_MIN}–${UI_CORNER_RADIUS_MAX}）。`}
+              value={draft.uiCornerRadius}
+              onChange={(value) => patchField('uiCornerRadius', value)}
+              min={UI_CORNER_RADIUS_MIN}
+              max={UI_CORNER_RADIUS_MAX}
+              step={1}
+              unit="px"
+              sliderId="uiCornerRadius"
+              activeSliderId={isolatedSlider}
+              onActiveSliderChange={setIsolatedSlider}
+            />
           </SettingsSection>
 
           <SettingsSection title="玻璃效果">
@@ -245,24 +288,36 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
                   description="玻璃对背景图的透镜形变强度。"
                   value={draft.liquidGlass.refraction}
                   onChange={(value) => patchLiquidGlass({ refraction: value })}
+                  sliderId="refraction"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
                 />
                 <SliderRow
                   label="背景模糊"
                   description="玻璃背后的高斯模糊强度，面积越大越耗性能。"
                   value={draft.liquidGlass.blur}
                   onChange={(value) => patchLiquidGlass({ blur: value })}
+                  sliderId="blur"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
                 />
                 <SliderRow
                   label="边缘高光"
                   description="玻璃边缘的镜面反光强度。"
                   value={draft.liquidGlass.specular}
                   onChange={(value) => patchLiquidGlass({ specular: value })}
+                  sliderId="specular"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
                 />
                 <SliderRow
                   label="边缘色散"
-                  description="折射边缘的彩虹色散强度；渲染开销成倍增加，保持 0 关闭。"
+                  description="折射边缘的彩虹色散强度；仅作用于侧边栏。"
                   value={draft.liquidGlass.dispersion}
                   onChange={(value) => patchLiquidGlass({ dispersion: value })}
+                  sliderId="dispersion"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
                 />
                 <SwitchGroupLabel>区域</SwitchGroupLabel>
                 <SwitchRow
@@ -281,20 +336,46 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
                   onCheckedChange={(checked) => patchLiquidGlass({ toolbar: checked })}
                 />
                 <SwitchRow
-                  label="状态栏"
-                  checked={draft.liquidGlass.statusBar}
-                  onCheckedChange={(checked) => patchLiquidGlass({ statusBar: checked })}
-                />
-                <SwitchRow
                   label="日志面板"
                   checked={draft.liquidGlass.logPanel}
                   onCheckedChange={(checked) => patchLiquidGlass({ logPanel: checked })}
+                />
+                <SwitchRow
+                  label="按钮"
+                  description="玻璃样式按钮(工具栏、浏览、打开等)的液态玻璃渲染。"
+                  checked={draft.liquidGlass.buttons}
+                  onCheckedChange={(checked) => patchLiquidGlass({ buttons: checked })}
+                />
+                <SwitchRow
+                  label="输入框"
+                  description="搜索框、路径输入、重命名输入等文本框的液态玻璃渲染。"
+                  checked={draft.liquidGlass.inputs}
+                  onCheckedChange={(checked) => patchLiquidGlass({ inputs: checked })}
                 />
               </>
             )}
           </SettingsSection>
 
           <SettingsSection title="高级">
+            <PathField
+              label="Python 解释器路径"
+              description="AI 背景识别使用的 Python 解释器；留空自动探测（开发用仓库 venv，打包版用 resources/python）。保存后立即生效。"
+              value={draft.pythonExecutable}
+              onChange={(value) => patchField('pythonExecutable', value)}
+              onBrowse={() => {
+                void window.api
+                  .pickFile({
+                    title: '选择 Python 解释器',
+                    extensions: ['exe'],
+                    defaultPath: draft.pythonExecutable || undefined
+                  })
+                  .then((picked) => {
+                    if (picked) {
+                      patchField('pythonExecutable', picked)
+                    }
+                  })
+              }}
+            />
             <SwitchRow
               label="使用测试背景图"
               description="调试用：启用后背景图改用固定的测试图片目录。"
@@ -303,7 +384,7 @@ export default function SettingsDialog({ open, config, onOpenChange, onSaved }: 
             />
             <SwitchRow
               label="显示 FPS 计数器"
-              description="在底部状态栏显示当前帧率，用于性能诊断。"
+              description="在窗口左下角显示当前帧率，用于性能诊断。"
               checked={draft.fpsCounterEnabled}
               onCheckedChange={(checked) => patchField('fpsCounterEnabled', checked)}
             />
@@ -365,6 +446,7 @@ function PathField({
   return (
     <div className="grid gap-1.5">
       <Label>{label}</Label>
+      {description && <p className="text-[11px] leading-relaxed text-muted-foreground">{description}</p>}
       <div className="flex gap-2">
         <Input
           value={value}
@@ -376,7 +458,6 @@ function PathField({
           浏览
         </Button>
       </div>
-      {description && <p className="text-[11px] leading-relaxed text-muted-foreground">{description}</p>}
     </div>
   )
 }
@@ -393,30 +474,71 @@ function SliderRow({
   label,
   description,
   value,
-  onChange
+  onChange,
+  min = 0,
+  max = 100,
+  step = 5,
+  unit = '%',
+  sliderId,
+  activeSliderId,
+  onActiveSliderChange
 }: {
   label: string
   description?: string
   value: number
   onChange: (value: number) => void
+  min?: number
+  max?: number
+  step?: number
+  /** 数值后缀:玻璃强度为百分比,全局圆角为像素 */
+  unit?: string
+  /** 拖动隔离:滑块值变化时上报自身 id、松开/按键抬起置回 null(dialog 根上据此挂 data-slider-isolated) */
+  sliderId: string
+  activeSliderId: string | null
+  onActiveSliderChange: (id: string | null) => void
 }) {
+  const isolated = activeSliderId === sliderId
+
+  // 滑出滑块外松开、pointercancel(切窗口等)都要恢复对话框;键盘方向键调值没有指针事件,
+  // 用 keyup 兜底,监听放 window 才兜得住
+  useEffect(() => {
+    if (!isolated) return
+    const release = () => onActiveSliderChange(null)
+    window.addEventListener('pointerup', release)
+    window.addEventListener('pointercancel', release)
+    window.addEventListener('keyup', release)
+    return () => {
+      window.removeEventListener('pointerup', release)
+      window.removeEventListener('pointercancel', release)
+      window.removeEventListener('keyup', release)
+    }
+  }, [isolated, onActiveSliderChange])
+
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-4">
         <div className="text-sm font-medium text-foreground">{label}</div>
-        <span className="text-xs tabular-nums text-muted-foreground">{value}%</span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {value}
+          {unit}
+        </span>
       </div>
-      <Slider
-        min={0}
-        max={100}
-        step={5}
-        value={[value]}
-        onValueChange={([next]) => onChange(next)}
-        aria-label={label}
-      />
       {description && (
         <p className="text-[11px] leading-relaxed text-muted-foreground">{description}</p>
       )}
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[value]}
+        onValueChange={([next]) => {
+          // 值真正变化才开始隔离:单纯按下(未拖动)不隐藏对话框
+          if (next !== value) onActiveSliderChange(sliderId)
+          onChange(next)
+        }}
+        aria-label={label}
+        data-slider-isolate-keep={isolated || undefined}
+      />
     </div>
   )
 }

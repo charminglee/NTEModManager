@@ -3,7 +3,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { parseIni, serializeIni, splitList, unquote } from './ini'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '../shared/types'
-import { LIQUID_GLASS_DEFAULTS, SortOrder } from '../shared/types'
+import {
+  LIQUID_GLASS_DEFAULTS,
+  SortOrder,
+  UI_CORNER_RADIUS_DEFAULT,
+  UI_CORNER_RADIUS_MAX,
+  UI_CORNER_RADIUS_MIN
+} from '../shared/types'
 
 const CONFIG_FILE_NAME = 'NteModManager.ini'
 
@@ -66,8 +72,9 @@ const LIQUID_GLASS_INI_KEYS: Record<keyof LiquidGlassConfig, string> = {
   sidebar: 'sidebar',
   modCards: 'mod_cards',
   toolbar: 'toolbar',
-  statusBar: 'status_bar',
-  logPanel: 'log_panel'
+  logPanel: 'log_panel',
+  buttons: 'buttons',
+  inputs: 'inputs'
 }
 
 /**
@@ -155,7 +162,8 @@ function createDefaultConfig(filePath: string): void {
     mod_list_sort_order: String(SortOrder.NameAscending),
     mod_category_order: DEFAULT_CATEGORY_ORDER.join(','),
     auto_use_last_packaging_path: '1',
-    exclusive_install_exempt_groups: 'UI'
+    exclusive_install_exempt_groups: 'UI',
+    ui_corner_radius: String(UI_CORNER_RADIUS_DEFAULT)
   }
   ini.Debug = {
     test_images: '0',
@@ -202,6 +210,8 @@ export function getAppConfig(): AppConfigData {
     backgroundImagesDirectory: getPath('background_images_directory', 'D:/pictures/真人', true),
     gameLauncher,
     packagerDirectory: getPath('packager_directory', 'E:/Projects/ModManager/傻瓜打包器'),
+    // 空字符串 = 自动探测(pythonExecutable() 决定 dev/packaged 的默认位置)
+    pythonExecutable: overriddenPath('python_executable'),
     autoUseLastPackagingPath: getBool('Preferences', 'auto_use_last_packaging_path', true),
     exclusiveInstallExemptGroups: getList('Preferences', 'exclusive_install_exempt_groups', ['UI']),
     categories: getList('Categories', 'names', DEFAULT_MOD_CATEGORIES),
@@ -211,6 +221,9 @@ export function getAppConfig(): AppConfigData {
     // 冒烟测量工具可用 NTEMM_FPS=1 强制开启,不受配置开关影响
     fpsCounterEnabled:
       getBool('Debug', 'fps_counter', false) || process.env.NTEMM_FPS === '1',
+    uiCornerRadius: clampUiCornerRadius(
+      getInt('Preferences', 'ui_corner_radius', UI_CORNER_RADIUS_DEFAULT)
+    ),
     liquidGlass: getLiquidGlassConfig(ini)
   }
 }
@@ -234,9 +247,8 @@ function getLiquidGlassConfig(ini: ReturnType<typeof parseIni>): LiquidGlassConf
       continue
     }
     if (raw === '1' || raw === 'true') {
-      // 旧版布尔开关的视觉等效值:色散在旧版从未实际渲染(无组件接入,开关是死的),
-      // 必须迁移为 0,否则旧配置会继承到全局 100% 色散,把帧率打穿
-      ;(result[configKey] as number) = configKey === 'dispersion' ? 0 : 100
+      // 旧版布尔开关的视觉等效值:强度按 100% 迁移(色散现仅作用于侧边栏/工具栏,可安全开启)
+      ;(result[configKey] as number) = 100
     } else if (raw === '0' || raw === 'false') {
       ;(result[configKey] as number) = 0
     } else {
@@ -254,6 +266,13 @@ function clampSortOrder(value: number): SortOrder {
     return SortOrder.NameAscending
   }
   return value as SortOrder
+}
+
+function clampUiCornerRadius(value: number): number {
+  if (!Number.isFinite(value)) {
+    return UI_CORNER_RADIUS_DEFAULT
+  }
+  return Math.min(UI_CORNER_RADIUS_MAX, Math.max(UI_CORNER_RADIUS_MIN, Math.round(value)))
 }
 
 export function setSortOrder(sortOrder: SortOrder): void {
@@ -346,7 +365,8 @@ const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
   backupsDirectory: 'backups_directory',
   backgroundImagesDirectory: 'background_images_directory',
   gameLauncher: 'game_launcher',
-  packagerDirectory: 'packager_directory'
+  packagerDirectory: 'packager_directory',
+  pythonExecutable: 'python_executable'
 }
 
 /** 设置界面保存:将补丁写入配置文件,未指定的字段保持原值。 */
@@ -378,6 +398,9 @@ export function updateAppConfig(patch: AppConfigPatch): void {
   if (patch.exclusiveInstallExemptGroups !== undefined) {
     preferenceEntries.exclusive_install_exempt_groups =
       patch.exclusiveInstallExemptGroups.map((group) => group.trim()).filter(Boolean).join(',')
+  }
+  if (patch.uiCornerRadius !== undefined) {
+    preferenceEntries.ui_corner_radius = String(clampUiCornerRadius(patch.uiCornerRadius))
   }
   if (Object.keys(preferenceEntries).length > 0) {
     ini.Preferences = { ...ini.Preferences, ...preferenceEntries }

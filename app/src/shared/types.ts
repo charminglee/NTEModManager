@@ -42,7 +42,7 @@ export interface ImportResult {
 }
 
 /** 液态玻璃可单独开关的界面区域 */
-export type LiquidGlassArea = 'sidebar' | 'modCards' | 'toolbar' | 'statusBar' | 'logPanel'
+export type LiquidGlassArea = 'sidebar' | 'modCards' | 'toolbar' | 'logPanel' | 'buttons' | 'inputs'
 
 /** 液态玻璃效果配置:总开关(液态玻璃/毛玻璃)+ 效果强度 + 区域开关 */
 export interface LiquidGlassConfig {
@@ -50,7 +50,7 @@ export interface LiquidGlassConfig {
   enabled: boolean
   /** 折射强度 0-100(%):乘算各面板自身的折射深度,0 为关闭 */
   refraction: number
-  /** 边缘色散强度 0-100(%):渲染开销成倍增加,0 为关闭 */
+  /** 边缘色散强度 0-100(%):仅侧边栏接入(渲染开销成倍增加,不铺开到批量小玻璃),0 为关闭 */
   dispersion: number
   /** 背景模糊强度 0-100(%):乘算各面板自身的模糊半径,0 为关闭 */
   blur: number
@@ -62,26 +62,34 @@ export interface LiquidGlassConfig {
   modCards: boolean
   /** 顶部工具栏 */
   toolbar: boolean
-  /** 状态栏 */
-  statusBar: boolean
   /** 日志面板 */
   logPanel: boolean
+  /** 玻璃样式的按钮(工具栏、浏览等) */
+  buttons: boolean
+  /** 文本输入框(搜索、路径、重命名等) */
+  inputs: boolean
 }
 
 export const LIQUID_GLASS_DEFAULTS: LiquidGlassConfig = {
   enabled: true,
   refraction: 100,
-  dispersion: 0,
+  dispersion: 100,
   blur: 100,
   specular: 100,
   sidebar: true,
   modCards: true,
   toolbar: true,
-  statusBar: true,
-  logPanel: true
+  logPanel: true,
+  buttons: true,
+  inputs: true
 }
 
 export const LIQUID_GLASS_KEYS = Object.keys(LIQUID_GLASS_DEFAULTS) as (keyof LiquidGlassConfig)[]
+
+/** 全局圆角(px):所有 UI 控件(含液态/毛玻璃面板)统一套用的 border-radius */
+export const UI_CORNER_RADIUS_DEFAULT = 16
+export const UI_CORNER_RADIUS_MIN = 0
+export const UI_CORNER_RADIUS_MAX = 32
 
 export interface AppConfigData {
   configPath: string
@@ -94,6 +102,8 @@ export interface AppConfigData {
   /** 游戏启动器路径;随游戏安装目录自动生成 */
   gameLauncher: string
   packagerDirectory: string
+  /** Python 解释器路径覆盖(视觉识别用);空字符串表示自动探测 */
+  pythonExecutable: string
   autoUseLastPackagingPath: boolean
   exclusiveInstallExemptGroups: string[]
   categories: string[]
@@ -102,6 +112,8 @@ export interface AppConfigData {
   testImagesEnabled: boolean
   /** 显示 FPS 计数器(性能诊断);NTEMM_FPS=1 环境变量可强制开启 */
   fpsCounterEnabled: boolean
+  /** 全局圆角(px):写入 :root 的 --radius,所有控件的圆角刻度由它单点派生 */
+  uiCornerRadius: number
   liquidGlass: LiquidGlassConfig
 }
 
@@ -114,10 +126,13 @@ export interface AppConfigPatch {
   backgroundImagesDirectory?: string
   gameLauncher?: string
   packagerDirectory?: string
+  /** Python 解释器路径覆盖;空字符串清除覆盖,恢复自动探测 */
+  pythonExecutable?: string
   autoUseLastPackagingPath?: boolean
   exclusiveInstallExemptGroups?: string[]
   testImagesEnabled?: boolean
   fpsCounterEnabled?: boolean
+  uiCornerRadius?: number
   liquidGlass?: Partial<LiquidGlassConfig>
 }
 

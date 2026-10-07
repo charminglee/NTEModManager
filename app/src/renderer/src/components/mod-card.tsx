@@ -8,7 +8,7 @@ import {
   Package,
   PackageCheck,
   Pencil,
-  RefreshCw,
+  RefreshCcw,
   Trash2,
   TriangleAlert
 } from 'lucide-react'
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 import FileTree from '@/components/file-tree'
 import { LiquidGlass } from '@/components/liquid-glass'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, GlassButtonOverlay, GLASS_BUTTON_CONTENT_CLASS } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,15 +50,15 @@ interface ModCardProps {
   uiHidden?: boolean
 }
 
-/** 视口首次可见回调的共享 IntersectionObserver:卡片上百张,不能每卡一个 observer 实例。
- *  同一次回调里相交的卡片按序号拿到 batchIndex,用作推入动画的交错延迟 */
+/** 视口首次可见回调的共享 IntersectionObserver:卡片上百张,不能每卡一个 observer 实例 */
 let revealObserver: IntersectionObserver | null = null
-const revealCallbacks = new WeakMap<Element, (batchIndex: number) => void>()
+const revealCallbacks = new WeakMap<Element, (delayMs: number) => void>()
 
-function observeFirstViewportEntry(
-  el: Element,
-  onReveal: (batchIndex: number) => void
-): () => void {
+const STAGGER_STEP_MS = 45
+/** 批内交错上限:视口特别高、单批卡片很多时,最后一张也不晚于 495ms 起步 */
+const MAX_STAGGER_MS = 11 * STAGGER_STEP_MS
+
+function observeFirstViewportEntry(el: Element, onReveal: (delayMs: number) => void): () => void {
   if (typeof IntersectionObserver === 'undefined') {
     onReveal(0)
     return () => {}
@@ -66,12 +66,18 @@ function observeFirstViewportEntry(
   if (!revealObserver) {
     revealObserver = new IntersectionObserver(
       (entries) => {
-        let batchIndex = 0
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue
+        // 同批进入视口的卡片按视口纵坐标排序,批内自上而下依次交错推入。
+        // 交错只在批内分配、不跨批累积:若用全局游标排队,快速甩动滚动时
+        // 途中掠过视口的卡片会逐张领走槽位,滚到底部后视口内的卡片
+        // 反而要等游标追上来才能推入
+        const revealed = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        for (const [batchIndex, entry] of revealed.entries()) {
           revealObserver!.unobserve(entry.target)
-          revealCallbacks.get(entry.target)?.(batchIndex++)
+          const callback = revealCallbacks.get(entry.target)
           revealCallbacks.delete(entry.target)
+          callback?.(Math.min(batchIndex * STAGGER_STEP_MS, MAX_STAGGER_MS))
         }
       },
       // 底部外扩一点:卡片刚探入视口就开始推入,而不是完整出现后才动
@@ -97,8 +103,8 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
   useEffect(() => {
     const el = revealRef.current
     if (!el) return
-    return observeFirstViewportEntry(el, (batchIndex) => {
-      el.style.setProperty('--card-enter-delay', `${Math.min(batchIndex, 11) * 45}ms`)
+    return observeFirstViewportEntry(el, (delayMs) => {
+      el.style.setProperty('--card-enter-delay', `${delayMs}ms`)
       setEntered(true)
     })
   }, [])
@@ -108,7 +114,7 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
         <LiquidGlass
           area="modCards"
           className={cn(
-            'glass ui-fade overflow-hidden rounded-xl transition-colors duration-200 hover:bg-foreground/[0.07]',
+            'ui-fade overflow-hidden rounded-xl',
             uiHidden && 'ui-fade-hidden',
             entered ? 'card-enter' : 'card-children-wait'
           )}
@@ -145,23 +151,6 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
             </div>
           </button>
   
-          {mod.installed && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
-                  disabled={disabled}
-                  onClick={() => actions.onReinstall(mod)}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>重新安装（先卸载再安装）</TooltipContent>
-            </Tooltip>
-          )}
-  
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -169,28 +158,31 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
                 disabled={disabled}
                 onClick={() => actions.onToggleInstall(mod)}
                 className={cn(
-                  'flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all duration-150 active:scale-95 disabled:pointer-events-none disabled:opacity-50',
+                  'group relative flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3.5 text-xs font-semibold transition-all duration-150 active:scale-95 disabled:pointer-events-none disabled:opacity-100',
                   mod.installed
                     ? 'bg-[hsl(var(--success)/0.2)] text-[hsl(var(--success))] shadow-[inset_0_0_0_1px_hsl(var(--success)/0.4)] hover:bg-[hsl(var(--success)/0.3)]'
                     : 'bg-secondary/70 text-secondary-foreground shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.1)] hover:bg-secondary'
                 )}
               >
-                {mod.installed ? (
-                  <>
-                    <PackageCheck className="h-3.5 w-3.5" />
-                    已安装
-                  </>
-                ) : (
-                  <>
-                    <Package className="h-3.5 w-3.5" />
-                    未安装
-                  </>
-                )}
+                <GlassButtonOverlay />
+                <span className={GLASS_BUTTON_CONTENT_CLASS}>
+                  {mod.installed ? (
+                    <>
+                      <PackageCheck className="h-3.5 w-3.5" />
+                      已安装
+                    </>
+                  ) : (
+                    <>
+                      <Package className="h-3.5 w-3.5" />
+                      未安装
+                    </>
+                  )}
+                </span>
               </button>
             </TooltipTrigger>
             <TooltipContent>{mod.installed ? '点击卸载此模组' : '点击安装此模组'}</TooltipContent>
           </Tooltip>
-  
+
           <DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -217,6 +209,10 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
                 重命名...
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => actions.onRepackage(mod)}>
+                <Package />
+                重新打包
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => actions.onAddArchive(mod)}>
                 <FolderInput />
                 添加...
@@ -225,10 +221,12 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
                 <CircleArrowUp />
                 更新/替换...
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => actions.onRepackage(mod)}>
-                <RefreshCw />
-                重新打包...
-              </DropdownMenuItem>
+              {mod.installed && (
+                <DropdownMenuItem onClick={() => actions.onReinstall(mod)}>
+                  <RefreshCcw />
+                  重新安装
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => actions.onToggleInvalid(mod)}>
                 <TriangleAlert />
@@ -261,7 +259,7 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
           )}
         >
           <div className="overflow-hidden">
-            <div className="mx-3 mb-3 rounded-lg border border-foreground/[0.08] bg-[hsl(var(--card)/0.4)] p-2">
+            <div className="mx-3 mb-3 rounded-lg border border-foreground/[0.08] p-2">
               {mod.files.length > 0 ? (
                 <FileTree
                   entries={mod.files}

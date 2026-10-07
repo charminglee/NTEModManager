@@ -10,6 +10,7 @@ import {
 import { ALL_CATEGORY, OTHER_CATEGORY } from '@shared/types'
 import { cn } from '@/lib/utils'
 import { LiquidGlass } from '@/components/liquid-glass'
+import { GlassButtonOverlay, GLASS_BUTTON_CONTENT_CLASS } from '@/components/ui/button'
 
 export interface SidebarProps {
   /** 侧边栏展示顺序:全部在最上,普通分类按用户排序,其他固定在底部 */
@@ -75,12 +76,13 @@ function Sidebar({
       component="aside"
       area="sidebar"
       className={cn(
-        'liquid ui-fade z-10 ml-3 my-3 w-[290px] shrink-0 select-none rounded-2xl',
+        'ui-fade z-10 ml-3 my-3 w-[290px] shrink-0 select-none rounded-2xl',
         uiHidden && 'ui-fade-hidden'
       )}
       contentClassName="flex h-full min-h-0 flex-col"
       depth={1}
       blur={2.5}
+      dispersion={1}
     >
       {/* 品牌区 */}
       <div className="flex items-center gap-3 px-5 pb-5 pt-6">
@@ -143,45 +145,57 @@ function Sidebar({
                 active
                   ? 'bg-primary/15 font-semibold text-foreground shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]'
                   : 'text-foreground/75 hover:bg-foreground/[0.05] hover:text-foreground',
-                draggingName === category && 'opacity-40',
                 dropping && 'before:absolute before:inset-x-2 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-primary'
               )}
             >
-              {isSpecial ? (
-                <span
-                  className={cn(
-                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
-                    active
-                      ? 'bg-primary/25 text-primary'
-                      : 'bg-foreground/[0.06] text-muted-foreground group-hover:text-foreground'
-                  )}
-                >
-                  {category === ALL_CATEGORY ? (
-                    <Layers className="h-3.5 w-3.5" />
-                  ) : (
-                    <PackageOpen className="h-3.5 w-3.5" />
-                  )}
-                </span>
-              ) : image ? (
-                <img
-                  src={image}
-                  alt=""
-                  draggable={false}
-                  className="h-6 w-6 shrink-0 rounded-md object-cover ring-1 ring-foreground/15"
-                />
-              ) : (
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-foreground/[0.06] text-xs font-bold text-foreground/70">
-                  {category.slice(0, 1)}
-                </span>
-              )}
-              <span className="min-w-0 flex-1 truncate">{category}</span>
+              {/* 选中框的液态玻璃:仅激活项挂覆盖层,参数与玻璃按钮一致(area=buttons)。
+                  内容层必须包 GLASS_BUTTON_CONTENT_CLASS(内容带 relative 提到玻璃上方,
+                  否则会被覆盖层盖住变糊);拖拽淡出放内容层——根元素 opacity<1 会截断
+                  玻璃的 backdrop 采样 */}
+              {active && <GlassButtonOverlay />}
               <span
                 className={cn(
-                  'shrink-0 rounded-full px-1.5 py-0.5 text-[11px] tabular-nums',
-                  active ? 'bg-primary/20 text-primary' : 'bg-foreground/[0.06] text-muted-foreground'
+                  GLASS_BUTTON_CONTENT_CLASS,
+                  'w-full gap-2.5 text-left',
+                  draggingName === category && 'opacity-40'
                 )}
               >
-                {counts.get(category) ?? 0}
+                {isSpecial ? (
+                  <span
+                    className={cn(
+                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
+                      active
+                        ? 'bg-primary/25 text-primary'
+                        : 'bg-foreground/[0.06] text-muted-foreground group-hover:text-foreground'
+                    )}
+                  >
+                    {category === ALL_CATEGORY ? (
+                      <Layers className="h-3.5 w-3.5" />
+                    ) : (
+                      <PackageOpen className="h-3.5 w-3.5" />
+                    )}
+                  </span>
+                ) : image ? (
+                  <img
+                    src={image}
+                    alt=""
+                    draggable={false}
+                    className="h-6 w-6 shrink-0 rounded-md object-cover ring-1 ring-foreground/15"
+                  />
+                ) : (
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-foreground/[0.06] text-xs font-bold text-foreground/70">
+                    {category.slice(0, 1)}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1 truncate">{category}</span>
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full px-1.5 py-0.5 text-[11px] tabular-nums',
+                    active ? 'bg-primary/20 text-primary' : 'bg-foreground/[0.06] text-muted-foreground'
+                  )}
+                >
+                  {counts.get(category) ?? 0}
+                </span>
               </span>
             </button>
           )
@@ -190,14 +204,18 @@ function Sidebar({
 
       {/* 底部操作区 */}
       <div className="space-y-2 border-t border-foreground/[0.08] p-3">
+        {/* filter(brightness) 会成为 backdrop root,悬停时打碎玻璃层的背景采样,悬停反馈改用色标过渡 */}
         <button
           type="button"
           disabled={busy}
           onClick={onLaunchGame}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 text-sm font-semibold text-white shadow-glow transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+          className="group relative flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-linear-to-r from-violet-600/80 to-fuchsia-600/80 text-sm font-semibold text-white shadow-glow transition-all duration-150 hover:from-violet-500/85 hover:to-fuchsia-500/85 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-100"
         >
-          <Play className="h-4 w-4 fill-current" />
-          启动游戏
+          <GlassButtonOverlay />
+          <span className={GLASS_BUTTON_CONTENT_CLASS}>
+            <Play className="h-4 w-4 fill-current" />
+            启动游戏
+          </span>
         </button>
         <div className="grid grid-cols-2 gap-2">
           <SideActionButton icon={<FileText className="h-4 w-4" />} label="日志" active={view === 'logs'} disabled={busy} onClick={onOpenLogs} />
@@ -227,14 +245,17 @@ function SideActionButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
+        'group relative flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-100',
         active
           ? 'bg-primary/15 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]'
           : 'bg-foreground/[0.05] text-foreground/75 hover:bg-foreground/[0.08] hover:text-foreground'
       )}
     >
-      {icon}
-      {label}
+      <GlassButtonOverlay />
+      <span className={GLASS_BUTTON_CONTENT_CLASS}>
+        {icon}
+        {label}
+      </span>
     </button>
   )
 }

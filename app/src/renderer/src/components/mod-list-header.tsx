@@ -18,6 +18,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 interface ModListHeaderProps {
   category: string
   count: number
+  /** 已安装的模组数量,显示在总数右侧 */
+  installedCount: number
   search: string
   sortOrder: SortOrder
   busy: boolean
@@ -36,6 +38,7 @@ interface ModListHeaderProps {
 function ModListHeader({
   category,
   count,
+  installedCount,
   search,
   sortOrder,
   busy,
@@ -49,7 +52,7 @@ function ModListHeader({
   onPackageMod
 }: ModListHeaderProps) {
   return (
-    <header className="flex shrink-0 flex-wrap items-center gap-3 px-8 pb-4 pt-6">
+    <header className="flex shrink-0 flex-wrap items-center gap-3 px-4 pb-4 pt-6">
       <div
         className={cn(
           'min-w-0 transition-opacity duration-300',
@@ -59,12 +62,14 @@ function ModListHeader({
         <h1 className="truncate text-2xl font-bold tracking-wide text-foreground text-shadow-soft">
           {category}
         </h1>
-        <div className="mt-0.5 text-xs text-muted-foreground">{count} 个模组</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">
+          {count} 个模组 · {installedCount} 个已安装
+        </div>
       </div>
 
       <LiquidGlass
         area="toolbar"
-        className={cn('glass ui-fade ml-auto rounded-2xl', uiHidden && 'ui-fade-hidden')}
+        className={cn('ui-fade ml-auto rounded-2xl', uiHidden && 'ui-fade-hidden')}
         contentClassName="flex flex-wrap items-center gap-2 px-2.5 py-2"
         depth={1}
         blur={2}
@@ -75,7 +80,7 @@ function ModListHeader({
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="搜索模组..."
-            className="h-9 w-44 bg-[hsl(var(--card)/0.5)] pl-8"
+            className="h-9 w-44 border-transparent pl-8 hover:bg-foreground/[0.06]"
           />
         </div>
 

@@ -41,6 +41,7 @@ class BackgroundCarousel {
   private detectionInProgress = false
   private pendingDetectionPaths: string[] = []
   private modelReady = false
+  private warmupStarted = false
   private debugMode = false
   private detector = new VisualRegionDetector()
   private lastState: BackgroundState | null = null
@@ -62,9 +63,49 @@ class BackgroundCarousel {
     this.current = first
     this.push()
     void this.requestDetection(first.path)
-    void this.warmup()
+    this.ensureModelWarmup()
     this.scheduleRotation()
     logger.info('背景轮播已启动')
+  }
+
+  /** 配置里的背景目录/测试图开关变化后刷新图库:重新收集并按需切换,无需重启应用。
+   *  当前图仍存在于新图库时无缝保留;否则立即切到新图库的第一张;
+   *  新图库为空则清空背景并暂停轮播,等下次刷新恢复。 */
+  reloadImages(): void {
+    this.images = collectBackgroundImages()
+    logger.info(`背景图库已刷新：${this.images.length} 张`)
+
+    if (this.images.length === 0) {
+      if (this.rotationTimer) {
+        clearTimeout(this.rotationTimer)
+        this.rotationTimer = null
+      }
+      // 旧目录的在途识别全部作废:完成后找不到 slot,不会推送
+      this.current = null
+      this.staged = null
+      this.pendingDetectionPaths = []
+      this.pushClear()
+      logger.warning('刷新后没有可用的背景图片，背景已清空、轮播暂停')
+      return
+    }
+
+    this.staged = null
+    this.pendingDetectionPaths = []
+
+    // 当前图仍在新图库:无缝保留,只确保轮换计时在跑
+    if (this.current && this.images.includes(this.current.path)) {
+      this.scheduleRotation()
+      return
+    }
+
+    const slot = this.loadSlot()
+    if (!slot) {
+      return
+    }
+    this.staged = slot
+    void this.requestDetection(slot.path)
+    this.scheduleRotation()
+    this.ensureModelWarmup()
   }
 
   /** 切换到随机背景(手动 ↓ 与定时轮换共用;切换期间调用会被忽略)。
@@ -112,6 +153,23 @@ class BackgroundCarousel {
     this.setDebugMode(!this.debugMode)
   }
 
+  /** 检测环境变化(Python 解释器路径等)后重建识别进程:清空当前图缓存结果并立即重新检测 */
+  restartDetection(): void {
+    void (async () => {
+      await this.detector.dispose()
+      this.modelReady = false
+      this.warmupStarted = false
+      if (this.current) {
+        this.current.region = emptyRegion()
+        this.push()
+      }
+      await this.warmup()
+      if (this.current) {
+        void this.requestDetection(this.current.path)
+      }
+    })()
+  }
+
   currentPath(): string | null {
     return this.current?.path ?? null
   }
@@ -142,6 +200,15 @@ class BackgroundCarousel {
     } else {
       logger.error('视觉识别模型加载失败')
     }
+  }
+
+  /** 模型预热只做一次:启动时无图跳过初始化的场景,由 reloadImages 补触发 */
+  private ensureModelWarmup(): void {
+    if (this.warmupStarted) {
+      return
+    }
+    this.warmupStarted = true
+    void this.warmup()
   }
 
   private scheduleRotation(): void {
@@ -274,6 +341,19 @@ class BackgroundCarousel {
         win.webContents.send('background:state', state)
       } catch (error) {
         logger.warning(`背景状态推送失败：${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+  }
+
+  /** 通知渲染端清空背景(目录被改空/不可用时) */
+  private pushClear(): void {
+    this.lastState = null
+    const win = this.getWindow()
+    if (win && !win.isDestroyed()) {
+      try {
+        win.webContents.send('background:state', null)
+      } catch (error) {
+        logger.warning(`背景清空推送失败：${error instanceof Error ? error.message : String(error)}`)
       }
     }
   }

@@ -1,29 +1,54 @@
-import { createContext, createElement, useContext, type ReactNode } from 'react'
+import {
+  createContext,
+  createElement,
+  useContext,
+  type ComponentType,
+  type ReactNode
+} from 'react'
 import { Vaso, type VasoProps } from 'vaso'
-import { LIQUID_GLASS_DEFAULTS, type LiquidGlassArea, type LiquidGlassConfig } from '@shared/types'
+import {
+  LIQUID_GLASS_DEFAULTS,
+  UI_CORNER_RADIUS_DEFAULT,
+  type LiquidGlassArea,
+  type LiquidGlassConfig
+} from '@shared/types'
 import { cn } from '@/lib/utils'
 
 /** 与 Vaso 的 prop 默认值保持一致,用于效果开关关闭后的零值判断 */
 const VASO_BLUR_DEFAULT = 0.1
 const VASO_SPECULAR_DEFAULT = 0.5
-/** 组件未显式开启色散时的基准强度(Vaso 默认 0.5),供全局色散滑条驱动 */
-const VASO_DISPERSION_DEFAULT = 0.5
 
 const LiquidGlassConfigContext = createContext<LiquidGlassConfig>(LIQUID_GLASS_DEFAULTS)
+
+/**
+ * 全局圆角(px)。Vaso 只靠 ResizeObserver 重测量,CSS 变量 --radius 变化不改变尺寸,
+ * 玻璃的位移贴图不会重建;显式传 radius(prop 在 vaso 测量 effect 的依赖里)才能让
+ * 液态玻璃的圆角跟随设置实时更新。
+ */
+const UICornerRadiusContext = createContext<number>(UI_CORNER_RADIUS_DEFAULT)
+
+export function useUICornerRadius(): number {
+  return useContext(UICornerRadiusContext)
+}
 
 /** 玻璃不可用时的统一回退外观:高透毛玻璃(近全透底色 + backdrop 模糊),可被 fallbackClassName 覆盖 */
 const FROSTED_FALLBACK_CLASS = 'frosted-hi'
 
 export function LiquidGlassConfigProvider({
   config,
+  cornerRadius,
   children
 }: {
   config: LiquidGlassConfig
+  /** 全局圆角(px);同时下发 CSS 侧与液态玻璃折射贴图侧 */
+  cornerRadius?: number
   children: ReactNode
 }) {
   return (
     <LiquidGlassConfigContext.Provider value={{ ...LIQUID_GLASS_DEFAULTS, ...config }}>
-      {children}
+      <UICornerRadiusContext.Provider value={cornerRadius ?? UI_CORNER_RADIUS_DEFAULT}>
+        {children}
+      </UICornerRadiusContext.Provider>
     </LiquidGlassConfigContext.Provider>
   )
 }
@@ -32,7 +57,8 @@ export function useLiquidGlassConfig(): LiquidGlassConfig {
   return useContext(LiquidGlassConfigContext)
 }
 
-export interface LiquidGlassProps extends VasoProps {
+export interface LiquidGlassProps<E extends HTMLElement = HTMLDivElement>
+  extends Omit<VasoProps<E>, 'component'> {
   /**
    * 内容包一层 relative 置于玻璃层上方,保持清晰不被模糊/折射。
    * false 时不额外包层(子元素需自行保证层级),让内容真正「浸」在玻璃下。
@@ -44,6 +70,8 @@ export interface LiquidGlassProps extends VasoProps {
   fallbackClassName?: string
   /** 所属界面区域;设置中可按区域单独关闭玻璃效果,不填则只受总开关与效果开关控制 */
   area?: LiquidGlassArea
+  /** 宽松化 Vaso 的 component 类型:自定义宿主组件常携带更具体的元素属性(如按钮的 disabled) */
+  component?: string | ComponentType<any>
 }
 
 /**
@@ -52,7 +80,7 @@ export interface LiquidGlassProps extends VasoProps {
  * 设置(context)可整体或按区域关闭:关闭后退化为高透毛玻璃(见 FROSTED_FALLBACK_CLASS),
  * 不再渲染 Vaso 玻璃层。
  */
-export function LiquidGlass({
+export function LiquidGlass<E extends HTMLElement = HTMLDivElement>({
   children,
   className,
   crisp = true,
@@ -65,15 +93,19 @@ export function LiquidGlass({
   dispersion = false,
   specular,
   ...props
-}: LiquidGlassProps) {
+}: LiquidGlassProps<E>) {
   const glass = useLiquidGlassConfig()
+  // 显式圆角(见 UICornerRadiusContext 注释):宿主元素的 rounded-* 类与 --radius 同源,值一致
+  const cornerRadius = useUICornerRadius()
 
   // 效果强度滑条(0-100)乘算各面板自身的基础值,保持面板间的相对设计比例
   const effectiveDepth = glass.refraction > 0 ? depth * (glass.refraction / 100) : 0
   const effectiveBlur = glass.blur > 0 ? (blur ?? VASO_BLUR_DEFAULT) * (glass.blur / 100) : 0
+  // 色散按组件显式 opt-in(目前仅侧边栏传入):多遍位移采样开销大,
+  // 只养得起数量固定的大玻璃;卡片等批量小玻璃一律单遍位移
   const effectiveDispersion: number | false =
-    glass.dispersion > 0
-      ? (dispersion === false ? VASO_DISPERSION_DEFAULT : dispersion) * (glass.dispersion / 100)
+    glass.dispersion > 0 && dispersion !== false && dispersion > 0
+      ? dispersion * (glass.dispersion / 100)
       : false
   const specularBase = specular === false || specular === undefined ? VASO_SPECULAR_DEFAULT : specular
   const effectiveSpecular: number | false =
@@ -99,12 +131,14 @@ export function LiquidGlass({
 
   return (
     <Vaso
-      {...props}
+      // Vaso 的类型固定为 HTMLDivElement 泛型实例,这里按运行时行为放宽(E 只影响宿主元素的 props 类型)
+      {...(props as VasoProps)}
       component={component}
       depth={effectiveDepth}
       blur={effectiveBlur}
       dispersion={effectiveDispersion}
       specular={effectiveSpecular}
+      radius={cornerRadius}
       className={className}
     >
       {crisp ? <div className={cn('relative', contentClassName)}>{children}</div> : children}

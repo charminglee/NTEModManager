@@ -83,8 +83,8 @@ const api = {
     ipcRenderer.invoke('background:currentPath'),
   getCurrentBackgroundState: (): Promise<BackgroundState | null> =>
     ipcRenderer.invoke('background:currentState'),
-  onBackgroundState: (callback: (state: BackgroundState) => void): (() => void) => {
-    const listener = (_event: unknown, state: BackgroundState) => callback(state)
+  onBackgroundState: (callback: (state: BackgroundState | null) => void): (() => void) => {
+    const listener = (_event: unknown, state: BackgroundState | null) => callback(state)
     ipcRenderer.on('background:state', listener)
     return () => ipcRenderer.removeListener('background:state', listener)
   },

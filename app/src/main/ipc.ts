@@ -304,13 +304,23 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     return { success: true, message: '已打开配置文件' }
   })
   ipcMain.handle('config:update', (_event, patch: AppConfigPatch) => {
+    const previous = getAppConfig()
     updateAppConfig(patch)
     logger.info(
       `配置已更新：${Object.keys(patch)
         .filter((key) => patch[key as keyof AppConfigPatch] !== undefined)
         .join(',')}`
     )
-    return getAppConfig()
+    const next = getAppConfig()
+    // 背景来源相关配置变化:刷新轮播图库,无需重启应用
+    if (patch.backgroundImagesDirectory !== undefined || patch.testImagesEnabled !== undefined) {
+      backgroundCarousel.reloadImages()
+    }
+    // Python 解释器实际变化才重建识别进程(保存对话框总是携带全部字段)
+    if (next.pythonExecutable !== previous.pythonExecutable) {
+      backgroundCarousel.restartDetection()
+    }
+    return next
   })
   ipcMain.handle('config:setSortOrder', (_event, sortOrder: SortOrder) => {
     setSortOrder(sortOrder)
