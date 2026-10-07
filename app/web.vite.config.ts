@@ -2,6 +2,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs'
 import { extname, resolve, sep } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 /** 调试图集目录(npm run dev 浏览器测试模式的全屏背景图来源) */
 const TEST_IMAGES_DIR = 'F:/pictures/test'
@@ -44,7 +45,7 @@ function serveTestImages(): Plugin {
 export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   publicDir: resolve(__dirname, '../img/bg'),
-  plugins: [react(), serveTestImages()],
+  plugins: [react(), tailwindcss(), serveTestImages()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src/renderer/src'),

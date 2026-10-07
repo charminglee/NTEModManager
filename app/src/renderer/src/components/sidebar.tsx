@@ -92,7 +92,7 @@ function Sidebar({
             className="h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-foreground/15"
           />
         ) : (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-glow">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-fuchsia-600 shadow-glow">
             <Blocks className="h-5 w-5 text-white" />
           </div>
         )}

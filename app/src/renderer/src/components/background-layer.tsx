@@ -144,7 +144,7 @@ export default function BackgroundLayer({ masked = true }: { masked?: boolean })
       {/* 衬托 UI 的暗化遮罩;隐藏 UI(F11)时随界面一同淡出,让背景完整露出 */}
       <div
         className={cn(
-          'absolute inset-0 bg-gradient-to-b from-background/75 via-background/45 to-background/85 transition-opacity duration-300',
+          'absolute inset-0 bg-linear-to-b from-background/75 via-background/45 to-background/85 transition-opacity duration-300',
           !masked && 'opacity-0'
         )}
       />
