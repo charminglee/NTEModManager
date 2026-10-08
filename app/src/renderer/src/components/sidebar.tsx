@@ -64,13 +64,21 @@ function Sidebar({
   // StrictMode 的 setState updater 会双调用,提交选择等副作用一律走 dragRef
   // 镜像,不放进 updater
   const [drag, setDrag] = useState<{ y: number; moved: boolean } | null>(null)
-  const dragRef = useRef<{ grabOffset: number; y: number; pressClientY: number; moved: boolean } | null>(null)
+  const dragRef = useRef<{
+    grabOffset: number
+    y: number
+    pressClientY: number
+    startY: number
+    moved: boolean
+  } | null>(null)
   // 松手时选中框还在途中:settling 期间保持放大(与玻璃点亮)滑到位,
   // translate 的 transitionend(或兜底计时器)到达后才缩回默认尺寸
   const [settling, setSettling] = useState(false)
   const settleTimer = useRef<number | null>(null)
 
-  useLayoutEffect(() => {
+  // 指示条位置 = 当前分类按钮的几何;布局一旦变化(窗口缩放、字体加载、分类增删)
+  // 必须重测,否则指示条停在旧位置与按钮错开——这是拖动/显示「错位」的一大来源
+  const measureIndicator = () => {
     if (view !== 'mods') return
     const button = buttonRefs.current.get(currentCategory)
     if (!button) return
@@ -78,6 +86,24 @@ function Sidebar({
     if (!indicatorReady) {
       requestAnimationFrame(() => setIndicatorReady(true))
     }
+  }
+
+  useLayoutEffect(() => {
+    measureIndicator()
+    // 依赖含 indicatorReady:首次测量后挂 data-ready(开过渡)再测一次,抵消
+    // StrictMode 双调用等造成的测量时机差异
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentCategory, view, displayCategories, indicatorReady])
+
+  useEffect(() => {
+    // 窗口尺寸与字体晚载都会改变分类行的布局,而按钮 offsetTop 不会自行通知
+    const remeasure = () => measureIndicator()
+    window.addEventListener('resize', remeasure)
+    document.fonts?.ready.then(remeasure)
+    return () => {
+      window.removeEventListener('resize', remeasure)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentCategory, view, displayCategories, indicatorReady])
 
   // 指针坐标 → nav 内容坐标(指示条随内容滚动,translateY 必须用内容坐标)
@@ -111,14 +137,20 @@ function Sidebar({
         // 按下后还没真正移动:只更新锚点基准(指针位置),不动 y——
         // 让「滑向所按行」的预览动画继续走,2px 内的抖动不算拖动
         if (Math.abs(event.clientY - prev.pressClientY) <= 2) return
-        // 进入拖动:按滑向预览的实时动画位置重新锚定抓取点,无缝转 1:1 跟随
-        let anchor = prev.y
-        if (indicatorRef.current) {
-          const cs = getComputedStyle(indicatorRef.current)
-          if (cs.translate !== 'none') anchor = parseFloat(cs.translate.split(' ')[1])
-        }
+        // 进入拖动:锚定改为「按下的目标行」,抓取点 = 按下时指针相对该行的偏移。
+        // 不能从预览动画的中途位置续接——按下后立刻拖动是常态,动画往往刚起步,
+        // 从中途续接会让指示条与指针保持「动画剩余距离」的恒定偏差(实测可达数百
+        // 像素),看起来就是拖动时指示条飘在别的行上。此处瞬移到指针下方,
+        // 与 scale 放大一起构成明确的「抓起」反馈
+        const anchor = prev.startY
         const y = Math.min(last.offsetTop + last.offsetHeight - rowHeight, Math.max(min, anchor))
-        dragRef.current = { grabOffset: contentY(event.clientY) - anchor, y, moved: true, pressClientY: prev.pressClientY }
+        dragRef.current = {
+          grabOffset: contentY(prev.pressClientY) - anchor,
+          y,
+          pressClientY: prev.pressClientY,
+          startY: prev.startY,
+          moved: true
+        }
         setDrag({ y, moved: true })
         return
       }
@@ -288,6 +320,7 @@ function Sidebar({
                   grabOffset: contentY(event.clientY) - startY,
                   y: startY,
                   pressClientY: event.clientY,
+                  startY,
                   moved: false
                 }
                 setDrag({ y: startY, moved: false })
