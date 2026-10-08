@@ -151,7 +151,11 @@ function ModListHeader({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button disabled={busy} onClick={onImport}>
+            <Button
+              disabled={busy}
+              onClick={onImport}
+              className="rounded-lg bg-linear-to-r from-violet-600/80 to-fuchsia-600/80 font-semibold text-white shadow-glow hover:from-violet-500/85 hover:to-fuchsia-500/85"
+            >
               <Upload />
               导入
             </Button>

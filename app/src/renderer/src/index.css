@@ -38,6 +38,10 @@
   --shadow-glow: 0 0 24px -6px hsl(var(--primary) / 0.45);
   /* 运行时变量须与主题 token(--shadow-card)不同名,否则 var() 自引用成环 */
   --shadow-card: var(--app-shadow-card);
+  /* 卡片外阴影:宿主的 overflow-hidden 会裁掉 vaso 玻璃层自带的 0 4px 12px 黑 18%
+     外投影(工具栏可见的那条),只能画在宿主自身上(不会被自己的 overflow 裁),
+     几何同形、浓度约减半 */
+  --shadow-card-soft: var(--app-shadow-card-soft);
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -130,6 +134,7 @@
     --ring: 258 90% 66%;
     --radius: 1rem;
     --app-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
+    --app-shadow-card-soft: 0 4px 12px rgba(0, 0, 0, 0.09);
   }
 
   /* 浅色模式:跟随系统 prefers-color-scheme 自动切换 */
@@ -157,6 +162,7 @@
       --input: 250 14% 80%;
       --ring: 258 78% 54%;
       --app-shadow-card: 0 8px 32px rgba(30, 20, 60, 0.14);
+      --app-shadow-card-soft: 0 4px 12px rgba(30, 20, 60, 0.07);
     }
   }
 
@@ -247,7 +253,8 @@
      (玻璃「点亮」);回退模式(覆盖层无 data-vaso-root)按钮自身无玻璃可亮,
      退回轻底色悬停保住可点击反馈——仅限无自有底色的 glass 变体(.glass-btn-root),
      其余变体有自己的悬停底色,不能被这条规则盖掉 */
-  button > .glass-btn-overlay > [data-vaso] {
+  button > .glass-btn-overlay > [data-vaso],
+  .sidebar-active-indicator > .glass-btn-overlay > [data-vaso] {
     box-shadow:
       inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
       inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.5),
@@ -261,6 +268,35 @@
       inset 1.5px 1.5px 1.5px -1px rgba(255, 255, 255, 0.8),
       inset -1.5px -1.5px 1.5px -1px rgba(255, 255, 255, 0.55),
       inset 0 0 14px rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* 侧边栏滑动选中框按下时玻璃「点亮」:与按钮悬停同级的内沿高光,
+     配合指示条自身的 scale 放大构成按压反馈 */
+  .sidebar-active-indicator[data-pressed] > .glass-btn-overlay > [data-vaso] {
+    box-shadow:
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.45),
+      inset 1.5px 1.5px 1.5px -1px rgba(255, 255, 255, 0.8),
+      inset -1.5px -1.5px 1.5px -1px rgba(255, 255, 255, 0.55),
+      inset 0 0 14px rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* 滑动选中框的过渡:translate(分类间滑动/按压滑向所按行/松手吸附)与 scale(按压
+     放大)必须拆成独立属性分别调——自由拖动时 translate 要零过渡 1:1 跟随指针,而
+     scale 仍要有按下放大动画;若合成在一个 transform 上共用一条 transition,拖动态
+     撤掉过渡类会把放大动画一起吃掉(按下瞬跳到最大的教训)。按下未拖动(data-pressed
+     无 data-dragging)走基础过渡:选中框带放大动画滑向所按行。data-dragging 由组件
+     在指针真正移动后挂上,translate 归零实现 1:1 跟随。data-ready 由组件在首次测量
+     后挂上,避免挂载时从顶部滑入 */
+  .sidebar-active-indicator[data-ready] {
+    transition:
+      translate 300ms cubic-bezier(0.33, 1, 0.68, 1),
+      scale 300ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .sidebar-active-indicator[data-ready][data-dragging] {
+    transition:
+      translate 0ms,
+      scale 300ms cubic-bezier(0.33, 1, 0.68, 1);
   }
 
   button.glass-btn-root:has(> .glass-btn-overlay:not([data-vaso-root])):hover {
@@ -344,13 +380,21 @@
     transition:
       background-color 300ms,
       border-color 300ms,
-      backdrop-filter 300ms;
+      backdrop-filter 300ms,
+      box-shadow 300ms;
   }
 
   .ui-fade.ui-fade-hidden {
     background-color: transparent;
     border-color: transparent;
     backdrop-filter: none;
+  }
+
+  /* 面板根自带的投影(shadow-card-soft,vaso 玻璃层的投影在子元素里随 opacity
+     淡出,根上的这条要单独归零)也参与淡出;目标值须与阴影类形状一致(长度数
+     相同)才能插值,否则会跳变 */
+  .ui-fade.ui-fade-hidden.shadow-card-soft {
+    box-shadow: 0 4px 12px transparent;
   }
 
   /* 子元素的淡入淡出用 animation 而非 transition:transition 会整体覆盖子元素

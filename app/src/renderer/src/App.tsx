@@ -211,10 +211,9 @@ export default function App() {
     void window.api.getAppIcon().then(setAppIcon)
   }, [displayCategories])
 
-  const handleReorderCategories = useCallback((order: string[]) => {
-    setConfig((prev) => (prev ? { ...prev, categoryOrder: order } : prev))
-    void window.api.setCategoryOrder(order)
-  }, [])
+  // 分类拖拽排序暂时关闭:侧边栏选中框占用了「按住 + 移动」手势,两者冲突。
+  // categoryOrder 数据模型与 setCategoryOrder API 原样保留,恢复排序时重新接线即可
+  // (SidebarProps 已无 onReorderCategories)。
 
   // ============ 模组列表 ============
   const visibleMods = useMemo(() => {
@@ -688,7 +687,6 @@ export default function App() {
               view={view}
               uiHidden={chromeHidden}
               onSelectCategory={handleSelectCategory}
-              onReorderCategories={handleReorderCategories}
               onLaunchGame={handleLaunchGame}
               onOpenLogs={handleToggleLogsView}
               onOpenSettings={handleOpenSettings}

@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   Blocks,
   FileText,
@@ -22,7 +22,6 @@ export interface SidebarProps {
   busy: boolean
   view: 'mods' | 'logs'
   onSelectCategory: (category: string) => void
-  onReorderCategories: (orderedNormalCategories: string[]) => void
   onLaunchGame: () => void
   onOpenLogs: () => void
   onOpenSettings: () => void
@@ -30,7 +29,14 @@ export interface SidebarProps {
   uiHidden?: boolean
 }
 
-/** memo:日志推送等无关状态变化时不重渲染整棵分类树 */
+/**
+ * memo:日志推送等无关状态变化时不重渲染整棵分类树。
+ *
+ * 分类选中框是 nav 里单一悬浮指示条(手机导航栏式):按下时放大并可自由拖动——
+ * 拖动中 1:1 跟随指针(不吸附行),松开才吸附到最近分类并提交选择。
+ * 注意:这里占用「按住 + 移动」手势,分类的拖拽排序因此暂时关闭(App 侧
+ * categoryOrder 数据模型与 setCategoryOrder API 原样保留)。
+ */
 function Sidebar({
   displayCategories,
   counts,
@@ -41,35 +47,156 @@ function Sidebar({
   view,
   uiHidden,
   onSelectCategory,
-  onReorderCategories,
   onLaunchGame,
   onOpenLogs,
   onOpenSettings
 }: SidebarProps) {
-  const [draggingName, setDraggingName] = useState<string | null>(null)
-  const [dropTargetName, setDropTargetName] = useState<string | null>(null)
+  // 滑动选中框:静止时位置 = 目标按钮的 offsetTop(相对 nav 内容),分类增删后重量
+  const navRef = useRef<HTMLElement>(null)
+  const indicatorRef = useRef<HTMLDivElement>(null)
+  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const [indicator, setIndicator] = useState<{ top: number; height: number } | null>(null)
+  // 首次定位完成后才开过渡,避免挂载时指示条从导航顶部滑入
+  const [indicatorReady, setIndicatorReady] = useState(false)
+  // 自由拖动:y = 指示条顶部(nav 内容坐标)。moved 只区分「跟随中」与「按下滑向
+  // 所按行的预览」——预览走基础过渡动画,跟随中 translate 零过渡;松手无论是否
+  // 拖动过都提交最近分类(原地点击 = 最近行即所按行,click 再幂等提交一次)。
+  // StrictMode 的 setState updater 会双调用,提交选择等副作用一律走 dragRef
+  // 镜像,不放进 updater
+  const [drag, setDrag] = useState<{ y: number; moved: boolean } | null>(null)
+  const dragRef = useRef<{ grabOffset: number; y: number; pressClientY: number; moved: boolean } | null>(null)
+  // 松手时选中框还在途中:settling 期间保持放大(与玻璃点亮)滑到位,
+  // translate 的 transitionend(或兜底计时器)到达后才缩回默认尺寸
+  const [settling, setSettling] = useState(false)
+  const settleTimer = useRef<number | null>(null)
+
+  useLayoutEffect(() => {
+    if (view !== 'mods') return
+    const button = buttonRefs.current.get(currentCategory)
+    if (!button) return
+    setIndicator({ top: button.offsetTop, height: button.offsetHeight })
+    if (!indicatorReady) {
+      requestAnimationFrame(() => setIndicatorReady(true))
+    }
+  }, [currentCategory, view, displayCategories, indicatorReady])
+
+  // 指针坐标 → nav 内容坐标(指示条随内容滚动,translateY 必须用内容坐标)
+  const contentY = (clientY: number) => {
+    const nav = navRef.current
+    return nav ? clientY - nav.getBoundingClientRect().top + nav.scrollTop : 0
+  }
+
+  // settling 完成:已滑到吸附行,缩回默认尺寸、熄灭玻璃点亮
+  const finishSettle = () => {
+    if (settleTimer.current !== null) {
+      clearTimeout(settleTimer.current)
+      settleTimer.current = null
+    }
+    setDrag(null)
+    setSettling(false)
+  }
+
+  useEffect(() => {
+    if (drag === null) return
+    const move = (event: PointerEvent) => {
+      const prev = dragRef.current
+      const nav = navRef.current
+      if (!prev || !nav) return
+      const entries = [...buttonRefs.current.values()]
+      if (entries.length === 0) return
+      const rowHeight = entries[0].offsetHeight
+      const min = entries[0].offsetTop
+      const last = entries[entries.length - 1]
+      if (!prev.moved) {
+        // 按下后还没真正移动:只更新锚点基准(指针位置),不动 y——
+        // 让「滑向所按行」的预览动画继续走,2px 内的抖动不算拖动
+        if (Math.abs(event.clientY - prev.pressClientY) <= 2) return
+        // 进入拖动:按滑向预览的实时动画位置重新锚定抓取点,无缝转 1:1 跟随
+        let anchor = prev.y
+        if (indicatorRef.current) {
+          const cs = getComputedStyle(indicatorRef.current)
+          if (cs.translate !== 'none') anchor = parseFloat(cs.translate.split(' ')[1])
+        }
+        const y = Math.min(last.offsetTop + last.offsetHeight - rowHeight, Math.max(min, anchor))
+        dragRef.current = { grabOffset: contentY(event.clientY) - anchor, y, moved: true, pressClientY: prev.pressClientY }
+        setDrag({ y, moved: true })
+        return
+      }
+      const y = Math.min(
+        last.offsetTop + last.offsetHeight - rowHeight,
+        Math.max(min, contentY(event.clientY) - prev.grabOffset)
+      )
+      dragRef.current = { ...prev, y }
+      setDrag({ y, moved: true })
+    }
+    const release = () => {
+      const prev = dragRef.current
+      dragRef.current = null
+      if (!prev) return
+      // 松手一律吸附最近分类并提交。原地点击时最近行就是所按行,随后 click 的
+      // 提交与之幂等;不能在这里跳过提交——按下后选中框已滑向所按行,若不提交,
+      // drag 清空会先把它退回旧分类再等 click 滑回来,出现来回滑的动画
+      const entries = [...buttonRefs.current.entries()].map(([name, el]) => ({
+        name,
+        top: el.offsetTop,
+        height: el.offsetHeight
+      }))
+      if (entries.length === 0) return
+      const center = prev.y + entries[0].height / 2
+      let nearest = entries[0]
+      let nearestDist = Infinity
+      for (const entry of entries) {
+        const dist = Math.abs(entry.top + entry.height / 2 - center)
+        if (dist < nearestDist) {
+          nearestDist = dist
+          nearest = entry
+        }
+      }
+      // 直接把指示条放到吸附行:松手瞬间过渡类恢复,从自由位置平滑吸附过去;
+      // 若吸附行就是当前分类,测量 effect 不会重跑,必须在这里显式归位
+      onSelectCategory(nearest.name)
+      setIndicator({ top: nearest.top, height: nearest.height })
+      // 途中松手:保持放大滑到位,translate 的 transitionend(或兜底计时器)
+      // 到达后再缩回;已到位(无 translate 动画在跑)则立即缩回
+      const moving = indicatorRef.current
+        ?.getAnimations()
+        .some((a) => (a as CSSTransition).transitionProperty === 'translate')
+      if (moving) {
+        setDrag({ y: nearest.top, moved: false })
+        setSettling(true)
+        if (settleTimer.current !== null) clearTimeout(settleTimer.current)
+        settleTimer.current = window.setTimeout(finishSettle, 450)
+      } else {
+        setDrag(null)
+        setSettling(false)
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', release)
+    window.addEventListener('pointercancel', release)
+    window.addEventListener('blur', release)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', release)
+      window.removeEventListener('pointercancel', release)
+      window.removeEventListener('blur', release)
+    }
+  }, [drag !== null, onSelectCategory])
+
+  // settling 期间监听 translate 到位:滑到吸附行后再缩回默认尺寸
+  // (transitionend 万一丢失时由 release 里的兜底计时器接管)
+  useEffect(() => {
+    if (!settling) return
+    const el = indicatorRef.current
+    if (!el) return
+    const onEnd = (event: TransitionEvent) => {
+      if (event.propertyName === 'translate') finishSettle()
+    }
+    el.addEventListener('transitionend', onEnd)
+    return () => el.removeEventListener('transitionend', onEnd)
+  }, [settling])
 
   const isNormalCategory = (category: string) => category !== ALL_CATEGORY && category !== OTHER_CATEGORY
-
-  const handleDrop = (targetName: string) => {
-    if (!draggingName || draggingName === targetName) {
-      setDraggingName(null)
-      setDropTargetName(null)
-      return
-    }
-    const normalCategories = displayCategories.filter(isNormalCategory)
-    const fromIndex = normalCategories.indexOf(draggingName)
-    const toIndex = normalCategories.indexOf(targetName)
-    if (fromIndex < 0 || toIndex < 0) {
-      setDraggingName(null)
-      setDropTargetName(null)
-      return
-    }
-    normalCategories.splice(toIndex, 0, ...normalCategories.splice(fromIndex, 1))
-    onReorderCategories(normalCategories)
-    setDraggingName(null)
-    setDropTargetName(null)
-  }
 
   return (
     <LiquidGlass
@@ -107,59 +234,76 @@ function Sidebar({
       </div>
 
       {/* 分类导航 */}
-      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3">
+      <nav ref={navRef} className="relative min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         <div className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
           模组分类
+        </div>
+        {/* 滑动选中框:translate(滑动/吸附)与 scale(按压放大)用独立属性,
+            过渡在 index.css 按 data-dragging 分别调——按下未拖动时选中框带放大
+            动画滑向所按行,真正拖动后 translate 零过渡 1:1 跟随指针。opacity 过渡
+            不能落在它自身或祖先上(opacity<1 会截断玻璃的 backdrop 采样),
+            显隐用 visibility 瞬切 */}
+        <div
+          ref={indicatorRef}
+          aria-hidden
+          data-ready={indicatorReady || undefined}
+          data-pressed={drag !== null || undefined}
+          data-dragging={(drag?.moved && !settling) || undefined}
+          className="sidebar-active-indicator pointer-events-none absolute left-3 right-3 top-0 rounded-lg bg-primary/15 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]"
+          style={{
+            height: indicator?.height ?? 0,
+            translate: `0 ${drag ? drag.y : indicator?.top ?? 0}px`,
+            scale: drag !== null ? '1.07' : '1',
+            visibility: (view === 'mods' || drag !== null) && indicator ? 'visible' : 'hidden'
+          }}
+        >
+          <GlassButtonOverlay />
         </div>
         {displayCategories.map((category) => {
           const isSpecial = !isNormalCategory(category)
           const active = view === 'mods' && currentCategory === category
           const image = categoryImages.get(category)
-          const dropping = dropTargetName === category && draggingName !== category
 
           return (
             <button
               key={category}
+              ref={(el) => {
+                if (el) buttonRefs.current.set(category, el)
+                else buttonRefs.current.delete(category)
+              }}
               type="button"
               disabled={busy}
-              draggable={isSpecial ? false : !busy}
-              onDragStart={() => setDraggingName(category)}
-              onDragOver={(event) => {
-                if (draggingName && isNormalCategory(category)) {
-                  event.preventDefault()
-                  setDropTargetName(category)
+              onPointerDown={(event) => {
+                // 新按压取消尚未完成的 settling(上一次滑行由新目标接管),
+                // 按下即滑向所按分类(带放大动画):起点 = 所按行顶部。
+                // 日志视图等指示条无位置时同样从所按行起;抓取点相对该行顶计算,
+                // 一旦真正开始移动,按指示条实时动画位置重新锚定,无缝转 1:1 跟随
+                if (settleTimer.current !== null) {
+                  clearTimeout(settleTimer.current)
+                  settleTimer.current = null
                 }
-              }}
-              onDragLeave={() => setDropTargetName((prev) => (prev === category ? null : prev))}
-              onDrop={(event) => {
-                event.preventDefault()
-                handleDrop(category)
-              }}
-              onDragEnd={() => {
-                setDraggingName(null)
-                setDropTargetName(null)
+                setSettling(false)
+                const startY = buttonRefs.current.get(category)?.offsetTop ?? 0
+                dragRef.current = {
+                  grabOffset: contentY(event.clientY) - startY,
+                  y: startY,
+                  pressClientY: event.clientY,
+                  moved: false
+                }
+                setDrag({ y: startY, moved: false })
               }}
               onClick={() => onSelectCategory(category)}
               className={cn(
-                'group relative flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-all duration-150',
+                'group relative mt-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors duration-150',
                 active
-                  ? 'bg-primary/15 font-semibold text-foreground shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]'
-                  : 'text-foreground/75 hover:bg-foreground/[0.05] hover:text-foreground',
-                dropping && 'before:absolute before:inset-x-2 before:-top-0.5 before:h-0.5 before:rounded-full before:bg-primary'
+                  ? 'font-semibold text-foreground'
+                  : 'text-foreground/75 hover:bg-foreground/[0.05] hover:text-foreground'
               )}
             >
-              {/* 选中框的液态玻璃:仅激活项挂覆盖层,参数与玻璃按钮一致(area=buttons)。
-                  内容层必须包 GLASS_BUTTON_CONTENT_CLASS(内容带 relative 提到玻璃上方,
-                  否则会被覆盖层盖住变糊);拖拽淡出放内容层——根元素 opacity<1 会截断
-                  玻璃的 backdrop 采样 */}
-              {active && <GlassButtonOverlay />}
-              <span
-                className={cn(
-                  GLASS_BUTTON_CONTENT_CLASS,
-                  'w-full gap-2.5 text-left',
-                  draggingName === category && 'opacity-40'
-                )}
-              >
+              {/* 选中框已上移为 nav 里的滑动指示条(玻璃覆盖层跟指示条走),按钮只剩文字强调;
+                  内容层仍包 GLASS_BUTTON_CONTENT_CLASS——禁用淡出落内容层,
+                  根元素 opacity<1 会截断玻璃的 backdrop 采样 */}
+              <span className={cn(GLASS_BUTTON_CONTENT_CLASS, 'w-full gap-2.5 text-left')}>
                 {isSpecial ? (
                   <span
                     className={cn(
@@ -248,7 +392,7 @@ function SideActionButton({
         'group relative flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-100',
         active
           ? 'bg-primary/15 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]'
-          : 'bg-foreground/[0.05] text-foreground/75 hover:bg-foreground/[0.08] hover:text-foreground'
+          : 'glass-btn-root text-foreground/75'
       )}
     >
       <GlassButtonOverlay />
