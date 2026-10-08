@@ -60,6 +60,22 @@ function success(message = ''): OperationResult {
   return { success: true, message }
 }
 
+/**
+ * 操作收尾统一落日志:成功按结果消息记 info,失败记 error 并带上操作名。
+ * 仓库层操作历史上几乎不产生日志,失败只能靠界面 toast 碰运气;现在每个
+ * 公开操作的最终结果在日志文件里都有据可查。
+ */
+function finalize(operation: string, result: OperationResult): OperationResult {
+  if (result.success) {
+    if (result.message) {
+      logger.info(result.message)
+    }
+  } else {
+    logger.error(`${operation}失败：${result.message}`)
+  }
+  return result
+}
+
 function sanitizeDirectoryName(name: string): string {
   const replaced = name.replace(/[<>:"/\\|?*]/g, '_').trim()
   let result = replaced
@@ -305,13 +321,24 @@ async function ensureWritableDirectory(directoryPath: string, displayName: strin
   return success()
 }
 
-function moveDirectory(sourcePath: string, targetPath: string): OperationResult {
-  try {
-    renameSync(sourcePath, targetPath)
-    return success()
-  } catch (error) {
-    return failure(`移动解压后的模组失败：${error instanceof Error ? error.message : String(error)}`)
+async function moveDirectory(sourcePath: string, targetPath: string): Promise<OperationResult> {
+  // Windows 上刚写完的目录可能被杀毒软件/索引器短暂占用，rename 会报
+  // EPERM/EBUSY；这类瞬时锁定等一小会儿重试即可，其它错误直接返回。
+  let lastError: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      renameSync(sourcePath, targetPath)
+      return success()
+    } catch (error) {
+      lastError = error
+      const code = (error as NodeJS.ErrnoException | undefined)?.code
+      if (code !== 'EPERM' && code !== 'EBUSY') {
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    }
   }
+  return failure(`移动文件夹失败：${lastError instanceof Error ? lastError.message : String(lastError)}`)
 }
 
 interface ManifestMod {
@@ -337,7 +364,10 @@ function loadManifest(): Manifest {
       return { version: document.version ?? 1, mods: document.mods ?? {} }
     }
   } catch {
-    // 清单不存在或损坏时按空清单处理。
+    // 清单不存在或损坏时按空清单处理,但必须留痕:这意味着安装状态全部「丢失」
+    if (existsSync(filePath)) {
+      logger.warning(`状态清单损坏，已按空清单处理（安装状态将重新识别）：${filePath}`)
+    }
   }
   return { version: 1, mods: {} }
 }
@@ -422,13 +452,21 @@ export async function initialize(): Promise<OperationResult> {
   return success()
 }
 
+/** 备份目录不可读只告警一次,恢复可读后复位;避免批量操作期间每个模组都刷一条 */
+let backupsDirectoryUnavailable = false
+
 export async function scan(): Promise<ModInfo[]> {
   const manifest = loadManifest()
   const backupRoot = backupsDirectory()
   let directoryNames: string[]
   try {
     directoryNames = await readdir(backupRoot)
+    backupsDirectoryUnavailable = false
   } catch {
+    if (!backupsDirectoryUnavailable) {
+      backupsDirectoryUnavailable = true
+      logger.warning(`无法读取模组备份目录，模组列表按空处理：${backupRoot}`)
+    }
     return []
   }
 
@@ -532,6 +570,7 @@ async function extractToStaging(
     return { ok: false, result: failure(`无法创建临时解压目录：${stagingPath}`) }
   }
 
+  logger.debug(`解压 ${basename(archivePath)} 到临时目录：${stagingPath}`)
   try {
     await extractArchive({
       sevenZipPath: extractor,
@@ -566,6 +605,10 @@ function baseNameWithoutExtension(filePath: string): string {
 }
 
 export async function importArchive(archivePath: string, appDir: string): Promise<OperationResult> {
+  return finalize('导入压缩包', await importArchiveImpl(archivePath, appDir))
+}
+
+async function importArchiveImpl(archivePath: string, appDir: string): Promise<OperationResult> {
   if (!isFile(archivePath)) {
     return failure(`找不到压缩包：${archivePath}`)
   }
@@ -585,7 +628,7 @@ export async function importArchive(archivePath: string, appDir: string): Promis
 
   const modName = uniqueDirectoryName(sanitizeDirectoryName(baseNameWithoutExtension(archivePath)))
   const targetPath = join(backupsDirectory(), modName)
-  const moved = moveDirectory(staging.extractedRoot, targetPath)
+  const moved = await moveDirectory(staging.extractedRoot, targetPath)
   if (staging.extractedRoot !== staging.stagingPath) {
     rmSync(staging.stagingPath, { recursive: true, force: true })
   }
@@ -603,11 +646,14 @@ export async function importArchive(archivePath: string, appDir: string): Promis
   } catch {
     return failure(`模组已导入，但无法永久删除原压缩包：${basename(archivePath)}`)
   }
-  logger.info(`导入压缩包完成：${modName}`)
   return success(`已导入 ${modName}`)
 }
 
 export async function importPackagedMod(modName: string, packageDirectory: string): Promise<OperationResult> {
+  return finalize('导入打包模组', await importPackagedModImpl(modName, packageDirectory))
+}
+
+async function importPackagedModImpl(modName: string, packageDirectory: string): Promise<OperationResult> {
   if (modName.trim().length === 0) {
     return failure('模组名称不能为空。')
   }
@@ -652,6 +698,10 @@ export async function importPackagedMod(modName: string, packageDirectory: strin
 }
 
 export async function replacePackagedMod(mod: ModInfo, packageDirectory: string): Promise<OperationResult> {
+  return finalize('替换打包模组源文件', await replacePackagedModImpl(mod, packageDirectory))
+}
+
+async function replacePackagedModImpl(mod: ModInfo, packageDirectory: string): Promise<OperationResult> {
   if (!isDirectory(mod.sourcePath)) {
     return failure(`模组源文件夹不存在：${mod.sourcePath}`)
   }
@@ -711,6 +761,10 @@ export function lastPackagingPath(modName: string): string {
 }
 
 export function setLastPackagingPath(modName: string, path: string): OperationResult {
+  return finalize('保存打包路径记录', setLastPackagingPathImpl(modName, path))
+}
+
+function setLastPackagingPathImpl(modName: string, path: string): OperationResult {
   if (modName.trim().length === 0) {
     return failure('无法保存空的模组名称。')
   }
@@ -727,6 +781,10 @@ export function setLastPackagingPath(modName: string, path: string): OperationRe
 }
 
 export async function addFromArchive(mod: ModInfo, archivePath: string, appDir: string): Promise<OperationResult> {
+  return finalize('向模组添加文件', await addFromArchiveImpl(mod, archivePath, appDir))
+}
+
+async function addFromArchiveImpl(mod: ModInfo, archivePath: string, appDir: string): Promise<OperationResult> {
   if (!isSupportedArchive(archivePath)) {
     return failure(`只支持 .zip、.rar 和 .7z 压缩包：${basename(archivePath)}`)
   }
@@ -773,6 +831,10 @@ export async function addFromArchive(mod: ModInfo, archivePath: string, appDir: 
 }
 
 export async function replaceFromArchive(mod: ModInfo, archivePath: string, appDir: string): Promise<OperationResult> {
+  return finalize('更新模组源文件', await replaceFromArchiveImpl(mod, archivePath, appDir))
+}
+
+async function replaceFromArchiveImpl(mod: ModInfo, archivePath: string, appDir: string): Promise<OperationResult> {
   const archiveName = basename(archivePath)
   if (!isSupportedArchive(archivePath)) {
     return failure(`只支持 .zip、.rar 和 .7z 压缩包：${archiveName}`)
@@ -791,27 +853,29 @@ export async function replaceFromArchive(mod: ModInfo, archivePath: string, appD
     return staging.result
   }
 
-  // 替换模组源文件夹内容:先清空再移入解压结果。
+  // 替换模组源文件夹内容：先把旧目录整体改名移走，再移入解压结果。
+  // Windows 不允许把目录 rename 到已存在的路径（空目录也会 EPERM），
+  // 所以不能先删再建空目录；先移走旧目录，失败时还能原地回滚。
+  const previousPath = join(backupsDirectory(), `.replace-old-${randomUUID()}`)
   try {
-    rmSync(mod.sourcePath, { recursive: true })
+    renameSync(mod.sourcePath, previousPath)
   } catch {
     rmSync(staging.stagingPath, { recursive: true, force: true })
-    return failure(`无法清空原模组源文件夹：${mod.sourcePath}`)
+    return failure(`无法移走原模组源文件夹：${mod.sourcePath}`)
   }
-  try {
-    await mkdir(mod.sourcePath, { recursive: true })
-  } catch {
-    rmSync(staging.stagingPath, { recursive: true, force: true })
-    return failure(`无法重建模组源文件夹：${mod.sourcePath}`)
-  }
-  const moved = moveDirectory(staging.extractedRoot, mod.sourcePath)
+  const moved = await moveDirectory(staging.extractedRoot, mod.sourcePath)
   if (staging.extractedRoot !== staging.stagingPath) {
     rmSync(staging.stagingPath, { recursive: true, force: true })
   }
   if (!moved.success) {
-    rmSync(staging.stagingPath, { recursive: true, force: true })
+    try {
+      renameSync(previousPath, mod.sourcePath)
+    } catch {
+      return failure(`替换失败，且旧文件夹回滚失败，原内容保留在：${previousPath}`)
+    }
     return moved
   }
+  rmSync(previousPath, { recursive: true, force: true })
 
   // 如已安装,同步替换安装目录中的模组文件。
   if (mod.installed) {
@@ -837,6 +901,10 @@ export async function replaceFromArchive(mod: ModInfo, archivePath: string, appD
 }
 
 export async function install(mod: ModInfo): Promise<OperationResult> {
+  return finalize('安装模组', await installImpl(mod))
+}
+
+async function installImpl(mod: ModInfo): Promise<OperationResult> {
   if (!isDirectory(mod.sourcePath)) {
     return failure(`模组源文件夹不存在：${mod.name}`)
   }
@@ -866,6 +934,10 @@ export async function install(mod: ModInfo): Promise<OperationResult> {
 }
 
 export async function uninstall(mod: ModInfo): Promise<OperationResult> {
+  return finalize('卸载模组', await uninstallImpl(mod))
+}
+
+async function uninstallImpl(mod: ModInfo): Promise<OperationResult> {
   const installPath = join(modsDirectory(), mod.name)
   if (!existsSync(installPath)) {
     return success('模组未安装。')
@@ -883,6 +955,10 @@ export async function uninstall(mod: ModInfo): Promise<OperationResult> {
 }
 
 export async function setInvalid(mod: ModInfo, invalid: boolean): Promise<OperationResult> {
+  return finalize('设置失效标记', await setInvalidImpl(mod, invalid))
+}
+
+async function setInvalidImpl(mod: ModInfo, invalid: boolean): Promise<OperationResult> {
   const manifest = loadManifest()
   const metadata: ManifestMod = manifest.mods[mod.name] ?? {}
   metadata.invalid = invalid
@@ -897,6 +973,10 @@ export async function setInvalid(mod: ModInfo, invalid: boolean): Promise<Operat
 }
 
 export async function rename(mod: ModInfo, newName: string): Promise<OperationResult> {
+  return finalize('重命名模组', await renameImpl(mod, newName))
+}
+
+async function renameImpl(mod: ModInfo, newName: string): Promise<OperationResult> {
   if (newName.trim().length === 0) {
     return failure('模组名称不能为空。')
   }
@@ -925,15 +1005,15 @@ export async function rename(mod: ModInfo, newName: string): Promise<OperationRe
     return failure(`安装目录中已存在同名项目：${sanitizedName}`)
   }
 
-  const moved = moveDirectory(mod.sourcePath, targetPath)
+  const moved = await moveDirectory(mod.sourcePath, targetPath)
   if (!moved.success) {
     return failure(`重命名模组失败：${moved.message}`)
   }
 
   if (mod.installed) {
-    const movedInstallation = moveDirectory(oldInstallPath, newInstallPath)
+    const movedInstallation = await moveDirectory(oldInstallPath, newInstallPath)
     if (!movedInstallation.success) {
-      moveDirectory(targetPath, mod.sourcePath)
+      await moveDirectory(targetPath, mod.sourcePath)
       return failure(`重命名模组失败：无法更新已安装文件：${movedInstallation.message}`)
     }
   }
@@ -941,9 +1021,9 @@ export async function rename(mod: ModInfo, newName: string): Promise<OperationRe
   const manifestRenamed = renameManifestEntry(mod.name, sanitizedName)
   if (!manifestRenamed.success) {
     if (mod.installed) {
-      moveDirectory(newInstallPath, oldInstallPath)
+      await moveDirectory(newInstallPath, oldInstallPath)
     }
-    moveDirectory(targetPath, mod.sourcePath)
+    await moveDirectory(targetPath, mod.sourcePath)
     return failure(`重命名模组失败：${manifestRenamed.message}`)
   }
 
@@ -966,6 +1046,14 @@ function dirnameRelative(relativePath: string): string {
 }
 
 export function renameFile(
+  mod: ModInfo,
+  relativeFilePath: string,
+  newFileName: string
+): OperationResult {
+  return finalize('重命名模组文件', renameFileImpl(mod, relativeFilePath, newFileName))
+}
+
+function renameFileImpl(
   mod: ModInfo,
   relativeFilePath: string,
   newFileName: string
@@ -1103,6 +1191,10 @@ export function renameFile(
 }
 
 export async function remove(mod: ModInfo): Promise<OperationResult> {
+  return finalize('删除模组', await removeImpl(mod))
+}
+
+async function removeImpl(mod: ModInfo): Promise<OperationResult> {
   const installPath = join(modsDirectory(), mod.name)
   if (existsSync(installPath)) {
     const deletedInstallation = removeInstalledModDirectory(installPath)

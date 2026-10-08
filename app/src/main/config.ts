@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { describeError, logger } from './logger'
 import { ntemmConfigFile } from './ntemm-paths'
 import { parseIni, serializeIni, splitList, unquote } from './ini'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '../shared/types'
@@ -103,7 +104,9 @@ export function configFilePath(): string {
     try {
       mkdirSync(dirname(filePath), { recursive: true })
       copyFileSync(legacyPath, filePath)
-    } catch {
+      logger.info(`已将旧位置的配置文件迁移到：${filePath}`)
+    } catch (error) {
+      logger.warning(`旧配置文件迁移失败，继续使用旧位置：${describeError(error)}`)
       cachedConfigPath = legacyPath.replace(/\\/g, '/')
       return cachedConfigPath
     }
@@ -119,7 +122,9 @@ function readIni(): ReturnType<typeof parseIni> {
   }
   try {
     return parseIni(readFileSync(filePath, 'utf-8'))
-  } catch {
+  } catch (error) {
+    // 解析失败按空配置处理(全部回落默认值),但必须留痕,否则用户配置「莫名丢失」无从排查
+    logger.warning(`配置文件读取或解析失败，本次按默认配置处理：${filePath}：${describeError(error)}`)
     return {}
   }
 }
@@ -127,7 +132,12 @@ function readIni(): ReturnType<typeof parseIni> {
 function writeSection(section: string, entries: Record<string, string>): void {
   const ini = readIni()
   ini[section] = entries
-  writeFileSync(configFilePath(), serializeIni(ini), 'utf-8')
+  try {
+    writeFileSync(configFilePath(), serializeIni(ini), 'utf-8')
+  } catch (error) {
+    logger.error(`配置文件写入失败：${configFilePath()}：${describeError(error)}`)
+    throw error
+  }
 }
 
 function getPath(key: string, fallback: string, allowEmpty = false): string {
@@ -192,6 +202,7 @@ function createDefaultConfig(filePath: string): void {
   }
   ini.LiquidGlass = liquidGlassEntries
   writeFileSync(filePath, serializeIni(ini), 'utf-8')
+  logger.info(`配置文件不存在，已创建默认配置：${filePath}`)
 }
 
 /**
@@ -459,5 +470,10 @@ export function updateAppConfig(patch: AppConfigPatch): void {
     ini.LiquidGlass = entries
   }
 
-  writeFileSync(configFilePath(), serializeIni(ini), 'utf-8')
+  try {
+    writeFileSync(configFilePath(), serializeIni(ini), 'utf-8')
+  } catch (error) {
+    logger.error(`配置文件写入失败：${configFilePath()}：${describeError(error)}`)
+    throw error
+  }
 }

@@ -3,7 +3,7 @@ import { existsSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { configFilePath, getAppConfig } from './config'
-import { logger } from './logger'
+import { describeError, logger } from './logger'
 import {
   NTEMM_HOME_DIR,
   legacyUserDataDir,
@@ -49,6 +49,14 @@ app.on('web-contents-created', (_event, contents) => {
     if (!allowed) {
       event.preventDefault()
       logger.warning(`已拦截渲染层导航：${url}`)
+    }
+  })
+  // 渲染层的报错(JS 异常、未处理的 Promise 拒绝、资源加载失败)统一落进运行日志,
+  // 否则渲染层出问题只在 devtools 里可见,日志文件里毫无痕迹
+  contents.on('console-message', (details) => {
+    if (details.level === 'error') {
+      const source = details.sourceId ? `（${details.sourceId}:${details.lineNumber}）` : ''
+      logger.error(`[渲染层] ${details.message.slice(0, 500)}${source}`)
     }
   })
 })
@@ -235,7 +243,8 @@ function registerMediaProtocol(): void {
       return new Response(new Uint8Array(data), {
         headers: { 'content-type': contentType }
       })
-    } catch {
+    } catch (error) {
+      logger.warning(`读取图片失败：${path}：${describeError(error)}`)
       return new Response('Internal Server Error', { status: 500 })
     }
   })
@@ -247,6 +256,17 @@ function registerMediaProtocol(): void {
 // 此时日志也跟着隔离目录走,避免与真实实例混写同一个日志文件。
 const userDataOverride = process.env.NTEMM_USER_DATA
 const logDirectory = userDataOverride ? join(userDataOverride, 'logs') : ntemmLogsDir()
+// 日志器在模块加载期就初始化:userData 迁移、配置回退等早期逻辑也需要留下日志
+logger.initialize(logDirectory, 'NteModManager.log')
+
+// 主进程级的意外错误以前只会打到 stderr(打包后无人可见),现在落进运行日志
+process.on('uncaughtException', (error) => {
+  logger.error(`主进程未捕获异常：${describeError(error)}`)
+})
+process.on('unhandledRejection', (reason) => {
+  logger.error(`主进程未处理的 Promise 拒绝：${describeError(reason)}`)
+})
+
 if (userDataOverride) {
   app.setPath('userData', userDataOverride)
 } else {
@@ -273,11 +293,11 @@ if (!gotSingleInstanceLock) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
     registerMediaProtocol()
-    logger.initialize(logDirectory, 'NteModManager.log')
     logger.addBroadcaster(() => mainWindow)
     registerIpcHandlers(categoryImageBase(), windowIcon())
 
     logger.info('========== NTE 模组管理器启动 ==========')
+    logger.info(`应用版本：${app.getVersion()}，Electron：${process.versions.electron}`)
     logger.info(`数据目录：${NTEMM_HOME_DIR}`)
     // Electron 43+ 主进程快照启动让 whenReady 早于 GPU 进程初始化完成,立即查询
     // getGPUFeatureStatus 会永远读到 disabled_software 的假象,延迟到状态稳定后再记录。

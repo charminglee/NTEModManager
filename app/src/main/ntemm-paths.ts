@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { describeError, logger } from './logger'
 
 /**
  * 所有运行时数据的统一根目录 ~/.ntemm:配置(NteModManager.ini)、日志(logs/)、
@@ -29,8 +30,9 @@ export function ensurePythonCacheDirs(): void {
   try {
     mkdirSync(join(ntemmCacheDir(), 'ultralytics', 'Ultralytics'), { recursive: true })
     mkdirSync(join(ntemmCacheDir(), 'torch'), { recursive: true })
-  } catch {
+  } catch (error) {
     // 建不出来时让 ultralytics/torch 走各自的回退逻辑
+    logger.warning(`Python 缓存目录创建失败（子进程可能把缓存散落到工作目录）：${describeError(error)}`)
   }
 }
 
@@ -58,10 +60,16 @@ const NON_ESSENTIAL_USER_DATA_ENTRIES = new Set([
  * 迁移失败不阻断启动,大不了丢弃旧状态从头来。
  */
 export function migrateLegacyUserData(target: string, legacy: string): string {
-  if (existsSync(target) || !existsSync(legacy)) {
+  if (existsSync(target)) {
+    logger.debug(`userData 目录已存在，跳过旧数据迁移：${target}`)
+    return target
+  }
+  if (!existsSync(legacy)) {
+    logger.debug(`旧 userData 目录不存在，无需迁移：${legacy}`)
     return target
   }
   try {
+    logger.info(`开始迁移旧 userData：${legacy} → ${target}`)
     mkdirSync(target, { recursive: true })
     for (const entry of readdirSync(legacy)) {
       if (NON_ESSENTIAL_USER_DATA_ENTRIES.has(entry)) {
@@ -69,7 +77,9 @@ export function migrateLegacyUserData(target: string, legacy: string): string {
       }
       cpSync(join(legacy, entry), join(target, entry), { recursive: true })
     }
-  } catch {
+    logger.info('旧 userData 迁移完成')
+  } catch (error) {
+    logger.warning(`旧 userData 迁移失败，放弃旧状态继续启动：${describeError(error)}`)
     return target
   }
   return target

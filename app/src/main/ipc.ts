@@ -7,7 +7,7 @@ import { getAppConfig, getLastCategory, setCategoryOrder, setLastCategory, setSo
 import { runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
-import { logger } from './logger'
+import { describeError, logger } from './logger'
 import type { AppConfigPatch, ImportResult, ModInfo, OperationResult, SortOrder } from '../shared/types'
 
 type ProgressReporter = (message: string) => void
@@ -37,7 +37,16 @@ let operationChain: Promise<unknown> = Promise.resolve()
 function runExclusive<T>(activity: string, operation: (report: ProgressReporter) => Promise<T>): Promise<T> {
   const run = operationChain.then(async () => {
     logger.info(`开始异步操作：${activity}`)
-    return operation(sendProgress)
+    const startedAt = Date.now()
+    try {
+      const result = await operation(sendProgress)
+      logger.info(`异步操作完成：${activity}（耗时 ${Date.now() - startedAt}ms）`)
+      return result
+    } catch (error) {
+      // 抛异常的操作对渲染层只是一次 invoke 拒绝,不落日志就彻底无迹可寻
+      logger.error(`异步操作异常：${activity}：${describeError(error)}`)
+      throw error
+    }
   })
   operationChain = run.catch(() => undefined)
   return run
@@ -49,7 +58,12 @@ function failure(message: string): OperationResult {
 
 async function findMod(name: string): Promise<ModInfo | null> {
   const mods = await repository.scan()
-  return mods.find((mod) => mod.name === name) ?? null
+  const mod = mods.find((item) => item.name === name) ?? null
+  if (!mod) {
+    // 所有针对模组的操作都先经过这里;找不到时操作方只返回一句提示,得在这里留痕
+    logger.error(`操作找不到模组：${name}（可能已被删除或重命名）`)
+  }
+  return mod
 }
 
 function isDirectory(path: string): boolean {
@@ -58,6 +72,21 @@ function isDirectory(path: string): boolean {
   } catch {
     return false
   }
+}
+
+/** 打开系统选择对话框的公共入口;窗口不可用或用户取消返回 null,取消会留 debug 日志 */
+async function pickFileWithDialog(options: Electron.OpenDialogOptions): Promise<string | null> {
+  const window = mainWindowProvider()
+  if (!window) {
+    logger.warning('无法打开文件选择窗口：主窗口不存在')
+    return null
+  }
+  const result = await dialog.showOpenDialog(window, options)
+  if (result.canceled || result.filePaths.length === 0) {
+    logger.debug('用户取消了文件选择')
+    return null
+  }
+  return result.filePaths[0]
 }
 
 export function registerIpcHandlers(categoryImageBase: string, appIconPath: string | null): void {
@@ -75,7 +104,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     if (!initialization.success) {
       logger.error(`模组仓库初始化失败：${initialization.message}`)
     } else {
-      logger.info('模组仓库初始化完成')
+      logger.info(`模组仓库初始化完成，共 ${mods.length} 个模组`)
     }
     return {
       config,
@@ -256,9 +285,11 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
           properties: ['openDirectory']
         })
         if (picked.canceled || picked.filePaths.length === 0) {
+          logger.debug('重新打包已取消：用户未选择源文件夹')
           return { success: false, message: '', cancelled: true }
         }
         sourceDirectory = picked.filePaths[0]
+        logger.info(`重新打包 ${name}：源文件夹：${sourceDirectory}`)
         const pathSaved = repository.setLastPackagingPath(name, sourceDirectory)
         if (!pathSaved.success) {
           return pathSaved
@@ -321,51 +352,50 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   })
   ipcMain.handle('config:setSortOrder', (_event, sortOrder: SortOrder) => {
     setSortOrder(sortOrder)
+    logger.debug(`排序方式已保存：${sortOrder}`)
     return { success: true, message: '' }
   })
   ipcMain.handle('config:setCategoryOrder', (_event, order: string[]) => {
     setCategoryOrder(order)
+    logger.debug(`分类顺序已保存：${order.join('、')}`)
     return { success: true, message: '' }
   })
   ipcMain.handle('config:setLastCategory', (_event, category: string) => {
     setLastCategory(category)
+    logger.debug(`当前分类已记忆：${category || '（空）'}`)
     return { success: true, message: '' }
   })
 
   ipcMain.handle('dialog:pickArchive', async () => {
-    const window = mainWindowProvider()
-    if (!window) {
-      return null
-    }
-    const result = await dialog.showOpenDialog(window, {
+    const picked = await pickFileWithDialog({
       title: '选择要导入的压缩包',
       filters: [{ name: '压缩包', extensions: ['zip', 'rar', '7z'] }],
       properties: ['openFile']
     })
-    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+    if (typeof picked !== 'string') {
+      return null
+    }
+    logger.debug(`已选择要导入的压缩包：${picked}`)
+    return picked
   })
 
   ipcMain.handle('dialog:pickDirectory', async (_event, defaultPath?: string) => {
-    const window = mainWindowProvider()
-    if (!window) {
-      return null
-    }
-    const result = await dialog.showOpenDialog(window, {
+    const picked = await pickFileWithDialog({
       title: '选择文件夹',
       defaultPath: defaultPath && existsSync(defaultPath) ? defaultPath : undefined,
       properties: ['openDirectory']
     })
-    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+    if (typeof picked !== 'string') {
+      return null
+    }
+    logger.debug(`已选择文件夹：${picked}`)
+    return picked
   })
 
   ipcMain.handle(
     'dialog:pickFile',
     async (_event, options?: { title?: string; extensions?: string[]; defaultPath?: string }) => {
-      const window = mainWindowProvider()
-      if (!window) {
-        return null
-      }
-      const result = await dialog.showOpenDialog(window, {
+      const picked = await pickFileWithDialog({
         title: options?.title ?? '选择文件',
         defaultPath:
           options?.defaultPath && existsSync(options.defaultPath) ? options.defaultPath : undefined,
@@ -375,16 +405,26 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
             : undefined,
         properties: ['openFile']
       })
-      return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+      if (typeof picked !== 'string') {
+        return null
+      }
+      logger.debug(`已选择文件：${picked}`)
+      return picked
     }
   )
 
   ipcMain.handle('path:open', async (_event, path: string) => {
     const error = await shell.openPath(path)
-    return error ? failure(error) : { success: true, message: '' }
+    if (error) {
+      logger.warning(`无法打开路径：${path}：${error}`)
+      return failure(error)
+    }
+    logger.debug(`已打开路径：${path}`)
+    return { success: true, message: '' }
   })
   ipcMain.handle('path:showInFolder', (_event, path: string) => {
     shell.showItemInFolder(path)
+    logger.debug(`已在文件夹中定位：${path}`)
     return { success: true, message: '' }
   })
 
@@ -409,10 +449,12 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   ipcMain.handle('log:entries', () => logger.getEntries())
 
   ipcMain.handle('background:next', () => {
+    logger.info('手动切换背景')
     backgroundCarousel.switchBackground()
     return { success: true, message: '' }
   })
   ipcMain.handle('background:toggleDebugMode', () => {
+    logger.info('已切换背景调试模式')
     backgroundCarousel.toggleDebugMode()
     return { success: true, message: '' }
   })

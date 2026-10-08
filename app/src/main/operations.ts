@@ -3,6 +3,7 @@ import { ALL_CATEGORY } from '../shared/types'
 import { categoryForMod, secondaryNameForMod } from '../shared/mod-list-logic'
 import * as repository from './repository'
 import { getAppConfig } from './config'
+import { logger } from './logger'
 
 export type ProgressReporter = (message: string) => void
 
@@ -34,8 +35,12 @@ export async function installModExclusively(
     }
 
     reportProgress(`正在卸载同组模组 ${installedMod.name}...`)
+    logger.info(
+      `独占安装：自动卸载同组模组 ${installedMod.name}（与 ${mod.name} 同属「${secondaryName}」组）`
+    )
     const uninstalled = await repository.uninstall(installedMod)
     if (!uninstalled.success) {
+      logger.error(`独占安装失败：无法自动卸载同组模组 ${installedMod.name}：${uninstalled.message}`)
       return {
         success: false,
         message: `无法自动卸载同组模组 ${installedMod.name}:${uninstalled.message}`
@@ -79,11 +84,15 @@ export async function changeInstallationForAll(
     if (result.success) {
       changedCount += 1
     } else {
+      logger.error(`批量${action}失败：${mod.name}：${result.message}`)
       failures.push(`${mod.name}:${result.message}`)
     }
   }
 
   const summary = `已${action} ${changedCount} 个模组`
+  logger.info(
+    `批量${action}完成：成功 ${changedCount} 个，失败 ${failures.length} 个（分类：${category}）`
+  )
   return {
     result: failures.length === 0
       ? { success: true, message: summary }
