@@ -137,20 +137,14 @@ function Sidebar({
         // 按下后还没真正移动:只更新锚点基准(指针位置),不动 y——
         // 让「滑向所按行」的预览动画继续走,2px 内的抖动不算拖动
         if (Math.abs(event.clientY - prev.pressClientY) <= 2) return
-        // 进入拖动:锚定改为「按下的目标行」,抓取点 = 按下时指针相对该行的偏移。
-        // 不能从预览动画的中途位置续接——按下后立刻拖动是常态,动画往往刚起步,
-        // 从中途续接会让指示条与指针保持「动画剩余距离」的恒定偏差(实测可达数百
-        // 像素),看起来就是拖动时指示条飘在别的行上。此处瞬移到指针下方,
-        // 与 scale 放大一起构成明确的「抓起」反馈
-        const anchor = prev.startY
-        const y = Math.min(last.offsetTop + last.offsetHeight - rowHeight, Math.max(min, anchor))
-        dragRef.current = {
-          grabOffset: contentY(prev.pressClientY) - anchor,
-          y,
-          pressClientY: prev.pressClientY,
-          startY: prev.startY,
-          moved: true
+        // 进入拖动:按滑向预览的实时动画位置重新锚定抓取点,无缝转 1:1 跟随
+        let anchor = prev.y
+        if (indicatorRef.current) {
+          const cs = getComputedStyle(indicatorRef.current)
+          if (cs.translate !== 'none') anchor = parseFloat(cs.translate.split(' ')[1])
         }
+        const y = Math.min(last.offsetTop + last.offsetHeight - rowHeight, Math.max(min, anchor))
+        dragRef.current = { grabOffset: contentY(event.clientY) - anchor, y, moved: true, pressClientY: prev.pressClientY }
         setDrag({ y, moved: true })
         return
       }
@@ -320,7 +314,6 @@ function Sidebar({
                   grabOffset: contentY(event.clientY) - startY,
                   y: startY,
                   pressClientY: event.clientY,
-                  startY,
                   moved: false
                 }
                 setDrag({ y: startY, moved: false })
