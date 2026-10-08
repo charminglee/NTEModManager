@@ -45,21 +45,21 @@ training/orientation/dataset/val/uncertain/person_0101.png
 
 ## 环境准备
 
-项目根目录已有的 `.venv` 可以直接运行训练脚本。
+项目 `python/.venv` 中的虚拟环境可以直接运行训练脚本。
 
 安装依赖：
 
 ```powershell
-& .\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
+& .\python\.venv\Scripts\python.exe -m pip install -r .\python\requirements.txt
 ```
 
 验证 PyTorch、TorchVision 和 CUDA 状态：
 
 ```powershell
-& .\.venv\Scripts\python.exe -c "import torch, torchvision; print(torch.__version__); print(torchvision.__version__); print(torch.cuda.is_available())"
+& .\python\.venv\Scripts\python.exe -c "import torch, torchvision; print(torch.__version__); print(torchvision.__version__); print(torch.cuda.is_available())"
 ```
 
-上面的解释器路径按实际环境替换为 `.venv` 即可。`requirements.txt` 当前使用项目已有的 CUDA 版本约束；如果机器只使用 CPU，应按照 PyTorch 官方对应版本调整安装源和版本组合。
+上面的解释器路径按实际环境替换为 `python/.venv` 即可。`requirements.txt` 当前使用项目已有的 CUDA 版本约束；如果机器只使用 CPU，应按照 PyTorch 官方对应版本调整安装源和版本组合。
 
 ## 数据准备
 
@@ -98,7 +98,7 @@ training/orientation/dataset/val/uncertain/person_0101.png
 第一轮：
 
 ```powershell
-$python = '.\.venv\Scripts\python.exe'
+$python = '.\python\.venv\Scripts\python.exe'
 
 & $python .\training\orientation\train_orientation.py `
 --output .\training\orientation\checkpoints\weighted_head `
@@ -147,7 +147,7 @@ $python = '.\.venv\Scripts\python.exe'
 指定自定义数据和输出路径的例子：
 
 ```powershell
-& .\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --dataset D:\datasets\orientation --output D:\models\orientation --epochs 30 --batch-size 32 --image-size 224 --device cuda
+& .\python\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --dataset D:\datasets\orientation --output D:\models\orientation --epochs 30 --batch-size 32 --image-size 224 --device cuda
 ```
 
 ## 输出文件
@@ -165,7 +165,7 @@ checkpoint 同时保存类别顺序、输入尺寸、归一化均值/标准差�
 使用训练好的 `best.pt` 对一张人体裁剪图进行预测：
 
 ```powershell
-& .\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --mode predict --checkpoint .\training\orientation\checkpoints\best.pt --image .\training\orientation\dataset\val\front\example.jpg --device cuda
+& .\python\.venv\Scripts\python.exe .\training\orientation\train_orientation.py --mode predict --checkpoint .\training\orientation\checkpoints\best.pt --image .\training\orientation\dataset\val\front\example.jpg --device cuda
 ```
 
 输出为一行 JSON：
@@ -258,7 +258,7 @@ training/orientation/dataset/test/uncertain/
 补充并重新划分数据后，先使用冻结骨干的配置建立新的基线。输出到新目录，避免覆盖旧结果：
 
 ```powershell
-$python = '.\.venv\Scripts\python.exe'
+$python = '.\python\.venv\Scripts\python.exe'
 & $python .\training\orientation\train_orientation.py `
 --dataset .\training\orientation\dataset `
 --output .\training\orientation\checkpoints\weighted_head `
@@ -286,7 +286,7 @@ Windows 下数据集较小时 `workers 0` 往往更快；图片数量明显增�
 在类别级评估工具加入前，可以先用单图预测检查每类样本：
 
 ```powershell
-$python = '.\.venv\Scripts\python.exe'
+$python = '.\python\.venv\Scripts\python.exe'
 & $python .\training\orientation\train_orientation.py `
 --mode predict `
 --checkpoint .\training\orientation\checkpoints\balanced_head\best.pt `
@@ -301,7 +301,7 @@ $python = '.\.venv\Scripts\python.exe'
 当数据量增加、分类头基线稳定后，再尝试解冻 ConvNeXt 特征层：
 
 ```powershell
-$python = '.\.venv\Scripts\python.exe'
+$python = '.\python\.venv\Scripts\python.exe'
 & $python .\training\orientation\train_orientation.py `
 --dataset .\training\orientation\dataset `
 --output .\training\orientation\checkpoints\finetune `

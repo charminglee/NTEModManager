@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { ntemmCacheDir, ntemmConfigFile } from './ntemm-paths'
+import { ntemmConfigFile } from './ntemm-paths'
 import { parseIni, serializeIni, splitList, unquote } from './ini'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '../shared/types'
 import {
@@ -86,8 +86,8 @@ export function configFilePath(): string {
   if (cachedConfigPath) {
     return cachedConfigPath
   }
-  // NTEMM_CONFIG 显式指定 ini 位置(bg-server 的 --config= 参数会写入该环境变量),
-  // 供服务与主程序不同目录部署时指回主程序的配置
+  // NTEMM_CONFIG 显式指定 ini 位置(python/visual_region_detector.py --http 的
+  // --config 参数解析同一变量),供外部服务与主程序不同目录部署时指回主程序的配置
   const override = process.env.NTEMM_CONFIG?.trim()
   if (override) {
     cachedConfigPath = override.replace(/\\/g, '/')
@@ -225,13 +225,13 @@ export function getAppConfig(): AppConfigData {
     backgroundImagesDirectory: getPath('background_images_directory', 'D:/pictures/真人', true),
     gameLauncher,
     packagerDirectory: getPath('packager_directory', 'E:/Projects/ModManager/傻瓜打包器'),
-    // 空字符串 = 自动探测(pythonExecutable() 决定 dev/packaged 的默认位置)
-    pythonExecutable: overriddenPath('python_executable'),
     autoUseLastPackagingPath: getBool('Preferences', 'auto_use_last_packaging_path', true),
     exclusiveInstallExemptGroups: getList('Preferences', 'exclusive_install_exempt_groups', ['UI']),
     categories: getList('Categories', 'names', DEFAULT_MOD_CATEGORIES),
     categoryOrder: getList('Preferences', 'mod_category_order', DEFAULT_CATEGORY_ORDER),
     sortOrder: clampSortOrder(getInt('Preferences', 'mod_list_sort_order', SortOrder.NameAscending)),
+    // 空字符串 = 自动探测(pythonExecutable() 决定 dev/packaged 的默认位置)
+    pythonExecutable: overriddenPath('python_executable'),
     testImagesEnabled: getBool('Debug', 'test_images', false),
     // 冒烟测量工具可用 NTEMM_FPS=1 强制开启,不受配置开关影响
     fpsCounterEnabled:
@@ -305,14 +305,38 @@ export function setCategoryOrder(categoryOrder: string[]): void {
 }
 
 // ============ 视觉识别(Python 桥)路径 ============
-// 打包后固定在 resources/python 下;开发模式自动探测仓库内环境,均可用 Paths/* 键覆盖。
+// Python 资源(解释器、识别脚本、模型)不打包进应用,运行时解析「python 资源目录」:
+// 优先用程序所在目录旁的 python/,找不到则从 exe 目录向上逐级找含识别脚本的 python/
+// (开发模式 = 仓库根的 python/)。找不到时仍返回缺省拼装路径,让 spawn/existsSync
+// 失败并走 fallback 视觉检测。均可用 Paths/* 键覆盖(设置界面已移除,ini 是手动兜底)。
 
-function repoRoot(): string {
-  return join(app.getAppPath(), '..')
-}
+const PYTHON_SCRIPT_NAME = 'visual_region_detector.py'
 
 function overriddenPath(key: string): string {
   return getPath(key, '', true)
+}
+
+let cachedAssetsDir: string | null | undefined
+
+function pythonAssetsDir(): string {
+  if (cachedAssetsDir === undefined) {
+    cachedAssetsDir = null
+    let dir = dirname(app.getPath('exe'))
+    for (let depth = 0; depth < 10; depth += 1) {
+      const candidate = join(dir, 'python')
+      if (existsSync(join(candidate, PYTHON_SCRIPT_NAME))) {
+        cachedAssetsDir = candidate
+        break
+      }
+      const parent = dirname(dir)
+      if (parent === dir) {
+        break
+      }
+      dir = parent
+    }
+  }
+  // 找不到时返回 exe 旁的约定位置,错误信息里能看到试过的路径
+  return cachedAssetsDir ?? join(dirname(app.getPath('exe')), 'python')
 }
 
 export function pythonExecutable(): string {
@@ -320,14 +344,9 @@ export function pythonExecutable(): string {
   if (override) {
     return override
   }
-  if (!app.isPackaged) {
-    const venvPython = join(repoRoot(), '.venv/Scripts/python.exe')
-    if (existsSync(venvPython)) {
-      return venvPython
-    }
-    return join(repoRoot(), 'python/python.exe')
-  }
-  return join(process.resourcesPath, 'python/python.exe')
+  const assetsDir = pythonAssetsDir()
+  const venvPython = join(assetsDir, '.venv/Scripts/python.exe')
+  return existsSync(venvPython) ? venvPython : join(assetsDir, 'python.exe')
 }
 
 export function visualRegionScript(): string {
@@ -335,13 +354,7 @@ export function visualRegionScript(): string {
   if (override) {
     return override
   }
-  if (!app.isPackaged) {
-    const devScript = join(repoRoot(), 'python/visual_region_detector.py')
-    if (existsSync(devScript)) {
-      return devScript
-    }
-  }
-  return join(process.resourcesPath, 'python/visual_region_detector.py')
+  return join(pythonAssetsDir(), PYTHON_SCRIPT_NAME)
 }
 
 export function orientationModel(): string {
@@ -349,30 +362,16 @@ export function orientationModel(): string {
   if (override) {
     return override
   }
-  if (!app.isPackaged) {
-    const trainedModel = join(
-      repoRoot(),
-      'training/orientation/checkpoints/weighted_unfrozen/best.pt'
-    )
-    if (existsSync(trainedModel)) {
-      return trainedModel
-    }
-    return join(repoRoot(), 'python/orientation-model/best.pt')
-  }
-  return join(process.resourcesPath, 'python/orientation-model/best.pt')
+  return join(pythonAssetsDir(), 'orientation-model/best.pt')
 }
 
-/** 姿态模型(yolo26x-pose.pt)所在目录;Python 端 resolve_model_path 会在该目录下解析模型文件名。
- *  打包版的安装目录(resources)不可写,模型缓存统一放 ~/.ntemm/cache/python-model。 */
+/** 姿态模型(yolo26x-pose.pt)所在目录;Python 端 resolve_model_path 会在该目录下解析模型文件名 */
 export function pythonModelCache(): string {
   const override = overriddenPath('python_model_cache')
   if (override) {
     return override
   }
-  if (!app.isPackaged && existsSync(join(repoRoot(), 'yolo26x-pose.pt'))) {
-    return repoRoot()
-  }
-  return join(ntemmCacheDir(), 'python-model')
+  return join(pythonAssetsDir(), 'model-cache')
 }
 
 const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
@@ -380,8 +379,7 @@ const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
   backupsDirectory: 'backups_directory',
   backgroundImagesDirectory: 'background_images_directory',
   gameLauncher: 'game_launcher',
-  packagerDirectory: 'packager_directory',
-  pythonExecutable: 'python_executable'
+  packagerDirectory: 'packager_directory'
 }
 
 /** 设置界面保存:将补丁写入配置文件,未指定的字段保持原值。 */

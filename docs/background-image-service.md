@@ -145,6 +145,40 @@ export function BackgroundImage() {
 
 完整版额外处理:换代时保留旧图层 900ms 交叉淡化、`new Image()` 预解码后再切入、`generation` 回退帧丢弃(乱序保护)、调试线框 PNG 转 Blob URL 并延迟回收、`null` 状态清空回到纯底色。
 
+## 独立 HTTP 背景图服务(--http 模式,供外部程序调用)
+
+主程序内部不走 HTTP:背景管线由 backgroundCarousel 直接驱动 Python 子进程(见上文)。`--http` 模式服务于**外部程序**——不需要任何 Electron 壳,同一个脚本以 HTTP 常驻,消费端直接请求即可拿到按视口比例、以 AI 识别焦点为中心裁剪好的图片字节,可直接用作背景。
+
+启动(解释器与脚本路径规则见下节,建议从仓库根或部署目录运行):
+
+```bash
+python/.venv/Scripts/python.exe -X utf8 python/visual_region_detector.py --http \
+      --cache-dir python/model-cache --orientation-model python/orientation-model/best.pt
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `--port <N>` | 监听端口;缺省按 `NTEMM_BG_SERVER_PORT` > ini `[BgServer] port` > 26925 |
+| `--images-dir <目录>` | 覆盖背景图库目录(有数值子目录按子目录收集,否则平铺);缺省读 ini |
+| `--config <ini>` | 指定配置文件;缺省 `NTEMM_CONFIG` > `~/.ntemm/NteModManager.ini` |
+| `--rotation-interval <秒>` | 轮换间隔,默认 10 秒(与主程序一致) |
+| 其余 `--device` / `--cache-dir` / `--orientation-model` 等 | 与 stdio 模式共用,控制检测模型 |
+
+接口(仅监听 127.0.0.1,CORS 全开,支持 OPTIONS 预检):
+
+| 接口 | 说明 |
+| --- | --- |
+| `GET /background?width=<宽>&height=<高>[&format=png][&meta=1]` | 返回裁剪好的图片字节(jpeg 质量 92,`format=png` 可选);`meta=1` 改返回 JSON |
+| `GET /health` | 运行状态 JSON:`ok` `port` `images` `current` `generation` `modelReady` `lastViewport` |
+
+行为要点:
+
+- 响应头 `X-Background-Generation` 标换代(随机轮换,缺省 10 秒,与主程序一致);`X-Detection-Pending: 1` 表示检测尚未就绪,本次为图心回退裁剪,后台检测完成后稍后重取即可拿到 AI 结果(单次等待上限 15 秒,检测失败不缓存)。
+- `meta=1` 的 JSON 字段:`generation` `path` `imageWidth` `imageHeight` `crop{x,y,width,height}` `width` `height` `format` `detectionPending` `data`(图片字节 Base64)。
+- 参数缺省或非法返回 400;图库为空返回 503;模型在后台线程加载,HTTP 立即可用,就绪前所有请求返回图心回退裁剪。
+- 单例:端口被占用时新实例报错退出(Windows 上已关闭 SO_REUSEADDR,不会静默双实例)。
+- 检测按 (当前图, 视口) 缓存,跨视口不复用——Python 的 `background_crop` 依赖视口比例。
+
 ## Python 视觉识别子进程协议
 
 `VisualRegionDetector` 以 `--server` 模式启动常驻子进程,通过 stdin/stdout 的 JSON 行协议通信(检测请求串行化,Python 端逐行处理):
@@ -167,13 +201,13 @@ export function BackgroundImage() {
 
 ## Python 环境与模型路径
 
-开发模式按顺序自动探测,均可用 INI `[Paths]` 键覆盖(`python_executable` / `visual_region_script` / `orientation_model` / `python_model_cache`):
+Python 资源不打包进应用。运行时先看**程序所在目录旁的 `python/`**,找不到再从 exe 目录向上逐级找含 `visual_region_detector.py` 的 `python/`(开发模式即仓库根的 `python/`);目录内的解析如下,均可用 INI `[Paths]` 键覆盖(`python_executable` / `visual_region_script` / `orientation_model` / `python_model_cache`):
 
-| 资源 | 探测顺序 |
+| 资源 | 解析结果 |
 | --- | --- |
-| 解释器 | 仓库 `.venv/Scripts/python.exe` → 仓库 `python/python.exe` |
-| 识别脚本 | 仓库 `python/visual_region_detector.py` |
-| 方向模型 | `training/orientation/checkpoints/weighted_unfrozen/best.pt` → 仓库 `python/orientation-model/best.pt` |
-| 姿态模型目录 | 仓库根(`yolo26x-pose.pt`) |
+| 解释器 | `<python>/.venv/Scripts/python.exe`(无 venv 时 `<python>/python.exe`) |
+| 识别脚本 | `<python>/visual_region_detector.py` |
+| 方向模型 | `<python>/orientation-model/best.pt` |
+| 姿态模型目录 | `<python>/model-cache` |
 
-打包后固定在 `resources/python` 下(解释器、脚本、模型同目录)。Python 依赖见仓库根 `requirements.txt`(Ultralytics YOLO 姿态模型 + OpenCV);方向模型不存在时自动跳过并使用 fallback 视觉检测。
+部署打包版时把仓库 `python/` 目录整个复制到 exe 旁边即可(`python/.venv` 需用 `python/requirements.txt` 装好依赖:Ultralytics YOLO 姿态模型 + OpenCV);方向模型不存在时自动跳过并使用 fallback 视觉检测。

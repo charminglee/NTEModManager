@@ -243,8 +243,10 @@ function registerMediaProtocol(): void {
 
 // 运行数据统一保存到 ~/.ntemm(配置/日志/缓存/Electron userData)。
 // userData 迁入 electron/app;旧的 %APPDATA% 目录在首次启动时搬迁(跳过可再生缓存),
-// 窗口状态等不丢。NTEMM_USER_DATA 仍可显式隔离(冒烟/多开),且优先于默认位置。
+// 窗口状态等不丢。NTEMM_USER_DATA 仍可显式隔离(冒烟/多开),且优先于默认位置,
+// 此时日志也跟着隔离目录走,避免与真实实例混写同一个日志文件。
 const userDataOverride = process.env.NTEMM_USER_DATA
+const logDirectory = userDataOverride ? join(userDataOverride, 'logs') : ntemmLogsDir()
 if (userDataOverride) {
   app.setPath('userData', userDataOverride)
 } else {
@@ -271,7 +273,7 @@ if (!gotSingleInstanceLock) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
     registerMediaProtocol()
-    logger.initialize(ntemmLogsDir(), 'NteModManager.log')
+    logger.initialize(logDirectory, 'NteModManager.log')
     logger.addBroadcaster(() => mainWindow)
     registerIpcHandlers(categoryImageBase(), windowIcon())
 

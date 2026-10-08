@@ -22,9 +22,7 @@
   },
   "include": [
     "electron.vite.config.ts",
-    "electron.vite.bg-server.config.ts",
     "src/main/**/*",
-    "src/bg-server/**/*",
     "src/preload/**/*",
     "src/shared/**/*"
   ]

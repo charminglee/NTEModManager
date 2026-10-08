@@ -7,7 +7,6 @@
   "private": true,
   "scripts": {
     "dist": "node scripts/test-images.mjs off && node scripts/dist.mjs",
-    "dist:bg-server": "node scripts/test-images.mjs off && node scripts/dist.mjs bg-server",
     "dev": "node scripts/test-images.mjs on && vite --config web.vite.config.ts --open",
     "dev:electron": "node scripts/test-images.mjs on && electron-vite dev",
     "build": "node scripts/test-images.mjs on && electron-vite build",

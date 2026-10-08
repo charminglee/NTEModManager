@@ -49,8 +49,6 @@ npm run dist                  → scripts/dist.mjs 编排:build + electron-build
 
 初次体验打包注意两点:第一次构建要下载 Electron 二进制,国内网络较慢属正常;打包版与 dev 行为有差异(资源路径、安全策略更严格),所以本项目有条测试铁律——**开发验证一律走 `npm run dev` 族,打包版只用于发布前冒烟**。
 
-> 本项目还有个进阶产物:`npm run dist:bg-server` 会额外打包一个无界面的背景图服务进程(见 `docs/background-image-service.md`),属于“Electron 也能写后台服务”的实例,学完本书有余力可去读 `src/bg-server/`。
-
 ## 12.3 本书没讲、但很快会遇到的
 
 诚实地列出来,给你下一步的地图(按遇到的概率排序):

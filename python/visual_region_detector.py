@@ -2,14 +2,21 @@ from __future__ import annotations
 
 import argparse
 import base64
+import configparser
 import io
 import json
 import logging
+import os
 import platform
+import random
 import sys
+import threading
 import time
+from collections import OrderedDict
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 import torch
 from PIL import Image, ImageDraw
@@ -163,8 +170,9 @@ def log_startup_information(arguments: argparse.Namespace, resolved_model_path: 
             except RuntimeError as error:
                 LOGGER.warning("环境：读取 CUDA[%s] 信息失败：%s", device_index, error)
     LOGGER.info(
-        "配置：server=%s，requested_device=%s，score_threshold=%.3f，orientation_confidence_threshold=%.3f",
+        "配置：server=%s，http=%s，requested_device=%s，score_threshold=%.3f，orientation_confidence_threshold=%.3f",
         arguments.server,
+        arguments.http,
         arguments.device,
         arguments.score_threshold,
         arguments.orientation_confidence_threshold,
@@ -855,9 +863,632 @@ def run_server(
     return 0
 
 
+# ---------------------------------------------------------------------------
+# 独立 HTTP 背景图服务(--http 模式)
+#
+# 替代旧的 NteModBgServer.exe:同一进程内完成「图库轮换 + YOLO 检测 + 裁剪编码」,
+# 外部程序直接调用,无需 Electron 壳。接口与原服务保持一致:
+#   GET /background?width=<宽>&height=<高>[&format=png][&meta=1]
+#       返回按视口比例、以 AI 识别焦点为中心裁剪好的图片字节(可直接用作背景);
+#       响应头 X-Background-Generation 标换代,
+#       X-Detection-Pending: 1 表示检测尚未就绪、本次为图心回退裁剪(稍后重取即可)。
+#   GET /health → 运行状态 JSON。
+# 配置:NTEMM_CONFIG / --config 指定 ini(缺省 ~/.ntemm/NteModManager.ini),
+# 读取 [Paths] background_images_directory、[Debug] test_images、[BgServer] port。
+# ---------------------------------------------------------------------------
+
+DEFAULT_HTTP_PORT = 26925
+TEST_IMAGES_ROOT = Path("F:/pictures/test")
+DETECTION_WAIT_TIMEOUT_SECONDS = 15.0
+MODEL_READY_TIMEOUT_SECONDS = 120.0
+JPEG_QUALITY = 92
+MAX_ENCODE_CACHE_ENTRIES = 8
+MAX_VIEWPORT_EDGE = 16384
+
+
+def resolve_config_path(explicit: Path | None) -> Path | None:
+    if explicit is not None:
+        return explicit
+    override = os.environ.get("NTEMM_CONFIG", "").strip()
+    if override:
+        return Path(override.replace("\\", "/"))
+    return Path.home() / ".ntemm" / "NteModManager.ini"
+
+
+def read_ini_sections(config_path: Path | None) -> dict[str, dict[str, str]]:
+    if config_path is None or not config_path.is_file():
+        return {}
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        parser.read(config_path, encoding="utf-8")
+    except (OSError, configparser.Error) as error:
+        LOGGER.warning("读取配置 %s 失败：%s", config_path, error)
+        return {}
+    return {section: dict(parser.items(section)) for section in parser.sections()}
+
+
+def ini_value(sections: dict[str, dict[str, str]], section: str, key: str) -> str:
+    raw = str(sections.get(section, {}).get(key, "")).strip()
+    if len(raw) >= 2 and raw[0] == raw[-1] and raw[0] in {'"', "'"}:
+        raw = raw[1:-1].strip()
+    return raw
+
+
+def ini_bool(sections: dict[str, dict[str, str]], section: str, key: str) -> bool:
+    raw = ini_value(sections, section, key).lower()
+    return raw in {"1", "true"}
+
+
+def collect_http_background_images(
+    images_dir: Path | None,
+    sections: dict[str, dict[str, str]],
+) -> list[Path]:
+    """与主程序 collectBackgroundImages 一致:数值命名子目录中的 jpg/png。
+
+    显式给 --images-dir 时优先用它,且没有数值子目录时退回平铺收集,方便临时指一个图库。
+    """
+    if images_dir is not None:
+        try:
+            subdirectories = sorted(
+                entry.name
+                for entry in images_dir.iterdir()
+                if entry.is_dir() and entry.name.isdigit()
+            )
+        except OSError:
+            subdirectories = []
+        if subdirectories:
+            images = [
+                path
+                for name in subdirectories
+                for path in sorted((images_dir / name).iterdir())
+                if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
+            ]
+        else:
+            images = sorted(
+                path
+                for path in images_dir.iterdir()
+                if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
+            )
+        if not images:
+            LOGGER.warning("--images-dir 目录中没有可用的 jpg/png 图片：%s", images_dir)
+        return images
+
+    if ini_bool(sections, "Debug", "test_images"):
+        images = sorted(
+            path
+            for path in TEST_IMAGES_ROOT.iterdir()
+            if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
+        ) if TEST_IMAGES_ROOT.is_dir() else []
+        if not images:
+            LOGGER.warning(
+                "测试图片模式已开启，但 %s 没有可用的 jpg/png 图片；将忽略 background_images_directory",
+                TEST_IMAGES_ROOT,
+            )
+        return images
+
+    root_value = ini_value(sections, "Paths", "background_images_directory")
+    if not root_value:
+        return []
+    root = Path(root_value)
+    try:
+        subdirectories = sorted(
+            entry.name for entry in root.iterdir() if entry.is_dir() and entry.name.isdigit()
+        )
+    except OSError:
+        LOGGER.warning("无法读取背景图目录：%s", root)
+        return []
+    images: list[Path] = []
+    for name in subdirectories:
+        try:
+            images.extend(
+                path
+                for path in sorted((root / name).iterdir())
+                if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
+            )
+        except OSError:
+            continue
+    if not images:
+        LOGGER.warning(
+            "背景图目录中没有可用的图片：%s（需要数值命名的子目录，内含 jpg/jpeg/png 文件）", root
+        )
+    return images
+
+
+class HttpModelHolder:
+    """后台线程加载模型;HTTP 请求线程等 ready 后以全局锁串行检测。"""
+
+    def __init__(self, arguments: argparse.Namespace) -> None:
+        self._arguments = arguments
+        self._device = "cpu"
+        self._model: YOLO | None = None
+        self._orientation: OrientationClassifier | None = None
+        self._error: str | None = None
+        self._state_lock = threading.Lock()
+        self._infer_lock = threading.Lock()
+        self._ready = threading.Event()
+
+    def start_loading(self) -> None:
+        threading.Thread(target=self._load, name="model-loader", daemon=True).start()
+
+    def _load(self) -> None:
+        try:
+            device = select_device(self._arguments.device)
+            model = load_model(self._arguments.model, self._arguments.cache_dir)
+            orientation = load_orientation_classifier(self._arguments.orientation_model, device)
+            if orientation is not None:
+                orientation.confidence_threshold = self._arguments.orientation_confidence_threshold
+            with self._state_lock:
+                self._device = device
+                self._model = model
+                self._orientation = orientation
+            LOGGER.info("视觉识别模型加载完成，device=%s", device)
+        except Exception as error:
+            LOGGER.exception("视觉识别模型加载失败")
+            with self._state_lock:
+                self._error = str(error)
+        finally:
+            # 失败也要唤醒等待者:之后 detect() 会抛错,请求回退到图心裁剪
+            self._ready.set()
+
+    def ready(self) -> bool:
+        with self._state_lock:
+            return self._model is not None
+
+    def wait_ready(self, timeout: float | None = None) -> bool:
+        return self._ready.wait(timeout)
+
+    def detect(self, image_path: Path, viewport_size: tuple[int, int]) -> dict[str, Any]:
+        if not self._ready.wait(MODEL_READY_TIMEOUT_SECONDS):
+            raise RuntimeError("模型加载超时")
+        with self._state_lock:
+            model = self._model
+            orientation = self._orientation
+            error = self._error
+        if model is None:
+            raise RuntimeError(f"模型加载失败：{error}")
+        # YOLO 推理不加锁并发会互相干扰;与主程序的请求串行化语义一致
+        with self._infer_lock:
+            return detect_image(
+                model,
+                image_path,
+                self._device,
+                self._arguments.score_threshold,
+                orientation,
+                include_debug_overlay=False,
+                viewport_size=viewport_size,
+            )
+
+
+def image_pixel_size(image_path: Path) -> tuple[int, int] | None:
+    try:
+        with Image.open(image_path) as source:
+            return source.size
+    except OSError as error:
+        LOGGER.warning("无法读取背景图片：%s（%s）", image_path, error)
+        return None
+
+
+class BackgroundHttpService:
+    """10 秒轮换持有「当前背景」,按 (图, 视口) 缓存 AI 裁剪矩形与编码结果。"""
+
+    def __init__(
+        self,
+        detector: HttpModelHolder,
+        images_dir: Path | None,
+        sections: dict[str, dict[str, str]],
+        rotation_interval: float,
+    ) -> None:
+        self.detector = detector
+        self.images_dir = images_dir
+        self.sections = sections
+        self.rotation_interval = max(1.0, rotation_interval)
+        self.stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self.images: list[Path] = []
+        self.current_path: Path | None = None
+        self.current_size: tuple[int, int] = (0, 0)
+        self.generation = 0
+        self.crops: dict[tuple[str, str], dict[str, int]] = {}
+        self.pending: dict[tuple[str, str], threading.Event] = {}
+        self.last_viewport: tuple[int, int] | None = None
+        self._encode_cache: OrderedDict[str, tuple[bytes, int, int]] = OrderedDict()
+
+    def start(self) -> None:
+        self.rotate()
+        threading.Thread(target=self._rotation_loop, name="bg-rotation", daemon=True).start()
+
+    def stop(self) -> None:
+        self.stop_event.set()
+
+    def _rotation_loop(self) -> None:
+        while not self.stop_event.wait(self.rotation_interval):
+            self.rotate()
+
+    def rotate(self) -> None:
+        images = collect_http_background_images(self.images_dir, self.sections)
+        warmup_viewport: tuple[int, int] | None = None
+        with self._lock:
+            self.images = images
+            if not images:
+                if self.current_path is not None:
+                    self.current_path = None
+                    self.current_size = (0, 0)
+                    self.crops.clear()
+                    self._encode_cache.clear()
+                    LOGGER.warning("背景图库为空，暂停提供背景；目录恢复后自动继续")
+                return
+            slot = self._pick_readable_image_locked(images)
+            if slot is None:
+                return
+            path, size = slot
+            if path == self.current_path:
+                # 随机重选到同一张:保留已有检测结果,不换代
+                return
+            self.current_path = path
+            self.current_size = size
+            self.generation += 1
+            self.crops.clear()
+            self._encode_cache.clear()
+            LOGGER.info("切换背景：%s（generation=%d）", path, self.generation)
+            warmup_viewport = self.last_viewport or DEFAULT_WINDOW_SIZE
+        # 锁外预热:用最近请求过的视口,在请求到来前把 AI 结果备好
+        if warmup_viewport is not None:
+            self._spawn_detection(path, warmup_viewport)
+
+    def _pick_readable_image_locked(
+        self, images: list[Path]
+    ) -> tuple[Path, tuple[int, int]] | None:
+        count = len(images)
+        start = random.randrange(count)
+        for offset in range(count):
+            path = images[(start + offset) % count]
+            size = image_pixel_size(path)
+            if size is not None:
+                return path, size
+        return None
+
+    def current_slot(self) -> tuple[Path | None, tuple[int, int], int]:
+        with self._lock:
+            return self.current_path, self.current_size, self.generation
+
+    def health_snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "images": len(self.images),
+                "current": self.current_path.name if self.current_path else None,
+                "generation": self.generation if self.current_path else None,
+                "modelReady": self.detector.ready(),
+                "lastViewport": (
+                    list(self.last_viewport) if self.last_viewport else None
+                ),
+            }
+
+    def _viewport_key(self, viewport: tuple[int, int]) -> str:
+        return f"{viewport[0]}x{viewport[1]}"
+
+    def _spawn_detection(
+        self, path: Path, viewport: tuple[int, int]
+    ) -> threading.Event:
+        key = (str(path), self._viewport_key(viewport))
+        with self._lock:
+            existing = self.pending.get(key)
+            if existing is not None:
+                return existing
+            event = threading.Event()
+            self.pending[key] = event
+        threading.Thread(
+            target=self._detect_worker,
+            args=(path, viewport, key, event),
+            name=f"bg-detect-{self._viewport_key(viewport)}",
+            daemon=True,
+        ).start()
+        return event
+
+    def _detect_worker(
+        self,
+        path: Path,
+        viewport: tuple[int, int],
+        key: tuple[str, str],
+        event: threading.Event,
+    ) -> None:
+        try:
+            result = self.detector.detect(path, viewport)
+            crop = result.get("background_crop")
+            if not isinstance(crop, dict):
+                raise RuntimeError("检测结果缺少 background_crop")
+            with self._lock:
+                # 检测期间可能已轮换到下一张:过期结果直接丢弃
+                if self.current_path == path:
+                    self.crops[key] = crop
+        except Exception as error:
+            # 不缓存失败结果:下次请求重新检测
+            LOGGER.error("背景识别失败：%s（%s）", path, error)
+        finally:
+            with self._lock:
+                self.pending.pop(key, None)
+            event.set()
+
+    def ensure_crop(
+        self, path: Path, viewport: tuple[int, int]
+    ) -> tuple[dict[str, int] | None, bool]:
+        key = (str(path), self._viewport_key(viewport))
+        with self._lock:
+            crop = self.crops.get(key)
+        if crop is not None:
+            return crop, False
+        event = self._spawn_detection(path, viewport)
+        if event.wait(DETECTION_WAIT_TIMEOUT_SECONDS):
+            with self._lock:
+                crop = self.crops.get(key)
+            if crop is not None:
+                return crop, False
+        # 检测未就绪:调用方先取图心回退裁剪,后台检测完成后缓存生效
+        return None, True
+
+    def record_viewport(self, viewport: tuple[int, int]) -> None:
+        with self._lock:
+            self.last_viewport = viewport
+
+    def encode_crop(
+        self, path: Path, crop: dict[str, int], fmt: str
+    ) -> tuple[bytes, int, int] | None:
+        key = f"{crop['x']},{crop['y']},{crop['width']},{crop['height']}:{fmt}"
+        with self._lock:
+            cached = self._encode_cache.get(key)
+            if cached is not None:
+                self._encode_cache.move_to_end(key)
+                return cached
+        box = (crop["x"], crop["y"], crop["x"] + crop["width"], crop["y"] + crop["height"])
+        try:
+            with Image.open(path) as source:
+                image = source
+                if fmt == "jpeg" and image.mode not in ("RGB", "L"):
+                    image = image.convert("RGB")
+                cropped = image.crop(box)
+                buffer = io.BytesIO()
+                if fmt == "png":
+                    cropped.save(buffer, format="PNG", optimize=True)
+                else:
+                    cropped.save(buffer, format="JPEG", quality=JPEG_QUALITY)
+                entry = (buffer.getvalue(), cropped.width, cropped.height)
+        except (OSError, ValueError) as error:
+            LOGGER.error("背景图裁剪/编码失败：%s（%s）", path, error)
+            return None
+        with self._lock:
+            self._encode_cache[key] = entry
+            while len(self._encode_cache) > MAX_ENCODE_CACHE_ENTRIES:
+                self._encode_cache.popitem(last=False)
+        return entry
+
+
+class BackgroundHttpServer(ThreadingHTTPServer):
+    daemon_threads = True
+    # Windows 的 SO_REUSEADDR 允许重复绑定同一端口,会静默双实例;
+    # 关掉它,端口被占用时 bind 直接抛错退出(单例语义与原服务一致)
+    allow_reuse_address = False
+
+    def __init__(self, address: tuple[str, int], handler: type[BaseHTTPRequestHandler], service: BackgroundHttpService) -> None:
+        super().__init__(address, handler)
+        self.service = service
+
+
+class BackgroundHttpRequestHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, format: str, *args: Any) -> None:
+        LOGGER.debug("HTTP %s", format % args)
+
+    def _cors_headers(self) -> dict[str, str]:
+        return {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+        }
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        for name, value in self._cors_headers().items():
+            self.send_header(name, value)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_GET(self) -> None:
+        try:
+            self._dispatch()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception as error:
+            LOGGER.exception("背景服务请求处理失败")
+            self._respond_text(500, f"Internal Server Error: {error}")
+
+    def _respond_text(self, status: int, message: str) -> None:
+        body = message.encode("utf-8")
+        self.send_response(status)
+        for name, value in self._cors_headers().items():
+            self.send_header(name, value)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _dispatch(self) -> None:
+        if self.command == "OPTIONS":
+            self.do_OPTIONS()
+            return
+        if self.command != "GET":
+            self._respond_text(405, "Method Not Allowed")
+            return
+        parsed = urlsplit(self.path)
+        query = parse_qs(parsed.query)
+        if parsed.path == "/health":
+            self._respond_health()
+            return
+        if parsed.path == "/background":
+            self._respond_background(query)
+            return
+        self._respond_text(404, "Not Found。可用接口：/background?width=<宽>&height=<高>、/health")
+
+    def _respond_health(self) -> None:
+        service: BackgroundHttpService = self.server.service  # type: ignore[attr-defined]
+        payload = {
+            "ok": True,
+            "service": "nte-bg-server",
+            "port": self.server.server_address[1],  # type: ignore[attr-defined]
+            **service.health_snapshot(),
+        }
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(200)
+        for name, value in self._cors_headers().items():
+            self.send_header(name, value)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _respond_background(self, query: dict[str, list[str]]) -> None:
+        service: BackgroundHttpService = self.server.service  # type: ignore[attr-defined]
+        path, size, generation = service.current_slot()
+        if path is None:
+            self._respond_text(
+                503,
+                "背景图库为空，请检查主程序 ini 的 Paths/background_images_directory",
+            )
+            return
+        width = query_int(query, "width")
+        height = query_int(query, "height")
+        if width is None or height is None:
+            self._respond_text(400, "需要正整数参数 width（窗口宽）与 height（窗口高）")
+            return
+        viewport = (width, height)
+        service.record_viewport(viewport)
+
+        crop, pending = service.ensure_crop(path, viewport)
+        if crop is None:
+            crop = background_crop_for_result({"persons": []}, size, viewport)
+        if crop["width"] <= 0 or crop["height"] <= 0:
+            self._respond_text(503, "背景裁剪失败，请稍后重试")
+            return
+        fmt = "png" if query.get("format", [""])[0] == "png" else "jpeg"
+        encoded = service.encode_crop(path, crop, fmt)
+        if encoded is None:
+            self._respond_text(500, "背景图编码失败")
+            return
+        data, encoded_width, encoded_height = encoded
+
+        def send_headers(extra: dict[str, str]) -> None:
+            self.send_response(200)
+            for name, value in self._cors_headers().items():
+                self.send_header(name, value)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Background-Generation", str(generation))
+            self.send_header("X-Detection-Pending", "1" if pending else "0")
+            for name, value in extra.items():
+                self.send_header(name, value)
+
+        if query.get("meta", [""])[0] == "1":
+            payload = {
+                "generation": generation,
+                "path": str(path),
+                "imageWidth": size[0],
+                "imageHeight": size[1],
+                "crop": crop,
+                "width": encoded_width,
+                "height": encoded_height,
+                "format": fmt,
+                "detectionPending": pending,
+                "data": base64.b64encode(data).decode("ascii"),
+            }
+            body = json.dumps(payload).encode("utf-8")
+            send_headers({"Content-Type": "application/json; charset=utf-8"})
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        send_headers({
+            "Content-Type": "image/png" if fmt == "png" else "image/jpeg",
+        })
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+
+def query_int(query: dict[str, list[str]], name: str) -> int | None:
+    values = query.get(name)
+    if not values:
+        return None
+    try:
+        parsed = int(values[0], 10)
+    except ValueError:
+        return None
+    return parsed if 0 < parsed <= MAX_VIEWPORT_EDGE else None
+
+
+def resolve_http_port(
+    arguments: argparse.Namespace, sections: dict[str, dict[str, str]]
+) -> int:
+    if arguments.port is not None:
+        return arguments.port
+    raw = os.environ.get("NTEMM_BG_SERVER_PORT", "").strip()
+    if raw.isdigit() and 0 < int(raw) < 65536:
+        return int(raw)
+    raw = ini_value(sections, "BgServer", "port")
+    if raw.isdigit() and 0 < int(raw) < 65536:
+        return int(raw)
+    return DEFAULT_HTTP_PORT
+
+
+def run_http_server(arguments: argparse.Namespace) -> int:
+    config_path = resolve_config_path(arguments.config)
+    sections = read_ini_sections(config_path)
+    port = resolve_http_port(arguments, sections)
+    LOGGER.info("========== NTE 背景图 HTTP 服务启动 ==========")
+    LOGGER.info(
+        "配置文件：%s，图库目录覆盖：%s，端口：%d",
+        config_path or "<缺省>",
+        arguments.images_dir or "<ini>",
+        port,
+    )
+    detector = HttpModelHolder(arguments)
+    service = BackgroundHttpService(
+        detector,
+        arguments.images_dir,
+        sections,
+        arguments.rotation_interval,
+    )
+    service.start()
+    detector.start_loading()
+    try:
+        server = BackgroundHttpServer(("127.0.0.1", port), BackgroundHttpRequestHandler, service)
+    except OSError as error:
+        # 端口被占用等监听失败时直接退出:静默存活却无法响应,比退出更难排查
+        LOGGER.error("背景服务 HTTP 监听失败（端口 %d）：%s", port, error)
+        service.stop()
+        return 1
+    LOGGER.info(
+        "背景服务已监听 http://127.0.0.1:%d/background?width=<宽>&height=<高>[&format=png][&meta=1]",
+        port,
+    )
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        LOGGER.info("收到中断信号，退出背景服务")
+    finally:
+        service.stop()
+        server.server_close()
+    return 0
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run YOLO pose inference for NTE backgrounds")
-    parser.add_argument("--server", action="store_true")
+    parser.add_argument("--server", action="store_true", help="stdio JSON 行协议模式（主程序使用）")
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        help="HTTP 背景图服务模式（供外部程序调用，替代旧 NteModBgServer.exe）",
+    )
+    parser.add_argument("--port", type=int, default=None, help="HTTP 模式监听端口（默认 ini [BgServer] port > 26925）")
+    parser.add_argument("--images-dir", type=Path, default=None, help="HTTP 模式背景图库目录（默认读 ini）")
+    parser.add_argument("--config", type=Path, default=None, help="ini 配置路径（默认 NTEMM_CONFIG > ~/.ntemm/NteModManager.ini）")
+    parser.add_argument("--rotation-interval", type=float, default=10.0, help="HTTP 模式背景轮换间隔秒数（默认 10）")
     parser.add_argument("--model", type=Path, default=Path(DEFAULT_MODEL))
     parser.add_argument("--device", choices=("auto", "cuda", "cpu"), default="auto")
     parser.add_argument("--cache-dir", type=Path)
@@ -872,6 +1503,9 @@ def main() -> int:
     arguments = parse_arguments()
     resolved_model_path = resolve_model_path(arguments.model, arguments.cache_dir)
     log_startup_information(arguments, resolved_model_path)
+    if arguments.http:
+        # HTTP 模式的模型在后台线程加载,HTTP 立即可用;就绪前请求拿到回退裁剪
+        return run_http_server(arguments)
     try:
         device = select_device(arguments.device)
         model = load_model(arguments.model, arguments.cache_dir)
@@ -887,6 +1521,8 @@ def main() -> int:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
 
+    if arguments.http:
+        return run_http_server(arguments)
     if arguments.server:
         return run_server(
             model,

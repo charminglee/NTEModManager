@@ -4,20 +4,14 @@ directories:
   output: dist
 files:
   - out/**
-  # 背景图服务(out/bg-server)由 electron-builder.bg-server.yml 单独打包,不混进主程序
-  - '!out/bg-server/**'
 extraResources:
   - from: ../img/bg
     to: category-bg
   - from: ../img/nte-mod-manager.ico
     to: nte-mod-manager.ico
-  # 视觉识别(Python 桥)资源:脚本、姿态模型与方向模型
-  - from: ../python/visual_region_detector.py
-    to: python/visual_region_detector.py
-  - from: ../yolo26x-pose.pt
-    to: python/model-cache/yolo26x-pose.pt
-  - from: ../training/orientation/checkpoints/weighted_unfrozen/best.pt
-    to: python/orientation-model/best.pt
+# Python 资源(解释器/识别脚本/pt 模型)不打包:运行时从程序目录旁的 python/
+# 或项目根的 python/ 解析(见 config.ts pythonAssetsDir),部署时把 python/ 目录
+# 放到 exe 旁边即可
 asar: true
 # Electron 压缩包走 npmmirror:与 install-electron 的下载 URL 同源,才能命中
 # %LOCALAPPDATA%\electron\Cache 的共享缓存(缓存键=下载 URL 的哈希,镜像不同则永远 miss)
