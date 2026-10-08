@@ -126,18 +126,15 @@ export default function BackgroundLayer({ masked = true }: { masked?: boolean })
       if (previousSlot && slot.generation < previousSlot.generation) {
         return
       }
-      // 换代:等图片加载并解码完成后再切入。只等 onload 时解码可能尚未完成,
-      // 首次绘制会在主线程同步解码全屏大图(可达几十毫秒),decode() 把它挪到
-      // 淡入开始之前;解码失败(文件损坏)时退回 onload 行为照常切入
+      // 换代:等图片加载完成再切入,避免显示半加载状态。解码交给 img 的
+      // decoding="async"(渲染端异步解码);不挂 decode() 承诺链——它偶发不
+      // settle,一旦挂起整个背景就永远空白,风险远大于省下的一次首帧解码
       const image = new Image()
-      const show = () => {
+      image.onload = () => {
         if (currentRef.current && slot.generation <= currentRef.current.generation) {
           return
         }
         commit(slot)
-      }
-      image.onload = () => {
-        image.decode().then(show, show)
       }
       image.src = slot.url
     }

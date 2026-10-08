@@ -18,6 +18,36 @@ export const TEST_IMAGES_ROOT = 'F:/pictures/test'
 /** 数值命名的子目录中的图片。 */
 export function collectBackgroundImages(): string[] {
   const config = getAppConfig()
+
+  const fromBackgroundDirectory = (): string[] => {
+    const root = config.backgroundImagesDirectory
+    if (!root) {
+      return []
+    }
+    const images: string[] = []
+    let subdirectories: string[]
+    try {
+      subdirectories = readdirSync(root, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name))
+        .map((entry) => entry.name)
+    } catch {
+      logger.warning(`无法读取背景图目录：${root}`)
+      return []
+    }
+    for (const directory of subdirectories) {
+      try {
+        for (const name of readdirSync(join(root, directory))) {
+          if (isSupportedImage(name)) {
+            images.push(join(root, directory, name))
+          }
+        }
+      } catch {
+        // 单个子目录不可读不拖垮整个图库
+      }
+    }
+    return images
+  }
+
   if (config.testImagesEnabled) {
     const testRoot = TEST_IMAGES_ROOT
     let images: string[] = []
@@ -28,42 +58,21 @@ export function collectBackgroundImages(): string[] {
     } catch {
       images = []
     }
-    if (images.length === 0) {
-      logger.warning(
-        `测试图片模式已开启，但 ${testRoot} 没有可用的 jpg/png 图片；将忽略 background_images_directory`
-      )
+    if (images.length > 0) {
+      return images
     }
-    return images
+    // 调试图集目录不可用(盘未挂载/已改名)时回退正常图库:空白背景比「调试模式
+    // 名义开启却什么都不显示」更接近预期,且 dev 命令会强制开启本开关,不能让
+    // 图集缺失把背景整个拖没
+    logger.warning(
+      `测试图片模式已开启，但 ${testRoot} 没有可用的 jpg/png 图片；回退到 background_images_directory`
+    )
   }
 
-  const root = config.backgroundImagesDirectory
-  if (!root) {
-    return []
-  }
-  const images: string[] = []
-  let subdirectories: string[]
-  try {
-    subdirectories = readdirSync(root, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && /^\d+$/.test(entry.name))
-      .map((entry) => entry.name)
-  } catch {
-    logger.warning(`无法读取背景图目录：${root}`)
-    return []
-  }
-  for (const directory of subdirectories) {
-    try {
-      for (const name of readdirSync(join(root, directory))) {
-        if (isSupportedImage(name)) {
-          images.push(join(root, directory, name))
-        }
-      }
-    } catch {
-      // 忽略无法读取的子目录。
-    }
-  }
+  const images = fromBackgroundDirectory()
   if (images.length === 0) {
     logger.warning(
-      `背景图目录中没有可用的图片：${root}（需要数值命名的子目录，内含 jpg/jpeg/png 文件）`
+      `背景图目录中没有可用的图片：${config.backgroundImagesDirectory}（需要数值命名的子目录，内含 jpg/jpeg/png 文件）`
     )
   }
   return images
