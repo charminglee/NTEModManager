@@ -155,6 +155,17 @@ export default function App() {
       setConfig(bootstrap.config)
       setMods(bootstrap.mods)
       setLogs(bootstrap.logs)
+      // 「启动时恢复上次打开的分类」:记录的分类已不存在(被删/改名)时留在「全部」
+      const last = bootstrap.lastCategory
+      if (last) {
+        const known =
+          last === ALL_CATEGORY ||
+          last === OTHER_CATEGORY ||
+          normalizeCategories(bootstrap.config.categories).includes(last)
+        if (known) {
+          setCurrentCategory(last)
+        }
+      }
       if (bootstrap.autoOpenSettings) {
         setSettingsOpen(true)
       }
@@ -257,6 +268,8 @@ export default function App() {
     setCurrentCategory(category)
     setView('mods')
     setSearch('')
+    // 记录上次打开的分类,供「启动时恢复」使用(与设置开关无关,始终记录)
+    void window.api.setLastCategory(category)
   }, [])
 
   const handleSortOrderChange = useCallback(

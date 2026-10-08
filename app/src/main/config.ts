@@ -178,7 +178,8 @@ function createDefaultConfig(filePath: string): void {
     mod_category_order: DEFAULT_CATEGORY_ORDER.join(','),
     auto_use_last_packaging_path: '1',
     exclusive_install_exempt_groups: 'UI',
-    ui_corner_radius: String(UI_CORNER_RADIUS_DEFAULT)
+    ui_corner_radius: String(UI_CORNER_RADIUS_DEFAULT),
+    restore_last_category: '0'
   }
   ini.Debug = {
     test_images: '0',
@@ -230,8 +231,7 @@ export function getAppConfig(): AppConfigData {
     categories: getList('Categories', 'names', DEFAULT_MOD_CATEGORIES),
     categoryOrder: getList('Preferences', 'mod_category_order', DEFAULT_CATEGORY_ORDER),
     sortOrder: clampSortOrder(getInt('Preferences', 'mod_list_sort_order', SortOrder.NameAscending)),
-    // 空字符串 = 自动探测(pythonExecutable() 决定 dev/packaged 的默认位置)
-    pythonExecutable: overriddenPath('python_executable'),
+    restoreLastCategory: getBool('Preferences', 'restore_last_category', false),
     testImagesEnabled: getBool('Debug', 'test_images', false),
     // 冒烟测量工具可用 NTEMM_FPS=1 强制开启,不受配置开关影响
     fpsCounterEnabled:
@@ -301,6 +301,18 @@ export function setCategoryOrder(categoryOrder: string[]): void {
   writeSection('Preferences', {
     ...readIni().Preferences,
     mod_category_order: categoryOrder.join(',')
+  })
+}
+
+/** 上次打开的分类([Preferences] last_category);空串 = 无记录 */
+export function getLastCategory(): string {
+  return unquote(readIni().Preferences?.last_category ?? '').trim()
+}
+
+export function setLastCategory(category: string): void {
+  writeSection('Preferences', {
+    ...readIni().Preferences,
+    last_category: category
   })
 }
 
@@ -414,6 +426,9 @@ export function updateAppConfig(patch: AppConfigPatch): void {
   }
   if (patch.uiCornerRadius !== undefined) {
     preferenceEntries.ui_corner_radius = String(clampUiCornerRadius(patch.uiCornerRadius))
+  }
+  if (patch.restoreLastCategory !== undefined) {
+    preferenceEntries.restore_last_category = patch.restoreLastCategory ? '1' : '0'
   }
   if (Object.keys(preferenceEntries).length > 0) {
     ini.Preferences = { ...ini.Preferences, ...preferenceEntries }

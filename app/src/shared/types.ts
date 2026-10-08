@@ -102,13 +102,13 @@ export interface AppConfigData {
   /** 游戏启动器路径;随游戏安装目录自动生成 */
   gameLauncher: string
   packagerDirectory: string
-  /** Python 解释器路径覆盖(视觉识别用);空字符串表示自动探测 */
-  pythonExecutable: string
   autoUseLastPackagingPath: boolean
   exclusiveInstallExemptGroups: string[]
   categories: string[]
   categoryOrder: string[]
   sortOrder: SortOrder
+  /** 启动时恢复上次打开的分类;上次分类单独记录在 [Preferences] last_category */
+  restoreLastCategory: boolean
   testImagesEnabled: boolean
   /** 显示 FPS 计数器(性能诊断);NTEMM_FPS=1 环境变量可强制开启 */
   fpsCounterEnabled: boolean
@@ -126,10 +126,9 @@ export interface AppConfigPatch {
   backgroundImagesDirectory?: string
   gameLauncher?: string
   packagerDirectory?: string
-  /** Python 解释器路径覆盖;空字符串清除覆盖,恢复自动探测 */
-  pythonExecutable?: string
   autoUseLastPackagingPath?: boolean
   exclusiveInstallExemptGroups?: string[]
+  restoreLastCategory?: boolean
   testImagesEnabled?: boolean
   fpsCounterEnabled?: boolean
   uiCornerRadius?: number

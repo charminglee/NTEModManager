@@ -3,7 +3,7 @@ import { existsSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
 import { changeInstallationForAll, installModExclusively } from './operations'
-import { getAppConfig, setCategoryOrder, setSortOrder, updateAppConfig } from './config'
+import { getAppConfig, getLastCategory, setCategoryOrder, setLastCategory, setSortOrder, updateAppConfig } from './config'
 import { runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
@@ -82,7 +82,9 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
       mods,
       logs: logger.getEntries(),
       initialization,
-      autoOpenSettings: process.env.NTEMM_AUTO_OPEN_SETTINGS === '1'
+      autoOpenSettings: process.env.NTEMM_AUTO_OPEN_SETTINGS === '1',
+      // 上次分类仅在设置开启时下发;无记录或设置关闭一律 null(渲染端回落到「全部」)
+      lastCategory: config.restoreLastCategory ? getLastCategory() || null : null
     }
   })
 
@@ -304,7 +306,6 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     return { success: true, message: '已打开配置文件' }
   })
   ipcMain.handle('config:update', (_event, patch: AppConfigPatch) => {
-    const previous = getAppConfig()
     updateAppConfig(patch)
     logger.info(
       `配置已更新：${Object.keys(patch)
@@ -316,10 +317,6 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     if (patch.backgroundImagesDirectory !== undefined || patch.testImagesEnabled !== undefined) {
       backgroundCarousel.reloadImages()
     }
-    // Python 解释器实际变化才重建识别进程(保存对话框总是携带全部字段)
-    if (next.pythonExecutable !== previous.pythonExecutable) {
-      backgroundCarousel.restartDetection()
-    }
     return next
   })
   ipcMain.handle('config:setSortOrder', (_event, sortOrder: SortOrder) => {
@@ -328,6 +325,10 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   })
   ipcMain.handle('config:setCategoryOrder', (_event, order: string[]) => {
     setCategoryOrder(order)
+    return { success: true, message: '' }
+  })
+  ipcMain.handle('config:setLastCategory', (_event, category: string) => {
+    setLastCategory(category)
     return { success: true, message: '' }
   })
 

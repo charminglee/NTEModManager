@@ -301,12 +301,12 @@ const config: AppConfigData = {
   backgroundImagesDirectory: 'D:/pictures/wallpapers',
   gameLauncher: 'D:/Games/NTE/NTE.exe',
   packagerDirectory: 'D:/Games/NTE/packager',
-  pythonExecutable: '',
   autoUseLastPackagingPath: true,
   exclusiveInstallExemptGroups: [],
   categories: [...CATEGORIES],
   categoryOrder: [],
   sortOrder: SortOrder.InstalledFirst,
+  restoreLastCategory: false,
   testImagesEnabled: true,
   fpsCounterEnabled: false,
   uiCornerRadius: UI_CORNER_RADIUS_DEFAULT,
@@ -335,6 +335,9 @@ function makeBackgroundState(): BackgroundState {
 }
 
 // ============ mock api ============
+/** mock 的「上次打开的分类」:仅内存态,刷新页面即模拟重启 */
+let mockLastCategory = ''
+
 const api: Api = {
   async bootstrap() {
     return {
@@ -342,7 +345,8 @@ const api: Api = {
       mods: cloneMods(),
       logs: bootstrapLogs,
       initialization: { success: true, message: '' },
-      autoOpenSettings: false
+      autoOpenSettings: false,
+      lastCategory: config.restoreLastCategory ? mockLastCategory || null : null
     }
   },
 
@@ -473,6 +477,11 @@ const api: Api = {
 
   async setCategoryOrder(order) {
     config.categoryOrder = [...order]
+    return { success: true, message: '' }
+  },
+
+  async setLastCategory(category) {
+    mockLastCategory = category
     return { success: true, message: '' }
   },
 

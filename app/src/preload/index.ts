@@ -17,6 +17,8 @@ export interface BootstrapPayload {
   initialization: OperationResult
   /** 冒烟测试用:启动时自动打开设置界面 */
   autoOpenSettings: boolean
+  /** 启动时恢复的分类;null = 不恢复(设置关闭或无记录) */
+  lastCategory: string | null
 }
 
 const api = {
@@ -62,6 +64,8 @@ const api = {
     ipcRenderer.invoke('config:setSortOrder', sortOrder),
   setCategoryOrder: (order: string[]): Promise<OperationResult> =>
     ipcRenderer.invoke('config:setCategoryOrder', order),
+  setLastCategory: (category: string): Promise<OperationResult> =>
+    ipcRenderer.invoke('config:setLastCategory', category),
 
   pickArchive: (): Promise<string | null> => ipcRenderer.invoke('dialog:pickArchive'),
   pickDirectory: (defaultPath?: string): Promise<string | null> =>

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '@shared/types'
 import { LIQUID_GLASS_KEYS, UI_CORNER_RADIUS_MAX, UI_CORNER_RADIUS_MIN } from '@shared/types'
@@ -39,9 +40,9 @@ interface SettingsDraft {
   backupsDirectory: string
   backgroundImagesDirectory: string
   packagerDirectory: string
-  pythonExecutable: string
   autoUseLastPackagingPath: boolean
   exemptGroupsText: string
+  restoreLastCategory: boolean
   testImagesEnabled: boolean
   fpsCounterEnabled: boolean
   uiCornerRadius: number
@@ -54,9 +55,9 @@ function toDraft(config: AppConfigData): SettingsDraft {
     backupsDirectory: config.backupsDirectory,
     backgroundImagesDirectory: config.backgroundImagesDirectory,
     packagerDirectory: config.packagerDirectory,
-    pythonExecutable: config.pythonExecutable,
     autoUseLastPackagingPath: config.autoUseLastPackagingPath,
     exemptGroupsText: config.exclusiveInstallExemptGroups.join(','),
+    restoreLastCategory: config.restoreLastCategory,
     testImagesEnabled: config.testImagesEnabled,
     fpsCounterEnabled: config.fpsCounterEnabled,
     uiCornerRadius: config.uiCornerRadius,
@@ -84,12 +85,20 @@ export default function SettingsDialog({
   const [saving, setSaving] = useState(false)
   /** 正在拖动隔离预览的滑块 id(null=无):按下滑块隐藏整个对话框只留滑块,松开恢复 */
   const [isolatedSlider, setIsolatedSlider] = useState<string | null>(null)
+  /** 高级选项折叠状态:默认收起,每次打开对话框重置 */
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  /** 设置内容区滚动容器:展开「高级」时钉住底部滚动 */
+  const scrollRef = useRef<HTMLDivElement>(null)
+  /** 高级展开期间的底部追踪 rAF id(高度过渡时逐帧跟随,null=未在追踪) */
+  const advancedTrackId = useRef<number | null>(null)
 
   useEffect(() => {
     if (open) {
       setDraft(toDraft(config))
       setIsolatedSlider(null)
+      setAdvancedOpen(false)
     }
+    stopAdvancedTracking()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
@@ -110,8 +119,8 @@ export default function SettingsDialog({
       normPath(draft.backupsDirectory) !== config.backupsDirectory ||
       normPath(draft.backgroundImagesDirectory) !== config.backgroundImagesDirectory ||
       normPath(draft.packagerDirectory) !== config.packagerDirectory ||
-      normPath(draft.pythonExecutable) !== config.pythonExecutable ||
       draft.autoUseLastPackagingPath !== config.autoUseLastPackagingPath ||
+      draft.restoreLastCategory !== config.restoreLastCategory ||
       draft.testImagesEnabled !== config.testImagesEnabled ||
       draft.fpsCounterEnabled !== config.fpsCounterEnabled ||
       draft.uiCornerRadius !== config.uiCornerRadius ||
@@ -119,6 +128,42 @@ export default function SettingsDialog({
       groupsChanged
     )
   }, [draft, config])
+
+  const stopAdvancedTracking = () => {
+    if (advancedTrackId.current !== null) {
+      cancelAnimationFrame(advancedTrackId.current)
+      advancedTrackId.current = null
+    }
+  }
+
+  /** 切换「高级」展开/收起。展开时高度过渡(200ms)期间逐帧把滚动容器钉在底部:
+   *  滚动与展开同步连续平滑,结束时正好停在展开内容的底部(高度还在增长时直接
+   *  scrollTo({behavior:'smooth'}) 会被当时的 scrollHeight 截住,收敛在中途)。 */
+  const toggleAdvanced = () => {
+    const next = !advancedOpen
+    setAdvancedOpen(next)
+    stopAdvancedTracking()
+    if (!next) return
+    const scroller = scrollRef.current
+    if (!scroller) return
+    const start = performance.now()
+    const track = (now: number) => {
+      advancedTrackId.current = null
+      // 对话框可能在追踪期间被关闭(Radix 卸载内容),容器已不在文档里就收手
+      if (!scroller.isConnected) return
+      scroller.scrollTop = scroller.scrollHeight
+      // 260ms = 200ms 高度过渡 + 余量收尾帧,确保追到定型后的最终底部
+      if (now - start < 260) {
+        advancedTrackId.current = requestAnimationFrame(track)
+      }
+    }
+    advancedTrackId.current = requestAnimationFrame(track)
+    // 兜底:渲染帧暂停(窗口失焦/最小化)时 rAF 链会被丢弃,过渡在恢复渲染时瞬间完成,
+    // 补一次 smooth 滚动;正常路径此时已钉在底部,同一目标的 smooth 滚动等于空操作
+    window.setTimeout(() => {
+      scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' })
+    }, 300)
+  }
 
   const patchField = <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) => {
     setDraft((prev) => ({ ...prev, [key]: value }))
@@ -157,9 +202,9 @@ export default function SettingsDialog({
         backupsDirectory: normPath(draft.backupsDirectory),
         backgroundImagesDirectory: normPath(draft.backgroundImagesDirectory),
         packagerDirectory: normPath(draft.packagerDirectory),
-        pythonExecutable: normPath(draft.pythonExecutable),
         autoUseLastPackagingPath: draft.autoUseLastPackagingPath,
         exclusiveInstallExemptGroups: parseGroups(draft.exemptGroupsText),
+        restoreLastCategory: draft.restoreLastCategory,
         testImagesEnabled: draft.testImagesEnabled,
         fpsCounterEnabled: draft.fpsCounterEnabled,
         uiCornerRadius: draft.uiCornerRadius,
@@ -193,7 +238,10 @@ export default function SettingsDialog({
         </DialogHeader>
 
         {/* 负外边距 + 内边距:给聚焦圈留出渲染空间,避免被 overflow 裁剪 */}
-        <div className="-m-1.5 max-h-[65vh] space-y-6 overflow-y-auto p-1.5">
+        <div
+          ref={scrollRef}
+          className="-m-1.5 max-h-[65vh] space-y-6 overflow-y-auto p-1.5"
+        >
           <SettingsSection title="路径">
             <PathField
               label="游戏安装目录"
@@ -231,6 +279,12 @@ export default function SettingsDialog({
               checked={draft.autoUseLastPackagingPath}
               onCheckedChange={(checked) => patchField('autoUseLastPackagingPath', checked)}
             />
+            <SwitchRow
+              label="启动时恢复上次打开的分类"
+              description="启动后自动选中上次退出时正在浏览的分类。"
+              checked={draft.restoreLastCategory}
+              onCheckedChange={(checked) => patchField('restoreLastCategory', checked)}
+            />
             <div className="grid gap-1.5">
               <Label htmlFor="settings-exempt-groups">独占安装豁免分组</Label>
               <p className="text-[11px] leading-relaxed text-muted-foreground">
@@ -242,6 +296,7 @@ export default function SettingsDialog({
                 onChange={(event) => patchField('exemptGroupsText', event.target.value)}
                 placeholder="UI，其他分组名"
                 spellCheck={false}
+                className="border-transparent hover:bg-foreground/[0.06]"
               />
             </div>
             <SliderRow
@@ -271,7 +326,10 @@ export default function SettingsDialog({
                 value={draft.liquidGlass.enabled ? 'liquid' : 'frosted'}
                 onValueChange={(value) => patchLiquidGlass({ enabled: value === 'liquid' })}
               >
-                <SelectTrigger className="w-28 shrink-0" aria-label="玻璃渲染方式">
+                <SelectTrigger
+                  className="w-28 shrink-0 border-transparent bg-transparent hover:bg-foreground/[0.06]"
+                  aria-label="玻璃渲染方式"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -356,54 +414,63 @@ export default function SettingsDialog({
             )}
           </SettingsSection>
 
-          <SettingsSection title="高级">
-            <PathField
-              label="Python 解释器路径"
-              description="AI 背景识别使用的 Python 解释器；留空自动探测（开发用仓库 venv，打包版用 resources/python）。保存后立即生效。"
-              value={draft.pythonExecutable}
-              onChange={(value) => patchField('pythonExecutable', value)}
-              onBrowse={() => {
-                void window.api
-                  .pickFile({
-                    title: '选择 Python 解释器',
-                    extensions: ['exe'],
-                    defaultPath: draft.pythonExecutable || undefined
-                  })
-                  .then((picked) => {
-                    if (picked) {
-                      patchField('pythonExecutable', picked)
-                    }
-                  })
-              }}
-            />
-            <SwitchRow
-              label="使用测试背景图"
-              description="调试用：启用后背景图改用固定的测试图片目录。"
-              checked={draft.testImagesEnabled}
-              onCheckedChange={(checked) => patchField('testImagesEnabled', checked)}
-            />
-            <SwitchRow
-              label="显示 FPS 计数器"
-              description="在窗口左下角显示当前帧率，用于性能诊断。"
-              checked={draft.fpsCounterEnabled}
-              onCheckedChange={(checked) => patchField('fpsCounterEnabled', checked)}
-            />
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground">直接编辑配置文件</div>
-                <div className="text-xs text-muted-foreground">在系统默认编辑器中打开 INI 配置文件。</div>
+          {/* 高级选项:默认收起,标题整行可点。grid-rows 0fr/1fr 过渡做高度折叠动画
+              (overflow-hidden 的网格项自动 min-height:0,0fr 才压得平) */}
+          <section>
+            <button
+              type="button"
+              aria-expanded={advancedOpen}
+              onClick={toggleAdvanced}
+              className="-ml-1 flex w-full items-center justify-between gap-2 rounded-md px-1 py-0.5 text-left text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            >
+              高级
+              <ChevronDown
+                className={cn(
+                  'h-3.5 w-3.5 shrink-0 transition-transform duration-200',
+                  !advancedOpen && '-rotate-90'
+                )}
+              />
+            </button>
+            <div
+              className={cn(
+                // visibility 参与过渡:收起过程中内容保持可见至高度归零后再隐藏,
+                // 展开时立即可见;hidden 状态同时把内容移出 Tab 焦点序与无障碍树
+                'grid transition-[grid-template-rows,visibility] duration-200 ease-out',
+                advancedOpen ? 'visible grid-rows-[1fr]' : 'invisible grid-rows-[0fr]'
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="space-y-4 pt-3 pb-1">
+                  <SwitchRow
+                    label="使用测试背景图"
+                    description="调试用：启用后背景图改用固定的测试图片目录。"
+                    checked={draft.testImagesEnabled}
+                    onCheckedChange={(checked) => patchField('testImagesEnabled', checked)}
+                  />
+                  <SwitchRow
+                    label="显示 FPS 计数器"
+                    description="在窗口左下角显示当前帧率，用于性能诊断。"
+                    checked={draft.fpsCounterEnabled}
+                    onCheckedChange={(checked) => patchField('fpsCounterEnabled', checked)}
+                  />
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-foreground">直接编辑配置文件</div>
+                      <div className="text-xs text-muted-foreground">在系统默认编辑器中打开 INI 配置文件。</div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="glass"
+                      className="w-16 shrink-0"
+                      onClick={() => void window.api.openConfigFile()}
+                    >
+                      打开
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <Button
-                type="button"
-                variant="glass"
-                size="sm"
-                className="shrink-0"
-                onClick={() => void window.api.openConfigFile()}
-              >
-                打开
-              </Button>
             </div>
-          </SettingsSection>
+          </section>
         </div>
 
         <DialogFooter>
@@ -452,7 +519,7 @@ function PathField({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           spellCheck={false}
-          className="font-mono text-xs"
+          className="border-transparent font-mono text-xs hover:bg-foreground/[0.06]"
         />
         <Button type="button" variant="glass" className="w-16 shrink-0" onClick={onBrowse}>
           浏览
