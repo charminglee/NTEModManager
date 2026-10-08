@@ -5,6 +5,7 @@
 .idea/
 build/
 .zcode-frames/
+.zcode-tmp/
 傻瓜打包器/xg/HT/Content/
 傻瓜打包器/LastImportFolder.txt
 __pycache__/
