@@ -38,6 +38,7 @@ function SlotLayer({ slot, fadingIn }: { slot: BackgroundSlotView; fadingIn: boo
         src={slot.url}
         alt=""
         draggable={false}
+        decoding="async"
         className="absolute max-w-none select-none"
         style={geometry}
       />
@@ -46,6 +47,7 @@ function SlotLayer({ slot, fadingIn }: { slot: BackgroundSlotView; fadingIn: boo
           src={slot.overlayUrl}
           alt=""
           draggable={false}
+          decoding="async"
           className="absolute max-w-none select-none"
           style={geometry}
         />
@@ -124,13 +126,18 @@ export default function BackgroundLayer({ masked = true }: { masked?: boolean })
       if (previousSlot && slot.generation < previousSlot.generation) {
         return
       }
-      // 换代:等图片完全解码后再切入,避免显示半加载状态
+      // 换代:等图片加载并解码完成后再切入。只等 onload 时解码可能尚未完成,
+      // 首次绘制会在主线程同步解码全屏大图(可达几十毫秒),decode() 把它挪到
+      // 淡入开始之前;解码失败(文件损坏)时退回 onload 行为照常切入
       const image = new Image()
-      image.onload = () => {
+      const show = () => {
         if (currentRef.current && slot.generation <= currentRef.current.generation) {
           return
         }
         commit(slot)
+      }
+      image.onload = () => {
+        image.decode().then(show, show)
       }
       image.src = slot.url
     }

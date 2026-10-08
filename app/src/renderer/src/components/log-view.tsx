@@ -20,7 +20,6 @@ const LEVEL_LABELS: Record<LogEntry['level'], string> = {
 }
 
 interface LogViewProps {
-  logs: LogEntry[]
   /** F11 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
   uiHidden?: boolean
 }
@@ -28,12 +27,29 @@ interface LogViewProps {
 /** 界面最多渲染的日志条数;完整日志在 INI 同目录的日志文件里 */
 const MAX_VISIBLE_LOGS = 500
 
-/** memo:日志推送频繁,未打开日志页时不重渲染 */
-function LogView({ logs, uiHidden }: LogViewProps) {
+/** 日志状态上限,与旧版 App 层一致:滚动窗口丢弃最老的条目 */
+const MAX_KEPT_LOGS = 4000
+
+/**
+ * 日志视图:日志数据完全自管理(挂载时拉取 + 常驻订阅推送),
+ * 不经 App 的 state 中转——安装/扫描期间日志可能每秒推送数十条,
+ * 若存进 App 会让整个界面跟着每条重渲染,现在只有本组件自身更新。
+ */
+function LogView({ uiHidden }: LogViewProps) {
+  const [logs, setLogs] = useState<LogEntry[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
   const [followTail, setFollowTail] = useState(true)
   const [showJumpButton, setShowJumpButton] = useState(false)
   const visibleLogs = logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs
+
+  useEffect(() => {
+    // 先订阅再拉取,避免错过挂载与拉取之间推送的条目;推送侧幂等由拉取结果覆盖
+    const unsubscribe = window.api.onLogEntry((entry) => {
+      setLogs((prev) => [...prev.slice(-MAX_KEPT_LOGS), entry])
+    })
+    void window.api.getLogEntries().then(setLogs)
+    return unsubscribe
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -62,16 +78,38 @@ function LogView({ logs, uiHidden }: LogViewProps) {
   }
 
   return (
-    <div className="relative min-h-0 flex-1">
-      {/* 关闭液态玻璃时回退为对话框同款毛玻璃,保证日志仍浮在背景图上可读 */}
-      <LiquidGlass
-        area="logPanel"
-        className={cn('ui-fade h-full rounded-xl', uiHidden && 'ui-fade-hidden')}
-        fallbackClassName="glass-dialog frosted"
-        contentClassName="h-full"
-        depth={1}
-        blur={2}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        className={cn(
+          'flex items-center gap-3 px-4 pb-4 transition-opacity duration-300',
+          uiHidden && 'opacity-0'
+        )}
       >
+        <h1 className="text-2xl font-bold tracking-wide text-foreground text-shadow-soft">
+          运行日志
+        </h1>
+        <span className="text-xs text-muted-foreground">{logs.length} 条</span>
+        <Button
+          variant="glass"
+          size="sm"
+          className="ml-auto"
+          onClick={() => {
+            void window.api.getLogEntries().then(setLogs)
+          }}
+        >
+          刷新
+        </Button>
+      </div>
+      <div className="relative min-h-0 flex-1">
+        {/* 关闭液态玻璃时回退为对话框同款毛玻璃,保证日志仍浮在背景图上可读 */}
+        <LiquidGlass
+          area="logPanel"
+          className={cn('ui-fade h-full rounded-xl', uiHidden && 'ui-fade-hidden')}
+          fallbackClassName="glass-dialog frosted"
+          contentClassName="h-full"
+          depth={1}
+          blur={2}
+        >
         <div
           ref={containerRef}
           onScroll={handleScroll}
@@ -113,6 +151,7 @@ function LogView({ logs, uiHidden }: LogViewProps) {
             <ArrowDown />
           </Button>
         )}
+      </div>
       </div>
     </div>
   )

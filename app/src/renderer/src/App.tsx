@@ -6,7 +6,6 @@ import {
   OTHER_CATEGORY,
   type AppConfigData,
   type LiquidGlassConfig,
-  type LogEntry,
   type ModInfo,
   type OperationResult,
   SortOrder,
@@ -39,7 +38,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
@@ -59,7 +57,6 @@ interface RenameQueueItem {
 export default function App() {
   const [config, setConfig] = useState<AppConfigData | null>(null)
   const [mods, setMods] = useState<ModInfo[]>([])
-  const [logs, setLogs] = useState<LogEntry[]>([])
   const [currentCategory, setCurrentCategory] = useState<string>(ALL_CATEGORY)
   const [view, setView] = useState<'mods' | 'logs'>('mods')
   const [search, setSearch] = useState('')
@@ -154,7 +151,7 @@ export default function App() {
       const bootstrap = await window.api.bootstrap()
       setConfig(bootstrap.config)
       setMods(bootstrap.mods)
-      setLogs(bootstrap.logs)
+      // 日志不再进 App state(见 LogView):推送频繁,存这里会带动整个界面重渲染
       // 「启动时恢复上次打开的分类」:记录的分类已不存在(被删/改名)时留在「全部」
       const last = bootstrap.lastCategory
       if (last) {
@@ -173,12 +170,6 @@ export default function App() {
         toast.error('模组仓库初始化失败', { description: bootstrap.initialization.message })
       }
     })()
-  }, [])
-
-  useEffect(() => {
-    return window.api.onLogEntry((entry) => {
-      setLogs((prev) => [...prev.slice(-4000), entry])
-    })
   }, [])
 
   // ============ 分类与计数 ============
@@ -777,23 +768,8 @@ export default function App() {
                 </>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-6">
-                  <div
-                    className={cn(
-                      'flex items-center gap-3 px-4 pb-4 transition-opacity duration-300',
-                      chromeHidden && 'opacity-0'
-                    )}
-                  >
-                    <h1 className="text-2xl font-bold tracking-wide text-foreground text-shadow-soft">
-                      运行日志
-                    </h1>
-                    <span className="text-xs text-muted-foreground">{logs.length} 条</span>
-                    <Button variant="glass" size="sm" className="ml-auto" onClick={() => {
-                      void window.api.getLogEntries().then(setLogs)
-                    }}>
-                      刷新
-                    </Button>
-                  </div>
-                  <LogView logs={logs} uiHidden={chromeHidden} />
+                  {/* 日志数据由 LogView 自管理(拉取/订阅/刷新),不经过 App state */}
+                  <LogView uiHidden={chromeHidden} />
                 </div>
               )}
             </main>
@@ -808,11 +784,12 @@ export default function App() {
             </div>
           )}
 
-          {/* 拖放导入遮罩 */}
+          {/* 拖放导入遮罩:visibility 随 opacity 一起过渡——淡出动画播完才真正隐藏,
+              隐藏后 Chromium 跳过整棵渲染,内部的 vaso 玻璃层不再常驻 backdrop-filter 开销 */}
           <div
             className={cn(
-              'pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-primary/10 transition-opacity duration-200',
-              dragOver && busy ? 'opacity-0' : dragOver ? 'opacity-100' : 'opacity-0'
+              'pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-primary/10 transition-[opacity,visibility] duration-200',
+              dragOver && !busy ? 'visible opacity-100' : 'invisible opacity-0'
             )}
           >
             <LiquidGlass

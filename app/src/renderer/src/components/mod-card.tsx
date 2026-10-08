@@ -110,11 +110,23 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
   }, [])
 
   return (
-    <div ref={revealRef} className={cn(entered ? 'card-go' : 'card-wait')}>
+    // content-visibility:auto:列表可能挂载上百张卡,每张带 3 个 vaso 玻璃实例
+    // (卡本体 + 两个按钮覆盖层),离屏卡片整棵跳过 layout/paint/backdrop 滤镜,
+    // 只有视口附近的卡参与合成。contain-intrinsic-size 的 auto 前缀让浏览器
+    // 记住卡片渲染过的真实尺寸(含展开态),仅未渲染过的离屏卡用 64px 估算
+    // (收起态典型高度),避免滚动条长度失真;推入动画本就设计为进入视口才播,
+    // 与跳过渲染的行为一致
+    <div
+      ref={revealRef}
+      className={cn(
+        '[content-visibility:auto] [contain-intrinsic-size:auto_64px]',
+        entered ? 'card-go' : 'card-wait'
+      )}
+    >
         <LiquidGlass
           area="modCards"
           className={cn(
-            'ui-fade overflow-hidden rounded-xl',
+            'ui-fade overflow-hidden rounded-xl shadow-card-soft',
             uiHidden && 'ui-fade-hidden',
             entered ? 'card-enter' : 'card-children-wait'
           )}
@@ -188,7 +200,7 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="ghost"
+                    variant="glass"
                     size="icon"
                     className="h-8 w-8 shrink-0 rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
                     disabled={disabled}
