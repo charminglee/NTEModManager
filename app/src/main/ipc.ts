@@ -2,13 +2,13 @@ import { dialog, ipcMain, shell, webContents } from 'electron'
 import { existsSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
-import { changeInstallationForAll, installModExclusively } from './operations'
+import { changeInstallationForAll, installModExclusively, runBatchModAction } from './operations'
 import { getAppConfig, getLastCategory, setCategoryOrder, setLastCategory, setSortOrder, updateAppConfig } from './config'
 import { runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { describeError, logger } from './logger'
-import type { AppConfigPatch, ImportResult, ModInfo, OperationResult, SortOrder } from '../shared/types'
+import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult, SortOrder } from '../shared/types'
 
 type ProgressReporter = (message: string) => void
 
@@ -71,6 +71,111 @@ function isDirectory(path: string): boolean {
     return statSync(path).isDirectory()
   } catch {
     return false
+  }
+}
+
+/**
+ * 重新打包单个模组的完整流程:确定源文件夹(自动复用上次路径,否则弹窗选择)→
+ * 运行打包器 → 替换模组源文件 → 已安装则重装。单模组与批量重新打包共用;
+ * 用户取消源文件夹选择时返回 cancelled 结果。
+ */
+async function repackageModWithSource(
+  mod: ModInfo,
+  report: ProgressReporter
+): Promise<OperationResult> {
+  const config = getAppConfig()
+
+  // 开启自动复用时直接使用该模组上次选择的源文件夹。
+  let sourceDirectory: string | null = null
+  const lastPath = repository.lastPackagingPath(mod.name)
+  if (config.autoUseLastPackagingPath && isDirectory(lastPath)) {
+    sourceDirectory = lastPath
+  } else {
+    const window = mainWindowProvider()
+    if (!window) {
+      return failure('无法打开文件夹选择窗口')
+    }
+    const picked = await dialog.showOpenDialog(window, {
+      title: `重新打包「${mod.name}」：选择源文件夹`,
+      defaultPath: isDirectory(lastPath) ? lastPath : undefined,
+      properties: ['openDirectory']
+    })
+    if (picked.canceled || picked.filePaths.length === 0) {
+      logger.debug('重新打包已取消：用户未选择源文件夹')
+      return { success: false, message: '', cancelled: true }
+    }
+    sourceDirectory = picked.filePaths[0]
+    logger.info(`重新打包 ${mod.name}：源文件夹：${sourceDirectory}`)
+    const pathSaved = repository.setLastPackagingPath(mod.name, sourceDirectory)
+    if (!pathSaved.success) {
+      return pathSaved
+    }
+  }
+
+  const packResult = await runPackager({
+    batchPath: join(config.packagerDirectory, '傻瓜打包器.bat'),
+    packageDirectory: config.packagerDirectory,
+    sourceDirectory
+  })
+  if (!packResult.success) {
+    return packResult
+  }
+
+  report(`正在替换 ${mod.name} 的源文件...`)
+  const replaced = await repository.replacePackagedMod(mod, config.packagerDirectory)
+  if (!replaced.success) {
+    return replaced
+  }
+  if (mod.installed) {
+    report(`正在重装 ${mod.name}...`)
+    const uninstalled = await repository.uninstall(mod)
+    if (!uninstalled.success) {
+      return uninstalled
+    }
+    const installed = await repository.install(mod)
+    if (!installed.success) {
+      return installed
+    }
+  }
+  return replaced
+}
+
+/** 批量重新打包:逐个复用与单模组相同的流程;用户在弹窗取消时中止整批。 */
+async function runBatchRepackage(
+  names: string[],
+  report: ProgressReporter
+): Promise<{ result: OperationResult }> {
+  const byName = new Map((await repository.scan()).map((mod) => [mod.name, mod]))
+
+  const failures: string[] = []
+  let changedCount = 0
+  for (const [index, name] of names.entries()) {
+    const mod = byName.get(name)
+    if (!mod) {
+      logger.error(`批量重新打包找不到模组：${name}（可能已被删除或重命名）`)
+      failures.push(`${name}:找不到模组`)
+      continue
+    }
+    report(`正在重新打包 ${name}(${index + 1}/${names.length})...`)
+    const result = await repackageModWithSource(mod, report)
+    if (result.cancelled) {
+      logger.info(`批量重新打包中止：已打包 ${changedCount} 个，用户取消了源文件夹选择`)
+      return { result: { success: false, message: '', cancelled: true } }
+    }
+    if (result.success) {
+      changedCount += 1
+    } else {
+      logger.error(`批量重新打包失败：${name}：${result.message}`)
+      failures.push(`${name}:${result.message}`)
+    }
+  }
+
+  const summary = `已重新打包 ${changedCount} 个模组`
+  logger.info(`批量重新打包完成：成功 ${changedCount} 个，失败 ${failures.length} 个`)
+  return {
+    result: failures.length === 0
+      ? { success: true, message: summary }
+      : { success: false, message: `${summary}\n${failures.join('\n')}` }
   }
 }
 
@@ -237,6 +342,14 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     })
   )
 
+  ipcMain.handle('mods:batch', (_event, action: BatchModAction, names: string[]) => {
+    // 重新打包可能逐个弹出源文件夹选择框,与纯仓库操作不同批次处理
+    if (action === 'repackage') {
+      return runExclusive('批量重新打包', async (report) => runBatchRepackage(names, report))
+    }
+    return runExclusive(`批量${action}`, async (report) => runBatchModAction(action, names, report))
+  })
+
   ipcMain.handle('package:run', (_event, sourceDirectory?: string) =>
     runExclusive('打包模组', async () => {
       const config = getAppConfig()
@@ -263,65 +376,11 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('package:repackage', (_event, name: string) =>
     runExclusive(`重新打包 ${name}`, async (report) => {
-      const config = getAppConfig()
       const mod = await findMod(name)
       if (!mod) {
         return failure(`找不到模组：${name}`)
       }
-
-      // 开启自动复用时直接使用该模组上次选择的源文件夹。
-      let sourceDirectory: string | null = null
-      const lastPath = repository.lastPackagingPath(name)
-      if (config.autoUseLastPackagingPath && isDirectory(lastPath)) {
-        sourceDirectory = lastPath
-      } else {
-        const window = mainWindowProvider()
-        if (!window) {
-          return failure('无法打开文件夹选择窗口')
-        }
-        const picked = await dialog.showOpenDialog(window, {
-          title: '选择要重新打包的源文件夹',
-          defaultPath: isDirectory(lastPath) ? lastPath : undefined,
-          properties: ['openDirectory']
-        })
-        if (picked.canceled || picked.filePaths.length === 0) {
-          logger.debug('重新打包已取消：用户未选择源文件夹')
-          return { success: false, message: '', cancelled: true }
-        }
-        sourceDirectory = picked.filePaths[0]
-        logger.info(`重新打包 ${name}：源文件夹：${sourceDirectory}`)
-        const pathSaved = repository.setLastPackagingPath(name, sourceDirectory)
-        if (!pathSaved.success) {
-          return pathSaved
-        }
-      }
-
-      const packResult = await runPackager({
-        batchPath: join(config.packagerDirectory, '傻瓜打包器.bat'),
-        packageDirectory: config.packagerDirectory,
-        sourceDirectory
-      })
-      if (!packResult.success) {
-        return packResult
-      }
-
-      report(`正在替换 ${name} 的源文件...`)
-      const replaced = await repository.replacePackagedMod(mod, config.packagerDirectory)
-      if (!replaced.success) {
-        return replaced
-      }
-      if (mod.installed) {
-        report(`正在重装 ${name}...`)
-        const uninstalled = await repository.uninstall(mod)
-        if (!uninstalled.success) {
-          return uninstalled
-        }
-        const installed = await repository.install(mod)
-        if (!installed.success) {
-          return installed
-        }
-      }
-      return replaced
+      return repackageModWithSource(mod, report)
     })
   )
 

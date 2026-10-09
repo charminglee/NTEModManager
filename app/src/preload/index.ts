@@ -3,6 +3,7 @@ import type {
   AppConfigData,
   AppConfigPatch,
   BackgroundState,
+  BatchModAction,
   ImportResult,
   LogEntry,
   ModInfo,
@@ -44,6 +45,8 @@ const api = {
     ipcRenderer.invoke('mods:installAll', category),
   uninstallAll: (category: string): Promise<{ result: OperationResult }> =>
     ipcRenderer.invoke('mods:uninstallAll', category),
+  batchModAction: (action: BatchModAction, names: string[]): Promise<{ result: OperationResult }> =>
+    ipcRenderer.invoke('mods:batch', action, names),
 
   runPackager: (sourceDirectory?: string): Promise<OperationResult> =>
     ipcRenderer.invoke('package:run', sourceDirectory),

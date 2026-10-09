@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LiquidGlass } from '@/components/liquid-glass'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const Dialog = DialogPrimitive.Root
@@ -17,7 +18,7 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     className={cn(
       // dialog-overlay 是稳定钩子类:设置滑块拖动隔离(index.css)按它定位遮罩
-      'dialog-overlay fixed inset-0 z-50 bg-black/50 dark:bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      'dialog-overlay fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
       className
     )}
     {...props}
@@ -47,27 +48,31 @@ const DialogContent = React.forwardRef<
         aria-label="关闭"
         className="pointer-events-auto absolute inset-0 cursor-default rounded-none bg-transparent opacity-0 outline-none"
       />
-      {/* 毛玻璃面板:比液态玻璃渲染开销低得多;网格布局与内边距放在 relative 内容层。
-          ui-fade-popover 让面板随开合淡入淡出且不打断 backdrop 采样 */}
-      <div
+      {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃;overlay-panel 是滑块拖动
+          隔离(index.css)按它定位面板的稳定钩子类。ui-fade-popover 让面板随开合
+          淡入淡出且不打断 backdrop 采样;网格布局与内边距放在 relative 内容层 */}
+      <LiquidGlass
+        area="overlays"
         className={cn(
-          'glass-dialog frosted ui-fade-popover pointer-events-auto w-full max-w-lg rounded-xl shadow-card',
+          'overlay-panel ui-fade-popover pointer-events-auto w-full max-w-lg rounded-xl shadow-card',
           className
         )}
+        fallbackClassName="glass-dialog frosted"
+        contentClassName="grid gap-4 p-6"
+        depth={1}
+        blur={4}
       >
-        <div className="relative grid gap-4 p-6">
-          {children}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 opacity-70 transition-opacity hover:bg-secondary hover:opacity-100 focus:outline-none disabled:pointer-events-none">
-                <X className="h-4 w-4" />
-                <span className="sr-only">关闭</span>
-              </DialogPrimitive.Close>
-            </TooltipTrigger>
-            <TooltipContent>关闭</TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
+        {children}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 opacity-70 transition-opacity hover:bg-secondary hover:opacity-100 focus:outline-none disabled:pointer-events-none">
+              <X className="h-4 w-4" />
+              <span className="sr-only">关闭</span>
+            </DialogPrimitive.Close>
+          </TooltipTrigger>
+          <TooltipContent>关闭</TooltipContent>
+        </Tooltip>
+      </LiquidGlass>
     </DialogPrimitive.Content>
   </DialogPortal>
 ))

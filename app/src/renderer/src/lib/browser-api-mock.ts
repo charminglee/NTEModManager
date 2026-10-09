@@ -433,6 +433,63 @@ const api: Api = {
     return { result: { success: true, message: `已卸载 ${targets.length} 个模组(mock)` } }
   },
 
+  async batchModAction(action, names) {
+    const labels = {
+      install: '安装',
+      uninstall: '卸载',
+      remove: '删除',
+      markInvalid: '标记失效',
+      unmarkInvalid: '取消失效标记',
+      reinstall: '重新安装',
+      repackage: '重新打包'
+    } as const
+    // 重新打包依赖真实的打包器与源文件夹弹窗,浏览器模式一律拒绝
+    if (action === 'repackage') {
+      return { result: unavailable('批量重新打包') }
+    }
+    let changed = 0
+    const failures: string[] = []
+    for (const name of names) {
+      const mod = findMod(name)
+      if (!mod) continue
+      switch (action) {
+        case 'install':
+          mod.installed = true
+          break
+        case 'uninstall':
+          mod.installed = false
+          break
+        case 'remove': {
+          const index = mods.findIndex((item) => item.name === name)
+          if (index >= 0) mods.splice(index, 1)
+          break
+        }
+        case 'markInvalid':
+          // 与主进程行为一致:已安装的先卸载再标记
+          mod.installed = false
+          mod.invalid = true
+          break
+        case 'unmarkInvalid':
+          mod.invalid = false
+          break
+        case 'reinstall':
+          // 与主进程行为一致:仅已安装的可重装(卸载后原样装回)
+          if (!mod.installed) {
+            failures.push(`${name}:未安装,无法重新安装`)
+            continue
+          }
+          mod.installed = true
+          break
+      }
+      changed += 1
+    }
+    return {
+      result: failures.length === 0
+        ? { success: true, message: `已${labels[action]} ${changed} 个模组(mock)` }
+        : { success: false, message: `已${labels[action]} ${changed} 个模组(mock)\n${failures.join('\n')}` }
+    }
+  },
+
   async runPackager() {
     return unavailable('打包模组')
   },

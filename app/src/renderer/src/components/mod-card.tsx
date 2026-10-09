@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import {
+  Check,
   ChevronDown,
   CircleArrowUp,
   FolderOpen,
@@ -40,12 +41,18 @@ export interface ModCardActions {
   onOpenSource: (mod: ModInfo) => void
   onOpenInstall: (mod: ModInfo) => void
   onRenameFile: (mod: ModInfo, relativePath: string, newFileName: string) => void
+  /** 切换选中态;shiftKey 时按上一次锚点到该卡片范围选中 */
+  onToggleSelect: (mod: ModInfo, modifiers: { shiftKey: boolean }) => void
 }
 
 interface ModCardProps {
   mod: ModInfo
   actions: ModCardActions
   disabled: boolean
+  /** 该卡片当前是否被选中(多选批量操作) */
+  selected?: boolean
+  /** 列表中是否存在任一选中项:存在时所有选择框常显,否则悬浮才显示 */
+  selectionActive?: boolean
   /** F11 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
   uiHidden?: boolean
 }
@@ -93,7 +100,7 @@ function observeFirstViewportEntry(el: Element, onReveal: (delayMs: number) => v
 }
 
 /** memo:列表卡片多且各带 vaso 玻璃实例,无关状态(如日志推送)变化时不重渲染 */
-function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
+function ModCard({ mod, actions, disabled, selected = false, selectionActive = false, uiHidden }: ModCardProps) {
   const [expanded, setExpanded] = useState(false)
   // 推入动画在卡片首次进入视口时才播放:挂载即处于右侧等待态(不可见),
   // 观察器触发后整体置换为播放态,避免回调前的「先定格后跳动」闪现
@@ -126,7 +133,10 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
         <LiquidGlass
           area="modCards"
           className={cn(
-            'ui-fade overflow-hidden rounded-xl shadow-card-soft',
+            // glass-card:稳定钩子类,index.css 按它把 vaso 层投影收敛为纯内沿高光;
+            // 卡片不投任何外部阴影(原 shadow-card-soft + vaso 默认外投影在
+            // 浅色背景上叠成卡片底下的一层淡影,已按需求全部移除)
+            'glass-card ui-fade overflow-hidden rounded-xl',
             uiHidden && 'ui-fade-hidden',
             entered ? 'card-enter' : 'card-children-wait'
           )}
@@ -134,10 +144,34 @@ function ModCard({ mod, actions, disabled, uiHidden }: ModCardProps) {
           blur={1.5}
           crisp={false}
         >
-        <div className="relative flex items-center gap-3 px-4 py-3">
+        <div className="group relative flex items-center gap-3 px-4 py-3">
+          {/* 选择框:悬浮显示;存在任一选中项时常显,便于连续点选 */}
           <button
             type="button"
-            onClick={() => setExpanded((value) => !value)}
+            disabled={disabled}
+            onClick={(event) => actions.onToggleSelect(mod, { shiftKey: event.shiftKey })}
+            aria-pressed={selected}
+            aria-label={selected ? '取消选择此模组' : '选择此模组'}
+            className={cn(
+              'flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.06)] transition-all duration-150 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:pointer-events-none',
+              selected
+                ? 'border-primary bg-primary/85 text-primary-foreground opacity-100'
+                : 'border-foreground/35 bg-background/50 text-transparent opacity-0 hover:border-primary/70 group-hover:opacity-100',
+              selectionActive && !selected && 'opacity-70'
+            )}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              // Ctrl/Cmd+点按卡片主体 = 切换选中,与文件管理器习惯一致
+              if (event.ctrlKey || event.metaKey) {
+                actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
+                return
+              }
+              setExpanded((value) => !value)
+            }}
             disabled={disabled}
             className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none"
           >

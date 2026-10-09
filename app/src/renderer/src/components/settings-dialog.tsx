@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/components/toast-card'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '@shared/types'
 import { LIQUID_GLASS_KEYS, UI_CORNER_RADIUS_MAX, UI_CORNER_RADIUS_MIN } from '@shared/types'
 import {
@@ -409,6 +409,12 @@ export default function SettingsDialog({
                   description="搜索框、路径输入、重命名输入等文本框的液态玻璃渲染。"
                   checked={draft.liquidGlass.inputs}
                   onCheckedChange={(checked) => patchLiquidGlass({ inputs: checked })}
+                />
+                <SwitchRow
+                  label="浮层"
+                  description="对话框、下拉菜单、选择器、右下角通知等悬浮面板的液态玻璃渲染。"
+                  checked={draft.liquidGlass.overlays}
+                  onCheckedChange={(checked) => patchLiquidGlass({ overlays: checked })}
                 />
               </>
             )}

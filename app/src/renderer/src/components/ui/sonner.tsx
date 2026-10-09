@@ -2,25 +2,18 @@ import { Toaster as Sonner } from 'sonner'
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
+/**
+ * toast 的定位/生命周期容器。视觉全部由 toast.custom 渲染的液态玻璃卡片承担
+ * (components/toast-card.tsx + index.css 的 data-styled='false' 覆盖),
+ * 内置 toast 样式已不再使用,这里不再配置 classNames。
+ */
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      theme="system"
       position="bottom-right"
       duration={3000}
       /* 底部弹出框与内容边距对齐:下边缘距窗口 12px(与面板 mb-3 一致),右边缘 16px(与 mx-4 一致) */
       offset={{ bottom: 12, right: 16 }}
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          /* 与菜单/对话框同款 glass-dialog frosted 毛玻璃浮层(不带 border-border,glass-dialog 自带边框) */
-          toast:
-            'group toast glass-dialog frosted text-foreground rounded-xl shadow-card',
-          description: 'text-muted-foreground whitespace-pre-wrap',
-          actionButton: 'bg-primary text-primary-foreground',
-          cancelButton: 'bg-secondary text-secondary-foreground'
-        }
-      }}
       {...props}
     />
   )

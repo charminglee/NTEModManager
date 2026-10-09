@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/components/toast-card'
 import { Blocks, LoaderCircle } from 'lucide-react'
 import {
   ALL_CATEGORY,
   OTHER_CATEGORY,
   type AppConfigData,
+  type BatchModAction,
   type LiquidGlassConfig,
   type ModInfo,
   type OperationResult,
@@ -24,6 +25,7 @@ import { LiquidGlass, LiquidGlassConfigProvider } from '@/components/liquid-glas
 import Sidebar from '@/components/sidebar'
 import ModListHeader from '@/components/mod-list-header'
 import ModCard, { type ModCardActions } from '@/components/mod-card'
+import BatchActionBar from '@/components/batch-action-bar'
 import LogView from '@/components/log-view'
 import FpsCounter from '@/components/fps-counter'
 import PromptDialog from '@/components/prompt-dialog'
@@ -47,6 +49,16 @@ type PendingConfirm =
   | { kind: 'install-invalid'; modName: string }
   | { kind: 'reinstall-invalid'; modName: string }
   | { kind: 'install-all-invalid'; modNames: string[] }
+  | { kind: 'batch-delete'; modNames: string[] }
+  | {
+      kind: 'batch-invalid'
+      /** 确认后要执行的批量动作 */
+      action: 'install' | 'reinstall'
+      /** 实际要批量执行的完整名单 */
+      modNames: string[]
+      /** 其中带失效标记的子集(提示用) */
+      invalidNames: string[]
+    }
   | null
 
 interface RenameQueueItem {
@@ -81,6 +93,17 @@ export default function App() {
   } | null>(null)
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null)
   const [renameQueue, setRenameQueue] = useState<RenameQueueItem[]>([])
+
+  // ============ 多选(批量操作) ============
+  const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set())
+  /** Shift 范围选择的锚点(卡片名) */
+  const selectionAnchorRef = useRef<string | null>(null)
+  // 镜像最新值供稳定引用的回调读取:选择相关回调若依赖 visibleMods/mods,
+  // 每次搜索输入都会换引用,上百张 memo 化卡片会跟着全部重渲染
+  const displayOrderRef = useRef<string[]>([])
+  const modsRef = useRef(mods)
+  /** 有对话框/确认弹层打开时为 true:多选快捷键(Ctrl+A/Esc)让位给弹层 */
+  const modalOpenRef = useRef(false)
 
   const busyRef = useRef(false)
   const dragDepthRef = useRef(0)
@@ -233,6 +256,43 @@ export default function App() {
 
   const installedCount = useMemo(() => mods.filter((mod) => mod.installed).length, [mods])
 
+  // ============ 多选状态维护 ============
+  // 镜像「屏幕顺序」:分组模式下屏幕顺序是各组按首现位置拼接(组内保序),
+  // 与 visibleMods 的扁平顺序不同;Shift 范围选择和全选必须按屏幕顺序,
+  // 否则会选中/漏掉视觉上位于范围之外的卡片
+  useEffect(() => {
+    displayOrderRef.current = groupedMods
+      ? groupedMods.flatMap((group) => group.mods.map((mod) => mod.name))
+      : visibleMods.map((mod) => mod.name)
+  }, [groupedMods, visibleMods])
+
+  useEffect(() => {
+    modsRef.current = mods
+  }, [mods])
+
+  // 列表刷新后修剪已不存在的选中项(删除/重命名后选中态自动收敛)
+  useEffect(() => {
+    setSelectedNames((prev) => {
+      if (prev.size === 0) {
+        return prev
+      }
+      const existing = new Set(mods.map((mod) => mod.name))
+      const next = new Set([...prev].filter((name) => existing.has(name)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [mods])
+
+  const selectedMods = useMemo(
+    () => mods.filter((mod) => selectedNames.has(mod.name)),
+    [mods, selectedNames]
+  )
+  const allVisibleSelected = useMemo(
+    () => visibleMods.length > 0 && visibleMods.every((mod) => selectedNames.has(mod.name)),
+    [visibleMods, selectedNames]
+  )
+  const canInstallSelected = selectedMods.some((mod) => !mod.installed)
+  const canUninstallSelected = selectedMods.some((mod) => mod.installed)
+
   // ============ 操作 ============
   const requireConfig = useCallback((): AppConfigData => {
     if (!config) {
@@ -258,6 +318,9 @@ export default function App() {
     setCurrentCategory(category)
     setView('mods')
     setSearch('')
+    // 选中集跟随分类视图:切换分类即清空,避免批量操作作用到看不见的模组上
+    setSelectedNames(new Set())
+    selectionAnchorRef.current = null
     // 记录上次打开的分类,供「启动时恢复」使用(与设置开关无关,始终记录)
     void window.api.setLastCategory(category)
   }, [])
@@ -392,6 +455,97 @@ export default function App() {
       await refreshMods()
     }
   }, [currentCategory, runOperation, refreshMods])
+
+  // ============ 多选与批量操作 ============
+  /** 切换一张卡的选中态;Shift 时从锚点到该卡范围选中(替换现有选中) */
+  const handleToggleSelect = useCallback((mod: ModInfo, modifiers: { shiftKey: boolean }) => {
+    const names = displayOrderRef.current
+    const anchor = selectionAnchorRef.current
+    if (modifiers.shiftKey && anchor) {
+      const from = names.indexOf(anchor)
+      const to = names.indexOf(mod.name)
+      if (from >= 0 && to >= 0) {
+        setSelectedNames(new Set(names.slice(Math.min(from, to), Math.max(from, to) + 1)))
+        return
+      }
+    }
+    setSelectedNames((prev) => {
+      const next = new Set(prev)
+      if (next.has(mod.name)) {
+        next.delete(mod.name)
+      } else {
+        next.add(mod.name)
+      }
+      return next
+    })
+    selectionAnchorRef.current = mod.name
+  }, [])
+
+  const handleSelectAllVisible = useCallback(() => {
+    setSelectedNames(new Set(displayOrderRef.current))
+  }, [])
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedNames(new Set())
+    selectionAnchorRef.current = null
+  }, [])
+
+  const runBatch = useCallback(
+    async (activity: string, action: BatchModAction, names: string[]) => {
+      const result = await runOperation(activity, () => window.api.batchModAction(action, names))
+      if (result) {
+        await refreshMods()
+      }
+    },
+    [runOperation, refreshMods]
+  )
+
+  /** 批量安装/重装:目标含失效模组时先经确认对话框(与「全部安装」同一交互) */
+  const handleBatchInstallLike = useCallback(
+    (action: 'install' | 'reinstall', names: string[]) => {
+      if (names.length === 0) {
+        return
+      }
+      const invalidNames = modsRef.current
+        .filter((mod) => names.includes(mod.name) && mod.invalid)
+        .map((mod) => mod.name)
+      if (invalidNames.length > 0) {
+        setPendingConfirm({ kind: 'batch-invalid', action, modNames: names, invalidNames })
+        return
+      }
+      const verb = action === 'reinstall' ? '重新安装' : '安装'
+      void runBatch(`正在批量${verb} ${names.length} 个模组...`, action, names)
+    },
+    [runBatch]
+  )
+
+  const handleBatchInstallAction = useCallback(
+    () => handleBatchInstallLike('install', [...selectedNames]),
+    [handleBatchInstallLike, selectedNames]
+  )
+
+  const handleBatchUninstallAction = useCallback(
+    () => runBatch(`正在批量卸载 ${selectedNames.size} 个模组...`, 'uninstall', [...selectedNames]),
+    [runBatch, selectedNames]
+  )
+
+  /** 批量重装只作用于已安装的选中项(与卡片菜单「重新安装」的可用范围一致) */
+  const handleBatchReinstallAction = useCallback(() => {
+    const names = [...selectedNames].filter(
+      (name) => modsRef.current.find((mod) => mod.name === name)?.installed
+    )
+    handleBatchInstallLike('reinstall', names)
+  }, [handleBatchInstallLike, selectedNames])
+
+  const handleBatchRepackageAction = useCallback(
+    () => runBatch(`正在批量重新打包 ${selectedNames.size} 个模组...`, 'repackage', [...selectedNames]),
+    [runBatch, selectedNames]
+  )
+
+  const handleBatchDeleteAction = useCallback(
+    () => setPendingConfirm({ kind: 'batch-delete', modNames: [...selectedNames] }),
+    [selectedNames]
+  )
 
   const handlePackageMod = useCallback(async () => {
     const result = await runOperation('正在打包模组...', () => window.api.runPackager())
@@ -535,13 +689,46 @@ export default function App() {
             await refreshMods()
           }
         })
-      }
+      },
+      onToggleSelect: handleToggleSelect
     }),
-    [handleToggleInstall, handleReinstall, handleRepackage, runOperation, refreshMods, requireConfig]
+    [handleToggleInstall, handleReinstall, handleRepackage, handleToggleSelect, runOperation, refreshMods, requireConfig]
   )
 
   // ============ 导入后重命名队列 ============
   const currentRename = renameQueue.length > 0 ? renameQueue[0] : null
+
+  // 多选快捷键让位弹层:任一对话框/确认层打开时不抢 Ctrl+A / Esc
+  useEffect(() => {
+    modalOpenRef.current =
+      settingsOpen || prompt !== null || pendingConfirm !== null || renameQueue.length > 0
+  }, [settingsOpen, prompt, pendingConfirm, renameQueue])
+
+  // ============ 多选快捷键 ============
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const inEditable =
+        target !== null &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      if (inEditable || modalOpenRef.current) {
+        return
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+        if (view !== 'mods') {
+          return
+        }
+        event.preventDefault()
+        handleSelectAllVisible()
+        return
+      }
+      if (event.key === 'Escape') {
+        handleClearSelection()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [view, handleSelectAllVisible, handleClearSelection])
 
   // ============ 快捷键 ============
   useEffect(() => {
@@ -683,7 +870,7 @@ export default function App() {
               onOpenSettings={handleOpenSettings}
             />
 
-            <main className="flex min-w-0 flex-1 flex-col">
+            <main className="relative flex min-w-0 flex-1 flex-col">
               {view === 'mods' ? (
                 <>
                   <ModListHeader
@@ -748,6 +935,8 @@ export default function App() {
                               mod={mod}
                               actions={modCardActions}
                               disabled={busy}
+                              selected={selectedNames.has(mod.name)}
+                              selectionActive={selectedNames.size > 0}
                               uiHidden={chromeHidden}
                             />
                           ))}
@@ -760,11 +949,32 @@ export default function App() {
                           mod={mod}
                           actions={modCardActions}
                           disabled={busy}
+                          selected={selectedNames.has(mod.name)}
+                          selectionActive={selectedNames.size > 0}
                           uiHidden={chromeHidden}
                         />
                       ))
                     )}
                   </div>
+
+                  {/* 多选批量操作栏(有选中项时从窗口底边滑出) */}
+                  {selectedNames.size > 0 && (
+                    <BatchActionBar
+                      count={selectedNames.size}
+                      allSelected={allVisibleSelected}
+                      canInstall={canInstallSelected}
+                      canUninstall={canUninstallSelected}
+                      busy={busy}
+                      uiHidden={chromeHidden}
+                      onSelectAll={handleSelectAllVisible}
+                      onClear={handleClearSelection}
+                      onInstall={handleBatchInstallAction}
+                      onUninstall={handleBatchUninstallAction}
+                      onReinstall={handleBatchReinstallAction}
+                      onRepackage={handleBatchRepackageAction}
+                      onDelete={handleBatchDeleteAction}
+                    />
+                  )}
                 </>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-6">
@@ -940,6 +1150,50 @@ export default function App() {
                             void refreshMods()
                           }
                         })
+                      }}
+                    >
+                      仍要继续
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </>
+              )}
+              {pendingConfirm?.kind === 'batch-delete' && (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>删除模组</AlertDialogTitle>
+                    <AlertDialogDescription>{`将永久删除选中的 ${pendingConfirm.modNames.length} 个模组的备份文件及已安装的模组文件：\n${pendingConfirm.modNames.join('\n')}\n此操作无法撤销。`}</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction
+                      variant="destructive"
+                      onClick={() => {
+                        const modNames = pendingConfirm.modNames
+                        setPendingConfirm(null)
+                        void runBatch(`正在批量删除 ${modNames.length} 个模组...`, 'remove', modNames)
+                      }}
+                    >
+                      删除
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </>
+              )}
+              {pendingConfirm?.kind === 'batch-invalid' && (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {pendingConfirm.action === 'reinstall' ? '重装失效模组' : '安装失效模组'}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>{`当前操作包含 ${pendingConfirm.invalidNames.length} 个已标记为失效的模组：\n${pendingConfirm.invalidNames.join('\n')}\n可能无法正常工作，是否仍要继续？`}</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        const { action, modNames } = pendingConfirm
+                        setPendingConfirm(null)
+                        const verb = action === 'reinstall' ? '重新安装' : '安装'
+                        void runBatch(`正在批量${verb} ${modNames.length} 个模组...`, action, modNames)
                       }}
                     >
                       仍要继续

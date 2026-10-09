@@ -315,6 +315,17 @@
     transition: box-shadow 150ms ease;
   }
 
+  /* 模组卡片的液态玻璃层(glass-card 是卡片玻璃根的稳定钩子类):卡片不投任何
+     外部阴影,vaso 自带的硬编码外投影(黑 18%)同样去掉,只保留内沿高光
+     (内沿三条与 vaso 默认值一致);卡片与背景的分层完全交给玻璃自身的
+     折射/模糊,底部不再出现淡淡的阴影层 */
+  .glass-card > [data-vaso] {
+    box-shadow:
+      inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
+      inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.5),
+      inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.3) !important;
+  }
+
   .glass-input-root:hover > .glass-input-overlay > [data-vaso],
   .glass-input-root:focus-within > .glass-input-overlay > [data-vaso] {
     box-shadow:
@@ -332,7 +343,7 @@
     opacity: 0;
     pointer-events: none;
   }
-  [data-slider-isolated] > .glass-dialog {
+  [data-slider-isolated] > .overlay-panel {
     visibility: hidden;
   }
   [data-slider-isolated] [data-slider-isolate-keep] {
@@ -352,9 +363,10 @@
     }
   }
 
-  /* 毛玻璃:纯 backdrop-filter,渲染开销远低于液态玻璃,用于对话框等浮层 */
+  /* 毛玻璃:纯 backdrop-filter,渲染开销远低于液态玻璃,用于对话框等浮层的
+     液态玻璃回退;模糊半径为浮层基础值 16px 的 2 倍(浮层文字可读性优先) */
   .frosted {
-    backdrop-filter: blur(16px);
+    backdrop-filter: blur(32px);
   }
 
   /* 液态玻璃关闭时的高透毛玻璃回退:底色近乎全透,靠 backdrop 模糊提背景保证可读性。
@@ -470,6 +482,20 @@
     transition: opacity 150ms;
   }
 
+  /* 液态玻璃对话框面板(overlay-panel):玻璃层是 vaso 子元素,退出时随上面的
+     > * 规则以 opacity 淡出即可。根上不能带 backdrop-filter——哪怕 blur(0)
+     也会把根变成 backdrop root,截断子玻璃层的背景采样,退出瞬间玻璃内容会
+     整体闪没(液态面板根自身透明,不存在毛玻璃残影问题;根自绘毛玻璃的
+     旧式浮层如下拉菜单仍走上面的 blur(0) 归零规则) */
+  [data-state='closed'] .overlay-panel.ui-fade-popover,
+  [data-state='closed'].overlay-panel.ui-fade-popover {
+    backdrop-filter: none;
+    transition:
+      background-color 150ms,
+      border-color 150ms,
+      box-shadow 150ms;
+  }
+
   /* 模组卡片推入动画(从右往左),首次进入视口才播放:列表一次性渲染上百张卡,
      若按挂载时机播放,视口外的卡动画白白放完,滚动下来的都是播完的静态卡。
      卡片挂载即处于等待态(容器右移 + 内容透明),共享 IntersectionObserver 触发后
@@ -505,6 +531,20 @@
   .card-enter > * {
     animation: card-children-in 500ms ease-out backwards;
     animation-delay: var(--card-enter-delay, 0ms);
+  }
+
+  /* 批量操作栏入场:从窗口底边之外沿直线垂直滑入。动画落在外层居中容器的内层
+     div 上(100% 自身高度 + 40px,保证起点完全在视口外),只动 transform——
+     外层的 -translate-x-1/2 是独立 translate 属性,与 transform 叠加会让
+     轨迹变成斜线;祖先 opacity<1 也会截断玻璃的 backdrop 采样 */
+  @keyframes batch-bar-in {
+    from {
+      transform: translateY(calc(100% + 40px));
+    }
+  }
+
+  .batch-bar-enter {
+    animation: batch-bar-in 300ms cubic-bezier(0.33, 1, 0.68, 1) backwards;
   }
 
   .text-shadow-soft {
@@ -550,28 +590,30 @@
   }
 }
 
-/* sonner 运行时注入的默认样式是不分层的(:where(...) 零特异性,但未分层声明在
-   CSS 层叠里整层压过 @layer 内的样式),Tailwind 4 起 utilities 全在 layer 里,
-   toast classNames 上的 glass-dialog/rounded-xl/border-border 会被 sonner 默认的
-   不透明黑底压掉(Tailwind 3 时代 utilities 不分层,故迁移后才坏)。
-   修复:在 toast 元素上直接声明 sonner 的主题变量(元素自身的声明压制从 toaster
-   继承的值,与特异性无关),并把阴影/描述色用更高特异性的未分层规则夺回;
-   目标值 = sonner.tsx classNames 引用的 glass-dialog / rounded-xl / shadow-card */
-[data-sonner-toast][data-styled='true'] {
-  --normal-bg: hsl(var(--background) / 0.55);
-  --normal-text: hsl(var(--foreground));
-  --normal-border: hsl(var(--foreground) / 0.1);
-  --border-radius: var(--radius);
-  box-shadow: var(--app-shadow-card);
+/* toast 是 toast.custom 渲染的液态玻璃卡片(ToastCard),sonner 的 li 只是定位
+   外壳。sonner 运行时注入的默认样式不分层(:where 零特异性,但未分层声明在 CSS
+   层叠里整层压过 @layer),给 li 底色/边框/投影和 blur(0) 滤镜——filter 非 none
+   会让 li 成为 backdrop root,卡片的 backdrop-filter 采不到 li 外的背景图;li 的
+   opacity 还承担入场与堆叠显隐,opacity<1 期间玻璃同样采不到(到 1 才突然出现)。
+   因此对 custom li(仅 data-styled='false',sonner 内置 toast 样式不受影响):
+   清掉视觉与滤镜,li 常驻不透明——入场只剩位移过渡,内容淡入交给卡片上的
+   ui-fade-popover;堆叠折叠仍按 sonner 的 data-visible 显隐 */
+[data-sonner-toast][data-styled='false'] {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  filter: none;
+  opacity: 1;
 }
 
-@media (prefers-color-scheme: light) {
-  [data-sonner-toast][data-styled='true'] {
-    --normal-bg: hsl(var(--card) / 0.88);
-    --normal-border: hsl(var(--foreground) / 0.12);
-  }
+[data-sonner-toast][data-styled='false'][data-visible='false'] {
+  opacity: 0;
 }
 
-[data-sonner-toast] [data-description] {
-  color: hsl(var(--muted-foreground));
+/* 定时/手动关闭的退场:li 常驻不透明会压住 sonner 的 data-removed opacity,
+   只保留它的位移,淡出改由卡片自身承担(不打断玻璃采样);滑动关闭(swipe-out)
+   是 li 上的 animation,级联优先级高于静态声明,仍由 sonner 原样驱动 */
+[data-sonner-toast][data-styled='false'][data-removed='true'] > * {
+  opacity: 0;
+  transition: opacity 200ms ease;
 }

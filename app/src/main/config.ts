@@ -80,7 +80,8 @@ const LIQUID_GLASS_INI_KEYS: Record<keyof LiquidGlassConfig, string> = {
   toolbar: 'toolbar',
   logPanel: 'log_panel',
   buttons: 'buttons',
-  inputs: 'inputs'
+  inputs: 'inputs',
+  overlays: 'overlays'
 }
 
 /**

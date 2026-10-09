@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import { Check, ChevronRight, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LiquidGlass } from '@/components/liquid-glass'
 
 const DropdownMenu = DropdownMenuPrimitive.Root
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
@@ -43,10 +44,18 @@ const DropdownMenuSubContent = React.forwardRef<
     )}
     {...props}
   >
-    {/* 与对话框同款的毛玻璃面板保持观感一致;ui-fade-popover 让面板随开合淡入淡出且不打断 backdrop 采样 */}
-    <div className="glass-dialog frosted ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl p-1 text-popover-foreground shadow-card">
+    {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃;ui-fade-popover 让面板随开合
+        淡入淡出且不打断 backdrop 采样。尺寸/圆角/投影在宿主上,内边距在内容层 */}
+    <LiquidGlass
+      area="overlays"
+      className="ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl shadow-card"
+      fallbackClassName="glass-dialog frosted"
+      contentClassName="p-1 text-popover-foreground"
+      depth={1}
+      blur={4}
+    >
       {children}
-    </div>
+    </LiquidGlass>
   </DropdownMenuPrimitive.SubContent>
 ))
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName
@@ -65,10 +74,18 @@ const DropdownMenuContent = React.forwardRef<
       )}
       {...props}
     >
-      {/* 与对话框同款的毛玻璃面板保持观感一致;ui-fade-popover 让面板随开合淡入淡出且不打断 backdrop 采样 */}
-      <div className="glass-dialog frosted ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl p-1 text-popover-foreground shadow-card">
+      {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃;ui-fade-popover 让面板随开合
+          淡入淡出且不打断 backdrop 采样。尺寸/圆角/投影在宿主上,内边距在内容层 */}
+      <LiquidGlass
+        area="overlays"
+        className="ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl shadow-card"
+        fallbackClassName="glass-dialog frosted"
+        contentClassName="p-1 text-popover-foreground"
+        depth={1}
+        blur={4}
+      >
         {children}
-      </div>
+      </LiquidGlass>
     </DropdownMenuPrimitive.Content>
   </DropdownMenuPrimitive.Portal>
 ))

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 import { cn } from '@/lib/utils'
+import { LiquidGlass } from '@/components/liquid-glass'
 import { buttonVariants, GlassButtonOverlay, GLASS_BUTTON_CONTENT_CLASS } from '@/components/ui/button'
 
 const AlertDialog = AlertDialogPrimitive.Root
@@ -14,7 +15,7 @@ const AlertDialogOverlay = React.forwardRef<
   ({ className, ...props }, ref) => (
     <AlertDialogPrimitive.Overlay
       className={cn(
-        'fixed inset-0 z-50 bg-black/50 dark:bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+        'fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         className
       )}
       {...props}
@@ -40,15 +41,22 @@ const AlertDialogContent = React.forwardRef<
       className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out"
       {...props}
     >
-      {/* 毛玻璃面板:比液态玻璃渲染开销低得多;网格布局与内边距放在 relative 内容层 */}
-      <div
+      {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃;overlay-panel 是稳定钩子类
+          (与 dialog.tsx 同名)。网格布局与内边距放在 relative 内容层;
+          ui-fade-popover 让面板随开合淡入淡出且不打断 backdrop 采样 */}
+      <LiquidGlass
+        area="overlays"
         className={cn(
-          'glass-dialog frosted ui-fade-popover pointer-events-auto w-full max-w-lg rounded-xl shadow-card',
+          'overlay-panel ui-fade-popover pointer-events-auto w-full max-w-lg rounded-xl shadow-card',
           className
         )}
+        fallbackClassName="glass-dialog frosted"
+        contentClassName="grid gap-4 p-6"
+        depth={1}
+        blur={4}
       >
-        <div className="relative grid gap-4 p-6">{children}</div>
-      </div>
+        {children}
+      </LiquidGlass>
     </AlertDialogPrimitive.Content>
   </AlertDialogPortal>
 ))

@@ -41,8 +41,25 @@ export interface ImportResult {
   importedName?: string
 }
 
+/** 模组列表批量操作类型(mods:batch) */
+export type BatchModAction =
+  | 'install'
+  | 'uninstall'
+  | 'remove'
+  | 'markInvalid'
+  | 'unmarkInvalid'
+  | 'reinstall'
+  | 'repackage'
+
 /** 液态玻璃可单独开关的界面区域 */
-export type LiquidGlassArea = 'sidebar' | 'modCards' | 'toolbar' | 'logPanel' | 'buttons' | 'inputs'
+export type LiquidGlassArea =
+  | 'sidebar'
+  | 'modCards'
+  | 'toolbar'
+  | 'logPanel'
+  | 'buttons'
+  | 'inputs'
+  | 'overlays'
 
 /** 液态玻璃效果配置:总开关(液态玻璃/毛玻璃)+ 效果强度 + 区域开关 */
 export interface LiquidGlassConfig {
@@ -68,6 +85,8 @@ export interface LiquidGlassConfig {
   buttons: boolean
   /** 文本输入框(搜索、路径、重命名等) */
   inputs: boolean
+  /** 浮层(对话框、下拉菜单、选择器、toast 通知) */
+  overlays: boolean
 }
 
 export const LIQUID_GLASS_DEFAULTS: LiquidGlassConfig = {
@@ -81,7 +100,8 @@ export const LIQUID_GLASS_DEFAULTS: LiquidGlassConfig = {
   toolbar: true,
   logPanel: true,
   buttons: true,
-  inputs: true
+  inputs: true,
+  overlays: true
 }
 
 export const LIQUID_GLASS_KEYS = Object.keys(LIQUID_GLASS_DEFAULTS) as (keyof LiquidGlassConfig)[]
