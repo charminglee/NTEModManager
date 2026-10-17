@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useState } from 'react'
 import {
   Check,
   ChevronDown,
@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import FileTree from '@/components/file-tree'
 import { LiquidGlass } from '@/components/liquid-glass'
 import { Badge } from '@/components/ui/badge'
-import { Button, GlassButtonOverlay, GLASS_BUTTON_CONTENT_CLASS } from '@/components/ui/button'
+import { Button, GlassButton } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,95 +53,27 @@ interface ModCardProps {
   selected?: boolean
   /** 列表中是否存在任一选中项:存在时所有选择框常显,否则悬浮才显示 */
   selectionActive?: boolean
-  /** F11 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
+  /** F9 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
   uiHidden?: boolean
 }
 
-/** 视口首次可见回调的共享 IntersectionObserver:卡片上百张,不能每卡一个 observer 实例 */
-let revealObserver: IntersectionObserver | null = null
-const revealCallbacks = new WeakMap<Element, (delayMs: number) => void>()
-
-const STAGGER_STEP_MS = 45
-/** 批内交错上限:视口特别高、单批卡片很多时,最后一张也不晚于 495ms 起步 */
-const MAX_STAGGER_MS = 11 * STAGGER_STEP_MS
-
-function observeFirstViewportEntry(el: Element, onReveal: (delayMs: number) => void): () => void {
-  if (typeof IntersectionObserver === 'undefined') {
-    onReveal(0)
-    return () => {}
-  }
-  if (!revealObserver) {
-    revealObserver = new IntersectionObserver(
-      (entries) => {
-        // 同批进入视口的卡片按视口纵坐标排序,批内自上而下依次交错推入。
-        // 交错只在批内分配、不跨批累积:若用全局游标排队,快速甩动滚动时
-        // 途中掠过视口的卡片会逐张领走槽位,滚到底部后视口内的卡片
-        // 反而要等游标追上来才能推入
-        const revealed = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-        for (const [batchIndex, entry] of revealed.entries()) {
-          revealObserver!.unobserve(entry.target)
-          const callback = revealCallbacks.get(entry.target)
-          revealCallbacks.delete(entry.target)
-          callback?.(Math.min(batchIndex * STAGGER_STEP_MS, MAX_STAGGER_MS))
-        }
-      },
-      // 底部外扩一点:卡片刚探入视口就开始推入,而不是完整出现后才动
-      { rootMargin: '0px 0px 5% 0px' }
-    )
-  }
-  revealCallbacks.set(el, onReveal)
-  revealObserver.observe(el)
-  return () => {
-    revealObserver?.unobserve(el)
-    revealCallbacks.delete(el)
-  }
-}
-
-/** memo:列表卡片多且各带 vaso 玻璃实例,无关状态(如日志推送)变化时不重渲染 */
+/** memo:列表卡片多且各带玻璃元素,无关状态(如日志推送)变化时不重渲染 */
 function ModCard({ mod, actions, disabled, selected = false, selectionActive = false, uiHidden }: ModCardProps) {
   const [expanded, setExpanded] = useState(false)
-  // 推入动画在卡片首次进入视口时才播放:挂载即处于右侧等待态(不可见),
-  // 观察器触发后整体置换为播放态,避免回调前的「先定格后跳动」闪现
-  const [entered, setEntered] = useState(false)
-  const revealRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const el = revealRef.current
-    if (!el) return
-    return observeFirstViewportEntry(el, (delayMs) => {
-      el.style.setProperty('--card-enter-delay', `${delayMs}ms`)
-      setEntered(true)
-    })
-  }, [])
 
   return (
-    // content-visibility:auto:列表可能挂载上百张卡,每张带 3 个 vaso 玻璃实例
-    // (卡本体 + 两个按钮覆盖层),离屏卡片整棵跳过 layout/paint/backdrop 滤镜,
-    // 只有视口附近的卡参与合成。contain-intrinsic-size 的 auto 前缀让浏览器
-    // 记住卡片渲染过的真实尺寸(含展开态),仅未渲染过的离屏卡用 64px 估算
-    // (收起态典型高度),避免滚动条长度失真;推入动画本就设计为进入视口才播,
-    // 与跳过渲染的行为一致
-    <div
-      ref={revealRef}
-      className={cn(
-        '[content-visibility:auto] [contain-intrinsic-size:auto_64px]',
-        entered ? 'card-go' : 'card-wait'
-      )}
-    >
+    // content-visibility:auto:离屏卡片跳过布局与绘制;液态玻璃引擎按可视区
+    // 注册与补画,滚动期间只刷新进入视口的卡片。
+    <div className="[content-visibility:auto] [contain-intrinsic-size:auto_64px]">
         <LiquidGlass
           area="modCards"
+          fallbackClassName="mod-card-glass"
           className={cn(
-            // glass-card:稳定钩子类,index.css 按它把 vaso 层投影收敛为纯内沿高光;
-            // 卡片不投任何外部阴影(原 shadow-card-soft + vaso 默认外投影在
-            // 浅色背景上叠成卡片底下的一层淡影,已按需求全部移除)
-            'glass-card ui-fade overflow-hidden rounded-xl',
-            uiHidden && 'ui-fade-hidden',
-            entered ? 'card-enter' : 'card-children-wait'
+            // 卡片玻璃按 panel 档参数渲染(engine 侧 zRadius 会按元素最短边收口);
+            // 卡片不投任何外部阴影(库的 shadowOpacity 由面板档固定为 0)
+            'ui-fade overflow-hidden rounded-xl',
+            uiHidden && 'ui-fade-hidden'
           )}
-          depth={1.4}
-          blur={1.5}
           crisp={false}
         >
         <div className="group relative flex items-center gap-3 px-4 py-3">
@@ -199,7 +131,7 @@ function ModCard({ mod, actions, disabled, selected = false, selectionActive = f
   
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <GlassButton
                 type="button"
                 disabled={disabled}
                 onClick={() => actions.onToggleInstall(mod)}
@@ -210,21 +142,18 @@ function ModCard({ mod, actions, disabled, selected = false, selectionActive = f
                     : 'bg-secondary/70 text-secondary-foreground shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.1)] hover:bg-secondary'
                 )}
               >
-                <GlassButtonOverlay />
-                <span className={GLASS_BUTTON_CONTENT_CLASS}>
-                  {mod.installed ? (
-                    <>
-                      <PackageCheck className="h-3.5 w-3.5" />
-                      已安装
-                    </>
-                  ) : (
-                    <>
-                      <Package className="h-3.5 w-3.5" />
-                      未安装
-                    </>
-                  )}
-                </span>
-              </button>
+                {mod.installed ? (
+                  <>
+                    <PackageCheck className="h-3.5 w-3.5" />
+                    已安装
+                  </>
+                ) : (
+                  <>
+                    <Package className="h-3.5 w-3.5" />
+                    未安装
+                  </>
+                )}
+              </GlassButton>
             </TooltipTrigger>
             <TooltipContent>{mod.installed ? '点击卸载此模组' : '点击安装此模组'}</TooltipContent>
           </Tooltip>

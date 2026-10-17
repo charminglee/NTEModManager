@@ -43,17 +43,6 @@ const SHADOW_PAD = 20
  * 首帧会短暂露出未采样的透明画布。
  */
 const VISIBILITY_PRELOAD_PX = 160
-/** 高斯模糊迭代数(与库 defaults.ts 的 BLUR_ITERATIONS 一致;库 1.0.3 未导出该常量) */
-const BLUR_ITERATIONS = 6
-/**
- * 模糊链路降采样倍数:blurA/blurB 在 1/N 分辨率上做模糊(1 = 不降采样)。
- * 模糊本身是低通,半分辨率处理后线性放大,半径(以原图像素计)保持不变,
- * 视觉近似无损,12 个模糊 pass 的像素量降到 1/4。
- */
-const BLUR_DOWNSCALE = 2
-/** FBO 缓存组数软上限与像素预算(每组含 bg 全尺寸 + blurA/blurB 降采样共 3 张纹理) */
-const FBO_CACHE_MAX_SETS = 48
-const FBO_CACHE_PIXEL_BUDGET = 8_000_000
 /** config 批量合并阈值:同一批变化的玻璃数达到该值(或总数的 1/3)时改走全量重画 */
 const CONFIG_MERGE_ABS = 8
 /** 尺寸兜底检测间隔(ms):ResizeObserver 之外的周期性保险(无 RO 时按帧退化为高频) */
@@ -72,59 +61,16 @@ interface LayerRect {
   h: number
 }
 
-/** 渲染器内部成员视图(仅声明本适配层用到的部分;库升级时签名变化会在这里报错) */
-interface RendererFBO {
-  fbo: WebGLFramebuffer
-  tex: WebGLTexture
-  w: number
-  h: number
-}
-
-interface RendererFBOSet {
-  bg: RendererFBO
-  blurA: RendererFBO
-  blurB: RendererFBO
-}
-
-interface GlassRendererInternals {
-  canvas: HTMLCanvasElement
-  gl: WebGLRenderingContext
-  contextLost: boolean
-  width: number
-  height: number
-  fboCache: Map<string, RendererFBOSet>
-  activeFBOs: RendererFBOSet | null
-  cropCanvas: HTMLCanvasElement
-  cropCtx: CanvasRenderingContext2D
-  bgTex: WebGLTexture | null
-  blitP: WebGLProgram
-  blitU: Record<string, WebGLUniformLocation | null>
-  blurP: WebGLProgram
-  blurU: Record<string, WebGLUniformLocation | null>
-  quadBuf: WebGLBuffer
-  _setActiveSize(w: number, h: number): boolean
-  _makeFBO(w: number, h: number): RendererFBO
-  _freeFBOSet(set: RendererFBOSet): void
-  _drawQuad(prog: WebGLProgram, buf: WebGLBuffer): void
-  uploadAndBlur(
-    sourceCanvas: HTMLCanvasElement,
-    sourceX: number,
-    sourceY: number,
-    width: number,
-    height: number,
-    blurAmount: number
-  ): void
-}
-
 /**
  * 库实例的内部成员视图。这里只声明本适配层真正用到的部分;库升级时若签名变化,
  * TypeScript 会在这里报错,便于定位。
  */
 interface GlassInternals {
+  root: HTMLElement
   glassSet: Set<HTMLElement>
   glassCanvases: Map<HTMLElement, HTMLCanvasElement>
   _glassContentDirty: Set<HTMLElement>
-  _glassCache: Map<HTMLElement, unknown>
+  _glassCache: Map<HTMLElement, { centerX: number; centerY: number }>
   _glassLastSize: Map<HTMLElement, { w: number; h: number }>
   _closestGlassAncestor(node: Node): HTMLElement | null
   _markGlassAndDependents(element: HTMLElement, rectOverride?: DOMRect): void
@@ -133,7 +79,6 @@ interface GlassInternals {
     invalidateCache(element: HTMLElement): void
     captureElement(element: HTMLElement, force?: boolean): Promise<void>
   }
-  renderer: GlassRendererInternals
   _start(): Promise<void>
   destroy(): void
   _setupGlassElements(): void
@@ -183,46 +128,6 @@ interface GlassInternals {
 /** 库实例 → 引擎(覆写的内部方法里需要读引擎侧的场景表) */
 const engineByInstance = new WeakMap<object, GlassEngine>()
 
-/**
- * 创建库实例,并顺带把 WebGL 上下文从库写死的 preserveDrawingBuffer=true
- * 改为 false。
- *
- * readback(drawImage 取 WebGL 画布)发生在库渲染循环的同一同步任务里
- * (renderGlassPanel 之后立刻 drawImage),不依赖「保留上一帧的缓冲」,
- * 关掉该标志可省去驱动层每帧保留后备缓冲的成本(Windows/ANGLE 下尤其明显)。
- * 库 1.0.3 把该参数写死在构造器里,只能在其构造窗口内临时拦截 getContext 改参;
- * 构造是同步的,窗口内不会有其他代码并发创建上下文。
- */
-function createGlassInstance(options: {
-  root: HTMLElement
-  glassElements: HTMLElement[]
-  defaults?: Partial<GlassConfig>
-}): LiquidGlass {
-  const proto = HTMLCanvasElement.prototype
-  const originalGetContext = proto.getContext
-  proto.getContext = function patchedGetContext(
-    this: HTMLCanvasElement,
-    contextId: string,
-    attrs?: unknown
-  ): unknown {
-    // 还原原型:本拦截只为玻璃渲染器服务,恢复后其余调用保持原生行为
-    proto.getContext = originalGetContext
-    if (contextId === 'webgl' || contextId === 'experimental-webgl') {
-      const merged = {
-        ...(typeof attrs === 'object' && attrs !== null ? attrs : {}),
-        preserveDrawingBuffer: false
-      }
-      return originalGetContext.call(this, contextId, merged)
-    }
-    return originalGetContext.call(this, contextId, attrs as never)
-  } as unknown as typeof proto.getContext
-  try {
-    return new LiquidGlass(options as ConstructorParameters<typeof LiquidGlass>[0])
-  } finally {
-    proto.getContext = originalGetContext
-  }
-}
-
 /** 按 DOM 顺序排序(近似绘制顺序:后出现的元素画在后面,浮层因挂到 body 尾部自然在后) */
 function sortByDocumentOrder(elements: HTMLElement[]): HTMLElement[] {
   return elements.slice().sort((a, b) => {
@@ -241,30 +146,42 @@ export class GlassEngine {
   private destroyed = false
   /** 每个玻璃元素背后的场景层 */
   private readonly scenes = new Map<HTMLElement, SceneLayer[]>()
+  /**
+   * 玻璃的场景依赖:仅 overlay 玻璃依赖自己的父玻璃画布。库默认按 DOM
+   * 顺序和矩形相交做级联刷新,会把主列表与对话框这类同背景但不相关的
+   * 玻璃也一起重画;这里用显式来源替代该推断。
+   */
+  private readonly glassDependencies = new Map<HTMLElement, Set<HTMLElement>>()
+  /** 当前帧实际重绘的玻璃及采样矩形,供依赖它的 overlay 玻璃判断级联 */
+  private readonly renderedGlassThisFrame = new Map<HTMLElement, LayerRect>()
+  private readonly relevantPriorGlass: Array<{ rect: LayerRect }> = []
   private defaultScene: SceneLayer[] = []
   private suspended = false
   /** 因不可见/暂停而跳过的玻璃:保留脏标记,下帧继续试探,可见即补画 */
   private readonly deferred = new Set<HTMLElement>()
-  /** 正在做 CSS transform 动画的玻璃(由组件侧登记):每帧检测位移并标脏,让画面跟随移动 */
-  private readonly motionTracked = new Set<HTMLElement>()
-  /** 追踪元素的上一帧中心点(视口坐标);无记录=首帧先按当前位置画一帧对齐 */
-  private readonly motionCenter = new Map<HTMLElement, { x: number; y: number }>()
   /** ResizeObserver 尺寸变化队列:下一帧渲染循环统一消费,避免每帧全量读 offsetWidth */
   private readonly pendingSizeSync = new Set<HTMLElement>()
   /** 尺寸监听器;环境缺失时退化为周期性兜底检测 */
   private readonly sizeObserver: ResizeObserver | null
   /**
-   * 视口可见性跟踪:IntersectionObserver 维护,替代渲染循环对全部玻璃每帧做
-   * getBoundingClientRect 检查(大列表上百张卡时是每秒数万次布局读取,且让
-   * 渲染循环因「离屏玻璃保留脏标记」永不空闲)
+   * 视口可见性跟踪:静止期由 IntersectionObserver 维护,避免渲染循环持续
+   * 对全部玻璃做 getBoundingClientRect 检查。滚动活跃期的旧结果会晚一帧,
+   * 因此改由 scrollFrameVisible 同帧校准。
    */
   private readonly visibleGlass = new Set<HTMLElement>()
   private readonly visibilityObserver: IntersectionObserver | null
   /** IO 首次回调前用 rect 兜底判可见,避免首帧把可见玻璃全判成离屏 */
   private visibilityReady = false
+  /**
+   * 滚动帧的同步可见集合。IntersectionObserver 的回调晚于 rAF 绘制,
+   * 快速滚动时新进视口的卡片会在当帧继续使用上一位置的画布。滚动活跃期
+   * 改用实测矩形重建本集合,让脏标记、可见判定与绘制发生在同一帧。
+   */
+  private readonly scrollFrameVisible = new Set<HTMLElement>()
+  private scrollFrameUsesRect = false
   /** 上次尺寸兜底检测的时间戳 */
   private lastSizeFallbackAt = 0
-  /** 最近一次 scroll 事件时间戳:窗口期内视口内玻璃每帧标脏,画面逐帧跟随滚动 */
+  /** 最近一次 scroll 事件时间戳:窗口期内按同帧位移刷新玻璃,画面逐帧跟随滚动 */
   private lastScrollAt = -Infinity
   /** 全局滚动监听(capture:内层 overflow 容器的 scroll 不冒泡,须在捕获阶段收) */
   private readonly onWindowScroll: () => void
@@ -272,7 +189,10 @@ export class GlassEngine {
   private readonly pendingConfigOwners = new Set<HTMLElement>()
 
   constructor({ root, defaults }: GlassEngineOptions) {
-    this.instance = createGlassInstance({ root, glassElements: [], defaults })
+    // 保留库默认的 preserveDrawingBuffer=true。玻璃合成结果通过 drawImage
+    // 回读到各元素自己的 2D 画布;关闭后备缓冲保留时,多画布连续回读在部分
+    // GPU/ANGLE 驱动上会读到旧帧,表现为整排卡片沿用先前位置的深色背景。
+    this.instance = new LiquidGlass({ root, glassElements: [], defaults })
     const internals = this.instance as unknown as GlassInternals
     this.internals = internals
     this.onWindowScroll = () => {
@@ -315,7 +235,6 @@ export class GlassEngine {
             { rootMargin: `${VISIBILITY_PRELOAD_PX}px` }
           )
     this.patchInternals()
-    this.patchRendererInternals()
   }
 
   // ──────────────────────────────── 对外 API ────────────────────────────────
@@ -351,7 +270,6 @@ export class GlassEngine {
     window.addEventListener('scroll', this.onWindowScroll, { capture: true, passive: true })
     // 库会把 root 的 user-select 置为 none;本应用的 body 已是 none,这里不额外处理,
     // 但记住该副作用:root 上不要依赖 user-select 的默认值
-    this.trimRendererCache()
   }
 
   destroy(): void {
@@ -359,15 +277,18 @@ export class GlassEngine {
     this.destroyed = true
     this.suspended = true
     this.scenes.clear()
+    this.glassDependencies.clear()
+    this.renderedGlassThisFrame.clear()
+    this.relevantPriorGlass.length = 0
     this.defaultScene = []
     this.deferred.clear()
-    this.motionTracked.clear()
-    this.motionCenter.clear()
     this.pendingSizeSync.clear()
     this.pendingConfigOwners.clear()
     this.sizeObserver?.disconnect()
     this.visibilityObserver?.disconnect()
     this.visibleGlass.clear()
+    this.scrollFrameVisible.clear()
+    this.scrollFrameUsesRect = false
     window.removeEventListener('scroll', this.onWindowScroll, { capture: true })
     this.internals.destroy()
   }
@@ -376,6 +297,7 @@ export class GlassEngine {
   addGlass(el: HTMLElement, layers: SceneLayer[] | null): void {
     if (layers) this.scenes.set(el, layers)
     else this.scenes.delete(el)
+    this.syncGlassDependencies(el, layers)
     if (this.internals.glassSet.has(el)) return
     this.internals.glassSet.add(el)
     this.setupGlassElement(el)
@@ -390,14 +312,15 @@ export class GlassEngine {
     this.internals.glassCanvases.delete(el)
     this.internals.glassSet.delete(el)
     this.scenes.delete(el)
+    this.glassDependencies.delete(el)
+    this.renderedGlassThisFrame.delete(el)
     this.deferred.delete(el)
-    this.motionTracked.delete(el)
-    this.motionCenter.delete(el)
     this.pendingSizeSync.delete(el)
     this.pendingConfigOwners.delete(el)
     this.sizeObserver?.unobserve(el)
     this.visibilityObserver?.unobserve(el)
     this.visibleGlass.delete(el)
+    this.scrollFrameVisible.delete(el)
     this.internals._glassDirty.delete(el)
     this.internals._glassCache.delete(el)
     this.internals.capture.invalidateCache(el)
@@ -408,6 +331,7 @@ export class GlassEngine {
   /** 更新某个玻璃的场景,并重画它 */
   setScene(el: HTMLElement, layers: SceneLayer[]): void {
     this.scenes.set(el, layers)
+    this.syncGlassDependencies(el, layers)
     this.internals.markChanged(el)
   }
 
@@ -442,28 +366,6 @@ export class GlassEngine {
     }
   }
 
-  /**
-   * 登记/结束一处「正在做 CSS transform 动画」的玻璃。
-   *
-   * transform 动不了布局:不触发 resize/scroll/尺寸检查,渲染循环平时感知不到,
-   * 玻璃折射的画面会停在动画起点的采样上(列表卡片的滑入动画就因此错位;
-   * 长列表靠离屏玻璃的补脏侥幸每帧渲染,短列表则动画结束后仍残留错位)。
-   * 登记后每帧检测元素位移,超过半像素即标脏重画,画面逐帧跟随;结束时
-   * (moving=false)额外标脏一次,把最终静止位置画正后停止追踪。
-   */
-  trackMotion(el: HTMLElement, moving: boolean): void {
-    if (moving) {
-      if (this.motionTracked.has(el)) return
-      this.motionTracked.add(el)
-      // 无基线:首帧先按当前位置标脏画一帧,再逐帧比较
-      this.motionCenter.delete(el)
-      return
-    }
-    if (!this.motionTracked.delete(el)) return
-    this.motionCenter.delete(el)
-    if (this.internals.glassSet.has(el)) this.internals._glassDirty.add(el)
-  }
-
   get fps(): number {
     return this.instance.fps
   }
@@ -496,6 +398,20 @@ export class GlassEngine {
       attributes: true,
       attributeFilter: ['data-config']
     })
+  }
+
+  /** 从显式场景来源生成依赖集;非 overlay 的默认背景场景没有级联依赖 */
+  private syncGlassDependencies(el: HTMLElement, layers: SceneLayer[] | null): void {
+    if (!layers || layers.length === 0) {
+      this.glassDependencies.delete(el)
+      return
+    }
+    const dependencies = new Set<HTMLElement>()
+    for (const layer of layers) {
+      if ('el' in layer) dependencies.add(layer.el)
+    }
+    if (dependencies.size > 0) this.glassDependencies.set(el, dependencies)
+    else this.glassDependencies.delete(el)
   }
 
   /** 清理元素上遗留的旧引擎画布(实例被替换/热更新时可能残留,重叠的孤儿画布会扰乱显示) */
@@ -723,7 +639,7 @@ export class GlassEngine {
       dpr: number,
       isDragging: boolean,
       dirtyTargets: Set<HTMLElement>,
-      renderedThisFrame: Array<{ rect: LayerRect }>
+      _renderedThisFrame: Array<{ rect: LayerRect }>
     ) {
       if (self.suspended || !self.isOnScreen(child)) {
         // 只有「带脏标记但没画成」的玻璃需要保留待重试(可见时由 IO 唤醒补画);
@@ -733,32 +649,67 @@ export class GlassEngine {
         return
       }
       self.deferred.delete(child)
-      originalRenderGlass(child, rootRect, dpr, isDragging, dirtyTargets, renderedThisFrame)
+      // 只把当前玻璃显式场景依赖的已重绘玻璃交给库。默认背景场景不会
+      // 因上方的卡片或侧边栏刷新而级联;overlay 玻璃仍会跟随父玻璃。
+      const dependencies = self.glassDependencies.get(child)
+      const priorGlass = self.relevantPriorGlass
+      priorGlass.length = 0
+      if (dependencies) {
+        for (const [renderedEl, rect] of self.renderedGlassThisFrame) {
+          if (!dependencies.has(renderedEl)) continue
+          priorGlass.push({ rect })
+        }
+      }
+      const priorCount = priorGlass.length
+      originalRenderGlass(child, rootRect, dpr, isDragging, dirtyTargets, priorGlass)
+      if (priorGlass.length > priorCount) {
+        self.renderedGlassThisFrame.set(child, priorGlass[priorGlass.length - 1].rect)
+      }
     }
 
     internals._renderFrame = function (this: GlassInternals) {
-      // 动画追踪先于渲染:位移检测标出的脏标记要在同一帧被消费,
-      // 否则元素已移到下一帧、画面却按上一帧的位置采样
-      self.sampleTrackedMotion()
-      // 滚动活跃期间:视口内玻璃每帧标脏,折射画面逐帧跟随滚动位移。
+      self.renderedGlassThisFrame.clear()
+      // 滚动活跃期间:位置发生变化的玻璃逐帧标脏,折射画面跟随滚动位移。
       // 滚动不产生任何布局/尺寸事件,若不主动刷新,画布内容会停在滚动起点
-      // 的采样上(卡片移动但画面错位);精确限定在可见集内,替代旧实现
-      // 「每帧把全部离屏玻璃重塞回脏集合」的做法——那个让渲染循环永不空闲、
-      // 每帧对全部玻璃做 rect 检查,大列表下每秒数万次布局读取
-      if (self.isScrollActive()) {
-        if (self.visibilityReady) {
-          for (const el of self.visibleGlass) {
-            if (this.glassSet.has(el)) this._glassDirty.add(el)
+      // 的采样上(卡片移动但画面错位)。
+      //
+      // IO 的可见集合在 rAF 之后才更新。若直接沿用它,快速滚动时刚进入
+      // 视口的卡片会来不及标脏,当帧仍按上一位置采样。滚动活跃期因此改
+      // 用同一帧的实测矩形重建可见集,并且只刷新位移超过半像素的元素;
+      // 静止后仍由 IO 负责,不承担长期开销。
+      const scrollActive = self.isScrollActive() && !self.suspended
+      self.scrollFrameUsesRect = scrollActive
+      if (scrollActive) {
+        const visible = self.scrollFrameVisible
+        visible.clear()
+        const rootRect = this.root.getBoundingClientRect()
+        for (const el of this.glassSet) {
+          const rect = el.getBoundingClientRect()
+          if (!self.isRectOnScreen(rect)) continue
+          visible.add(el)
+          // 只重画发生位移的玻璃。侧边栏外框、工具栏等位置不变的大面板
+          // 不因内部内容滚动而重采样;随内容移动的卡片与选中指示条才刷新。
+          const cached = this._glassCache.get(el)
+          const centerX = rect.left - rootRect.left + rect.width / 2
+          const centerY = rect.top - rootRect.top + rect.height / 2
+          if (
+            !cached ||
+            Math.abs(cached.centerX - centerX) > 0.5 ||
+            Math.abs(cached.centerY - centerY) > 0.5
+          ) {
+            this._glassDirty.add(el)
           }
-        } else {
-          // IO 首次回调前(启动瞬间)没有可见集可用,退化为全量一帧
-          this._globalDirty = true
         }
+      } else {
+        self.scrollFrameVisible.clear()
       }
-      originalRenderFrame()
+      try {
+        originalRenderFrame()
+      } finally {
+        self.scrollFrameUsesRect = false
+      }
       // 离屏玻璃的脏标记不每帧重塞回脏集合;可见性变化由 visibilityObserver
       // 唤醒,滚动进入的玻璃由滚动刷新窗口与 posChanged 判定覆盖
-      self.trimRendererCache()
     }
   }
 
@@ -767,42 +718,30 @@ export class GlassEngine {
     return performance.now() - this.lastScrollAt < SCROLL_REFRESH_WINDOW_MS
   }
 
-  /** 追踪中的玻璃逐帧位置检测:位移过半像素即标脏,渲染循环同帧重画 */
-  private sampleTrackedMotion(): void {
-    if (this.motionTracked.size === 0) return
-    for (const el of this.motionTracked) {
-      if (!el.isConnected || !this.internals.glassSet.has(el)) {
-        this.motionTracked.delete(el)
-        this.motionCenter.delete(el)
-        continue
-      }
-      const rect = el.getBoundingClientRect()
-      const x = rect.left + rect.width / 2
-      const y = rect.top + rect.height / 2
-      const last = this.motionCenter.get(el)
-      if (last && Math.abs(last.x - x) <= 0.5 && Math.abs(last.y - y) <= 0.5) continue
-      this.motionCenter.set(el, { x, y })
-      this.internals._glassDirty.add(el)
-    }
-  }
-
   /**
    * 玻璃元素(含影子外扩)是否落在视口内;隐藏界面态(ui-fade-hidden)也算不可见。
    * 视口判定优先用 IntersectionObserver 维护的可见集(O(1) 查询,零布局读取);
    * IO 首次回调之前用 rect 兜底,环境无 IO 时全程走 rect(等价旧实现)。
    */
   private isOnScreen(el: HTMLElement): boolean {
-    const onScreen =
-      this.visibilityObserver && this.visibilityReady
-        ? this.visibleGlass.has(el)
-        : this.isOnScreenByRect(el)
+    let onScreen: boolean
+    if (this.scrollFrameUsesRect) {
+      onScreen = this.scrollFrameVisible.has(el)
+    } else if (this.visibilityObserver && this.visibilityReady) {
+      onScreen = this.visibleGlass.has(el)
+    } else {
+      onScreen = this.isOnScreenByRect(el)
+    }
     if (!onScreen) return false
     return !el.closest('.ui-fade-hidden')
   }
 
   /** rect 兜底判定(旧实现;IO 就绪后仅首帧用到) */
   private isOnScreenByRect(el: HTMLElement): boolean {
-    const rect = el.getBoundingClientRect()
+    return this.isRectOnScreen(el.getBoundingClientRect())
+  }
+
+  private isRectOnScreen(rect: DOMRect): boolean {
     if (rect.width <= 0 || rect.height <= 0) return false
     return (
       rect.bottom > -SHADOW_PAD &&
@@ -871,161 +810,6 @@ export class GlassEngine {
     }
   }
 
-  /**
-   * 渲染器侧覆写(FBO 分配与上传/模糊管线),全部为行为等价或视觉近似等价优化:
-   *   1. blurA/blurB 使用降采样尺寸(BLUR_DOWNSCALE),12 个模糊 pass 的像素量
-   *      降为 1/N²;步长按降采样空间折算,模糊物理半径(原图像素计)不变;
-   *   2. FBO 缓存交给「像素预算 + 最久未用先释放」策略(trimRendererCache),
-   *      _setActiveSize 命中时把条目挪到 Map 末尾,维持 LRU 顺序;
-   *   3. uploadAndBlur:场景画布与目标尺寸一致时跳过 crop 中转直传;crop 兜底
-   *      路径也把无条件重建画布改为条件赋值。
-   * 库升级时需复核(方法名与内部状态依赖见 GlassRendererInternals)。
-   */
-  private patchRendererInternals(): void {
-    const renderer = this.internals.renderer
-
-    renderer._setActiveSize = function (
-      this: GlassRendererInternals,
-      w: number,
-      h: number
-    ): boolean {
-      if (w <= 0 || h <= 0) return false
-      this.width = w
-      this.height = h
-      // WebGL 画布只扩容不缩容(缩容由 resize() 统一处理,避免反复清空缓冲)
-      if (this.canvas.width < w || this.canvas.height < h) {
-        this.canvas.width = Math.max(this.canvas.width, w)
-        this.canvas.height = Math.max(this.canvas.height, h)
-      }
-      const key = `${w}x${h}`
-      let fboSet = this.fboCache.get(key)
-      if (fboSet) {
-        // LRU:命中的条目挪到 Map 末尾(trimRendererCache 从头部释放)
-        this.fboCache.delete(key)
-        this.fboCache.set(key, fboSet)
-      } else {
-        const blurW = Math.max(1, Math.ceil(w / BLUR_DOWNSCALE))
-        const blurH = Math.max(1, Math.ceil(h / BLUR_DOWNSCALE))
-        fboSet = {
-          bg: this._makeFBO(w, h),
-          blurA: this._makeFBO(blurW, blurH),
-          blurB: this._makeFBO(blurW, blurH)
-        }
-        this.fboCache.set(key, fboSet)
-      }
-      this.activeFBOs = fboSet
-      return true
-    }
-
-    renderer.uploadAndBlur = function (
-      this: GlassRendererInternals,
-      sourceCanvas: HTMLCanvasElement,
-      sourceX: number,
-      sourceY: number,
-      width: number,
-      height: number,
-      blurAmount: number
-    ): void {
-      if (this.contextLost) return
-      const gl = this.gl
-      if (!this._setActiveSize(width, height)) return
-      const W = this.width
-      const H = this.height
-      const fboSet = this.activeFBOs!
-
-      // 源画布与目标尺寸精确一致(本应用的场景画布已与玻璃画布对齐)时跳过
-      // crop 中转直传;兜底路径也只在实际换尺寸时重建 crop 画布
-      let uploadSource = sourceCanvas
-      if (
-        !(sourceX === 0 && sourceY === 0 && sourceCanvas.width === W && sourceCanvas.height === H)
-      ) {
-        const crop = this.cropCanvas
-        if (crop.width !== W) crop.width = W
-        if (crop.height !== H) crop.height = H
-        this.cropCtx.clearRect(0, 0, W, H)
-        this.cropCtx.drawImage(sourceCanvas, -sourceX, -sourceY)
-        uploadSource = crop
-      }
-
-      if (!this.bgTex) {
-        this.bgTex = gl.createTexture()
-      }
-      gl.bindTexture(gl.TEXTURE_2D, this.bgTex)
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true as unknown as number)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, uploadSource)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false as unknown as number)
-
-      // 全尺寸拷贝到 bgFBO
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fboSet.bg.fbo)
-      gl.viewport(0, 0, W, H)
-      gl.useProgram(this.blitP)
-      gl.activeTexture(gl.TEXTURE0)
-      gl.bindTexture(gl.TEXTURE_2D, this.bgTex)
-      gl.uniform1i(this.blitU.u_tex, 0)
-      gl.uniform2f(this.blitU.u_scale, 1, 1)
-      gl.uniform2f(this.blitU.u_offset, 0, 0)
-      this._drawQuad(this.blitP, this.quadBuf)
-
-      // 降采样拷贝 bgFBO → blurA(LINEAR 采样即 2×2 盒式近似)
-      const bw = fboSet.blurA.w
-      const bh = fboSet.blurA.h
-      gl.bindFramebuffer(gl.FRAMEBUFFER, fboSet.blurA.fbo)
-      gl.viewport(0, 0, bw, bh)
-      gl.bindTexture(gl.TEXTURE_2D, fboSet.bg.tex)
-      this._drawQuad(this.blitP, this.quadBuf)
-
-      // 多轮高斯模糊(在降采样空间执行;步长按降采样空间折算,原图物理半径不变)
-      if (blurAmount > 0) {
-        const spread = (blurAmount * 2.5) / BLUR_DOWNSCALE
-        gl.useProgram(this.blurP)
-        gl.uniform1i(this.blurU.u_tex, 0)
-        for (let i = 0; i < BLUR_ITERATIONS; i++) {
-          gl.bindFramebuffer(gl.FRAMEBUFFER, fboSet.blurB.fbo)
-          gl.viewport(0, 0, bw, bh)
-          gl.bindTexture(gl.TEXTURE_2D, fboSet.blurA.tex)
-          gl.uniform2f(this.blurU.u_dir, spread / bw, 0)
-          this._drawQuad(this.blurP, this.quadBuf)
-
-          gl.bindFramebuffer(gl.FRAMEBUFFER, fboSet.blurA.fbo)
-          gl.bindTexture(gl.TEXTURE_2D, fboSet.blurB.tex)
-          gl.uniform2f(this.blurU.u_dir, 0, spread / bh)
-          this._drawQuad(this.blurP, this.quadBuf)
-        }
-      }
-    }
-  }
-
-  /**
-   * FBO 缓存按「像素预算 + 组数上限、最久未用先释放」修剪。
-   * 旧实现上限 8 组、按插入序释放,而应用有 35 种玻璃尺寸,每轮全量渲染都要
-   * 重建约 27 组纹理(81 次分配/销毁,连续淡化一轮两秒内上千次,是驱动层的
-   * 大头);现在常用尺寸都留在缓存里,只在超预算时释放最久未用的一端。
-   */
-  private trimRendererCache(): void {
-    const renderer = this.internals.renderer
-    const cache = renderer.fboCache
-    if (!cache || cache.size === 0) return
-    let budgetPixels = 0
-    for (const set of cache.values()) {
-      budgetPixels += set.bg.w * set.bg.h
-    }
-    if (cache.size <= FBO_CACHE_MAX_SETS && budgetPixels <= FBO_CACHE_PIXEL_BUDGET) return
-    for (const [key, set] of cache) {
-      if (cache.size <= FBO_CACHE_MAX_SETS && budgetPixels <= FBO_CACHE_PIXEL_BUDGET) break
-      if (cache.size <= 1) break
-      cache.delete(key)
-      budgetPixels -= set.bg.w * set.bg.h
-      try {
-        renderer._freeFBOSet(set)
-      } catch {
-        // 释放失败不影响渲染正确性,忽略
-      }
-    }
-  }
 }
 
 export function createGlassEngine(options: GlassEngineOptions): GlassEngine {

@@ -41,8 +41,6 @@ function ToastCard({
         'flex gap-2.5 p-4 text-foreground',
         description ? 'items-start' : 'items-center'
       )}
-      depth={1}
-      blur={4}
     >
       <Icon className={cn('h-5 w-5 shrink-0', description && 'mt-0.5')} />
       <div className="flex min-w-0 flex-col gap-1">

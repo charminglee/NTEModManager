@@ -51,8 +51,6 @@ const DropdownMenuSubContent = React.forwardRef<
       className="ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl shadow-card"
       fallbackClassName="glass-dialog frosted"
       contentClassName="p-1 text-popover-foreground"
-      depth={1}
-      blur={4}
     >
       {children}
     </LiquidGlass>
@@ -81,8 +79,6 @@ const DropdownMenuContent = React.forwardRef<
         className="ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl shadow-card"
         fallbackClassName="glass-dialog frosted"
         contentClassName="p-1 text-popover-foreground"
-        depth={1}
-        blur={4}
       >
         {children}
       </LiquidGlass>

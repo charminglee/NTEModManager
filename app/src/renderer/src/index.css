@@ -38,7 +38,7 @@
   --shadow-glow: 0 0 24px -6px hsl(var(--primary) / 0.45);
   /* 运行时变量须与主题 token(--shadow-card)不同名,否则 var() 自引用成环 */
   --shadow-card: var(--app-shadow-card);
-  /* 卡片外阴影:宿主的 overflow-hidden 会裁掉 vaso 玻璃层自带的 0 4px 12px 黑 18%
+  /* 卡片外阴影:宿主的 overflow-hidden 会裁掉玻璃层外扩的投影(库的 SHADOW_PAD 一圈)
      外投影(工具栏可见的那条),只能画在宿主自身上(不会被自己的 overflow 裁),
      几何同形、浓度约减半 */
   --shadow-card-soft: var(--app-shadow-card-soft);
@@ -190,7 +190,7 @@
 @layer utilities {
   /* corner-shape 全 UI 保持默认 round(圆弧),勿改回 squircle(连续曲率):圆角大时
      半径被钳到元素半高,squircle 在半高半径下视觉圆度明显不足(角部大量留白),
-     且 vaso 玻璃按普通圆弧自绘,底色用 squircle 会与玻璃层角部错位 */
+     且玻璃按普通圆弧自绘,底色用 squircle 会与玻璃层角部错位 */
 
   /* 悬浮在 AI 背景图之上的半透明面板(毛玻璃模糊已按要求移除,保留透明效果) */
   .glass {
@@ -243,41 +243,12 @@
   }
 
 
-  /* 玻璃按钮的边缘高光与悬浮反馈(glass-btn-overlay 是 Button 玻璃变体覆盖层的稳定类,
-     液态模式根元素带 data-vaso-root,回退模式不带——据此区分两种形态):
-   * vaso 的 box-shadow 外投影分量(0 4px 12px 黑 18%)是硬编码的,会在按钮下方的
-     面板底色上叠出按钮形状的暗带,clip-path 切不净其 blur 内扩部分,必须整条替换为
-     纯 inset 高光(数值 = vaso createSpecularShadow(0.5) 的 inset 分量,静态不随
-     「边缘高光」滑条缩放);
-   * 悬停反馈:液态模式不画任何矩形底色,改为增强覆盖层内沿高光 + 柔和内辉光
-     (玻璃「点亮」);回退模式(覆盖层无 data-vaso-root)按钮自身无玻璃可亮,
-     退回轻底色悬停保住可点击反馈——仅限无自有底色的 glass 变体(.glass-btn-root),
-     其余变体有自己的悬停底色,不能被这条规则盖掉 */
-  button > .glass-btn-overlay > [data-vaso],
-  .sidebar-active-indicator > .glass-btn-overlay > [data-vaso] {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
-      inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.5),
-      inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.3) !important;
-    transition: box-shadow 150ms ease;
-  }
-
-  button:hover > .glass-btn-overlay > [data-vaso] {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.45),
-      inset 1.5px 1.5px 1.5px -1px rgba(255, 255, 255, 0.8),
-      inset -1.5px -1.5px 1.5px -1px rgba(255, 255, 255, 0.55),
-      inset 0 0 14px rgba(255, 255, 255, 0.1) !important;
-  }
-
-  /* 侧边栏滑动选中框按下时玻璃「点亮」:与按钮悬停同级的内沿高光,
-     配合指示条自身的 scale 放大构成按压反馈 */
-  .sidebar-active-indicator[data-pressed] > .glass-btn-overlay > [data-vaso] {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.45),
-      inset 1.5px 1.5px 1.5px -1px rgba(255, 255, 255, 0.8),
-      inset -1.5px -1.5px 1.5px -1px rgba(255, 255, 255, 0.55),
-      inset 0 0 14px rgba(255, 255, 255, 0.1) !important;
+  /* 玻璃表面(液态玻璃版本):面板/玻璃片的折射画面由注入的 canvas(z-index:-1)绘制,
+     元素自身的底色与内阴影都会被它盖住。isolate 是必须的——只有元素自成层叠上下文,
+     负 z-index 的注入画布才会落在「元素底色之上、内容之下」,而不是跑到祖先层叠
+     上下文里去被别的元素盖住 */
+  .glass-surface {
+    isolation: isolate;
   }
 
   /* 滑动选中框的过渡:translate(分类间滑动/按压滑向所按行/松手吸附)与 scale(按压
@@ -299,40 +270,11 @@
       scale 300ms cubic-bezier(0.33, 1, 0.68, 1);
   }
 
-  button.glass-btn-root:has(> .glass-btn-overlay:not([data-vaso-root])):hover {
+  /* 玻璃关闭(回退)时按钮自身就是无玻璃的普通按钮,退回轻底色悬停保住可点击
+     反馈——仅限无自有底色的 glass 变体;液态模式下悬浮反馈由玻璃的 button 模式
+     (提亮 + 按下压平棱面)负责 */
+  button.glass-btn-root:not(.glass-surface):hover {
     background-color: hsl(var(--foreground) / 0.07);
-  }
-
-  /* 输入框的液态玻璃覆盖层(glass-input-overlay 是 Input 覆盖层的稳定类),
-     与玻璃按钮同一套处理:覆盖层 depth=0 无折射贴图,圆角与外壳同为默认圆弧;
-     vaso 硬编码的外投影替换为纯内沿高光;悬浮与聚焦(光标在框内)时高光增强,
-     玻璃「点亮」给出可输入反馈。玻璃关闭时覆盖层为空层,外壳底色即普通外观 */
-  .glass-input-overlay > [data-vaso] {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
-      inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.5),
-      inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.3) !important;
-    transition: box-shadow 150ms ease;
-  }
-
-  /* 模组卡片的液态玻璃层(glass-card 是卡片玻璃根的稳定钩子类):卡片不投任何
-     外部阴影,vaso 自带的硬编码外投影(黑 18%)同样去掉,只保留内沿高光
-     (内沿三条与 vaso 默认值一致);卡片与背景的分层完全交给玻璃自身的
-     折射/模糊,底部不再出现淡淡的阴影层 */
-  .glass-card > [data-vaso] {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
-      inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.5),
-      inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.3) !important;
-  }
-
-  .glass-input-root:hover > .glass-input-overlay > [data-vaso],
-  .glass-input-root:focus-within > .glass-input-overlay > [data-vaso] {
-    box-shadow:
-      inset 0 0 0 0.5px rgba(255, 255, 255, 0.45),
-      inset 1.5px 1.5px 1.5px -1px rgba(255, 255, 255, 0.8),
-      inset -1.5px -1.5px 1.5px -1px rgba(255, 255, 255, 0.55),
-      inset 0 0 14px rgba(255, 255, 255, 0.1) !important;
   }
 
   /* 设置滑块的拖动隔离预览(settings-dialog):按下滑块即隐藏遮罩与面板,只留
@@ -377,13 +319,25 @@
     border: 1px solid hsl(var(--foreground) / 0.08);
   }
 
+  /* 液态玻璃关闭或引擎不可用时,模组卡片退回合成器驱动的毛玻璃:较厚的
+     半透明卡面压住背景高对比区域,避免深色图案透过卡片形成整块黑带。 */
+  .mod-card-glass {
+    background: hsl(var(--card) / 0.42);
+    border: 1px solid hsl(var(--foreground) / 0.09);
+    backdrop-filter: blur(22px) saturate(1.12);
+  }
+
   @media (prefers-color-scheme: light) {
     .frosted-hi {
       background: hsl(var(--background) / 0.22);
     }
+
+    .mod-card-glass {
+      background: hsl(var(--card) / 0.68);
+    }
   }
 
-  /* F11 隐藏/恢复 UI 的面板级淡出。不能在玻璃面板的祖先上过渡 opacity:
+  /* F9 隐藏/恢复 UI 的面板级淡出。不能在玻璃面板的祖先上过渡 opacity:
      祖先 opacity<1(过渡进行中)会成为 backdrop root,backdrop-filter 采样不到子树外的
      背景图,动画结束祖先恢复透明度时毛玻璃才瞬间「接上」,非常突兀。
      因此淡出做在面板根上:根自身只过渡底色/边框/backdrop-filter(自身滤镜全程有效),
@@ -402,11 +356,17 @@
     backdrop-filter: none;
   }
 
-  /* 面板根自带的投影(shadow-card-soft,vaso 玻璃层的投影在子元素里随 opacity
+  /* 面板根自带的投影(shadow-card-soft,玻璃层的投影在子元素里随 opacity
      淡出,根上的这条要单独归零)也参与淡出;目标值须与阴影类形状一致(长度数
      相同)才能插值,否则会跳变 */
   .ui-fade.ui-fade-hidden.shadow-card-soft {
     box-shadow: 0 4px 12px transparent;
+  }
+
+  /* 同上,shadow-card(0 8px 32px)用于批量操作栏等浮起面板:隐藏界面时也要把
+     投影一并淡掉,否则面板消失后仍留一块灰色投影 */
+  .ui-fade.ui-fade-hidden.shadow-card {
+    box-shadow: 0 8px 32px transparent;
   }
 
   /* 子元素的淡入淡出用 animation 而非 transition:transition 会整体覆盖子元素
@@ -482,7 +442,7 @@
     transition: opacity 150ms;
   }
 
-  /* 液态玻璃对话框面板(overlay-panel):玻璃层是 vaso 子元素,退出时随上面的
+  /* 液态玻璃对话框面板(overlay-panel):玻璃层是元素内的注入画布,退出时随上面的
      > * 规则以 opacity 淡出即可。根上不能带 backdrop-filter——哪怕 blur(0)
      也会把根变成 backdrop root,截断子玻璃层的背景采样,退出瞬间玻璃内容会
      整体闪没(液态面板根自身透明,不存在毛玻璃残影问题;根自绘毛玻璃的
@@ -494,43 +454,6 @@
       background-color 150ms,
       border-color 150ms,
       box-shadow 150ms;
-  }
-
-  /* 模组卡片推入动画(从右往左),首次进入视口才播放:列表一次性渲染上百张卡,
-     若按挂载时机播放,视口外的卡动画白白放完,滚动下来的都是播完的静态卡。
-     卡片挂载即处于等待态(容器右移 + 内容透明),共享 IntersectionObserver 触发后
-     整体置换为播放态——等待态由首帧渲染直接携带,不会先定格再跳位。
-     容器只动 transform——opacity 落在玻璃层的祖先上会把 backdrop 采样范围收窄到
-     卡片自身;子元素(含 vaso 玻璃层,自身 opacity 不影响其采样)各自淡入。
-     同批进入视口的卡片经 --card-enter-delay(观察器按批内序号写入)交错推入 */
-  @keyframes card-slide-in {
-    from {
-      transform: translateX(64px);
-    }
-  }
-
-  @keyframes card-children-in {
-    from {
-      opacity: 0;
-    }
-  }
-
-  .card-wait {
-    transform: translateX(64px);
-  }
-
-  .card-children-wait > * {
-    opacity: 0;
-  }
-
-  .card-go {
-    animation: card-slide-in 500ms cubic-bezier(0.33, 1, 0.68, 1) backwards;
-    animation-delay: var(--card-enter-delay, 0ms);
-  }
-
-  .card-enter > * {
-    animation: card-children-in 500ms ease-out backwards;
-    animation-delay: var(--card-enter-delay, 0ms);
   }
 
   /* 批量操作栏入场:从窗口底边之外沿直线垂直滑入。动画落在外层居中容器的内层

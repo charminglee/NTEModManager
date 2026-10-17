@@ -2,7 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { toast } from '@/components/toast-card'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '@shared/types'
-import { LIQUID_GLASS_KEYS, UI_CORNER_RADIUS_MAX, UI_CORNER_RADIUS_MIN } from '@shared/types'
+import {
+  BACKGROUND_MASK_OPACITY_DEFAULT,
+  BACKGROUND_MASK_OPACITY_MAX,
+  BACKGROUND_MASK_OPACITY_MIN,
+  LIQUID_GLASS_KEYS,
+  UI_CORNER_RADIUS_MAX,
+  UI_CORNER_RADIUS_MIN
+} from '@shared/types'
 import {
   Dialog,
   DialogContent,
@@ -31,8 +38,10 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void
   /** 保存成功后回调;modsDirectoryChanged 时调用方需刷新模组列表 */
   onSaved: (config: AppConfigData, modsDirectoryChanged: boolean) => void
-  /** 对话框打开期间把草稿里可实时预览的部分(圆角 + 玻璃效果)推给应用;关闭时传 null 回落到已保存值 */
-  onPreview: (preview: { uiCornerRadius: number; liquidGlass: LiquidGlassConfig } | null) => void
+  /** 对话框打开期间把草稿里可实时预览的部分(圆角 + 背景遮罩 + 玻璃效果)推给应用;关闭时传 null 回落到已保存值 */
+  onPreview: (
+    preview: { uiCornerRadius: number; backgroundMaskOpacity: number; liquidGlass: LiquidGlassConfig } | null
+  ) => void
 }
 
 interface SettingsDraft {
@@ -46,6 +55,7 @@ interface SettingsDraft {
   testImagesEnabled: boolean
   fpsCounterEnabled: boolean
   uiCornerRadius: number
+  backgroundMaskOpacity: number
   liquidGlass: LiquidGlassConfig
 }
 
@@ -61,6 +71,7 @@ function toDraft(config: AppConfigData): SettingsDraft {
     testImagesEnabled: config.testImagesEnabled,
     fpsCounterEnabled: config.fpsCounterEnabled,
     uiCornerRadius: config.uiCornerRadius,
+    backgroundMaskOpacity: config.backgroundMaskOpacity,
     liquidGlass: { ...config.liquidGlass }
   }
 }
@@ -87,6 +98,8 @@ export default function SettingsDialog({
   const [isolatedSlider, setIsolatedSlider] = useState<string | null>(null)
   /** 高级选项折叠状态:默认收起,每次打开对话框重置 */
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  /** 玻璃参数折叠块状态(仅液态玻璃模式下存在):默认收起,每次打开对话框重置 */
+  const [glassOpen, setGlassOpen] = useState(false)
   /** 设置内容区滚动容器:展开「高级」时钉住底部滚动 */
   const scrollRef = useRef<HTMLDivElement>(null)
   /** 高级展开期间的底部追踪 rAF id(高度过渡时逐帧跟随,null=未在追踪) */
@@ -97,16 +110,25 @@ export default function SettingsDialog({
       setDraft(toDraft(config))
       setIsolatedSlider(null)
       setAdvancedOpen(false)
+      setGlassOpen(false)
     }
     stopAdvancedTracking()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // 打开期间随草稿实时预览可即时生效的部分:圆角(滑块/输入立即改 UI)与玻璃效果
+  // 打开期间随草稿实时预览可即时生效的部分:圆角(滑块/输入立即改 UI)、背景遮罩与玻璃效果
   // (滑块一拖,拖动隔离又恰好让对话框隐去,直接看到实际界面的玻璃实时变化);关闭回落
   useEffect(() => {
-    onPreview(open ? { uiCornerRadius: draft.uiCornerRadius, liquidGlass: draft.liquidGlass } : null)
-  }, [open, draft.uiCornerRadius, draft.liquidGlass, onPreview])
+    onPreview(
+      open
+        ? {
+            uiCornerRadius: draft.uiCornerRadius,
+            backgroundMaskOpacity: draft.backgroundMaskOpacity,
+            liquidGlass: draft.liquidGlass
+          }
+        : null
+    )
+  }, [open, draft.uiCornerRadius, draft.backgroundMaskOpacity, draft.liquidGlass, onPreview])
 
   const dirty = useMemo(() => {
     const groupsChanged =
@@ -124,6 +146,7 @@ export default function SettingsDialog({
       draft.testImagesEnabled !== config.testImagesEnabled ||
       draft.fpsCounterEnabled !== config.fpsCounterEnabled ||
       draft.uiCornerRadius !== config.uiCornerRadius ||
+      draft.backgroundMaskOpacity !== config.backgroundMaskOpacity ||
       liquidGlassChanged ||
       groupsChanged
     )
@@ -208,6 +231,7 @@ export default function SettingsDialog({
         testImagesEnabled: draft.testImagesEnabled,
         fpsCounterEnabled: draft.fpsCounterEnabled,
         uiCornerRadius: draft.uiCornerRadius,
+        backgroundMaskOpacity: draft.backgroundMaskOpacity,
         liquidGlass: draft.liquidGlass
       }
       const next = await window.api.updateConfig(patch)
@@ -312,12 +336,30 @@ export default function SettingsDialog({
               activeSliderId={isolatedSlider}
               onActiveSliderChange={setIsolatedSlider}
             />
+            <SliderRow
+              label="背景遮罩"
+              description={`背景图上衬托界面的颜色遮罩强度：0 为无遮罩，${BACKGROUND_MASK_OPACITY_MAX} 为最初的完整强度（默认 ${BACKGROUND_MASK_OPACITY_DEFAULT} 即当前观感）。`}
+              value={draft.backgroundMaskOpacity}
+              onChange={(value) => patchField('backgroundMaskOpacity', value)}
+              min={BACKGROUND_MASK_OPACITY_MIN}
+              max={BACKGROUND_MASK_OPACITY_MAX}
+              step={1}
+              unit="%"
+              sliderId="backgroundMaskOpacity"
+              activeSliderId={isolatedSlider}
+              onActiveSliderChange={setIsolatedSlider}
+            />
           </SettingsSection>
 
-          <SettingsSection title="玻璃效果">
+          {/* 玻璃效果:玻璃样式常驻;液态玻璃的参数收在折叠块里(与「高级」同一套折叠动画) */}
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+              玻璃效果
+            </h3>
+            <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <div className="text-sm font-medium text-foreground">渲染方式</div>
+                <div className="text-sm font-medium text-foreground">玻璃样式</div>
                 <div className="text-[11px] leading-relaxed text-muted-foreground">
                   液态玻璃为折射实时渲染；毛玻璃为轻量高透模糊，渲染开销更低。
                 </div>
@@ -328,7 +370,7 @@ export default function SettingsDialog({
               >
                 <SelectTrigger
                   className="w-28 shrink-0 border-transparent bg-transparent hover:bg-foreground/[0.06]"
-                  aria-label="玻璃渲染方式"
+                  aria-label="玻璃样式"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -338,12 +380,34 @@ export default function SettingsDialog({
                 </SelectContent>
               </Select>
             </div>
-            {!draft.liquidGlass.enabled ? null : (
-              <>
+            {draft.liquidGlass.enabled && (
+              <div>
+                <button
+                  type="button"
+                  aria-expanded={glassOpen}
+                  onClick={() => setGlassOpen((prev) => !prev)}
+                  className="-ml-1 flex w-full items-center justify-between gap-2 rounded-md px-1 py-0.5 text-left text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                  玻璃参数
+                  <ChevronDown
+                    className={cn(
+                      'h-3.5 w-3.5 shrink-0 transition-transform duration-200',
+                      !glassOpen && '-rotate-90'
+                    )}
+                  />
+                </button>
+                <div
+                  className={cn(
+                    'grid transition-[grid-template-rows,visibility] duration-200 ease-out',
+                    glassOpen ? 'visible grid-rows-[1fr]' : 'invisible grid-rows-[0fr]'
+                  )}
+                >
+                  <div className="overflow-hidden">
+                    <div className="space-y-4 pt-3 pb-1">
                 <SwitchGroupLabel>强度</SwitchGroupLabel>
                 <SliderRow
                   label="折射"
-                  description="玻璃对背景图的透镜形变强度。"
+                  description="玻璃对背景图透镜形变的强度。"
                   value={draft.liquidGlass.refraction}
                   onChange={(value) => patchLiquidGlass({ refraction: value })}
                   sliderId="refraction"
@@ -352,7 +416,7 @@ export default function SettingsDialog({
                 />
                 <SliderRow
                   label="背景模糊"
-                  description="玻璃背后的高斯模糊强度，面积越大越耗性能。"
+                  description="玻璃背后画面的高斯模糊强度，面积越大越耗性能。"
                   value={draft.liquidGlass.blur}
                   onChange={(value) => patchLiquidGlass({ blur: value })}
                   sliderId="blur"
@@ -361,22 +425,85 @@ export default function SettingsDialog({
                 />
                 <SliderRow
                   label="边缘高光"
-                  description="玻璃边缘的镜面反光强度。"
-                  value={draft.liquidGlass.specular}
-                  onChange={(value) => patchLiquidGlass({ specular: value })}
-                  sliderId="specular"
+                  description="玻璃内沿那圈亮线的强度。"
+                  value={draft.liquidGlass.edgeHighlight}
+                  onChange={(value) => patchLiquidGlass({ edgeHighlight: value })}
+                  sliderId="edgeHighlight"
                   activeSliderId={isolatedSlider}
                   onActiveSliderChange={setIsolatedSlider}
                 />
                 <SliderRow
                   label="边缘色散"
-                  description="折射边缘的彩虹色散强度；仅作用于侧边栏。"
+                  description="折射边缘的彩虹色散强度，面板越大越明显。"
                   value={draft.liquidGlass.dispersion}
                   onChange={(value) => patchLiquidGlass({ dispersion: value })}
                   sliderId="dispersion"
                   activeSliderId={isolatedSlider}
                   onActiveSliderChange={setIsolatedSlider}
                 />
+
+                <SwitchGroupLabel>材质</SwitchGroupLabel>
+                <SliderRow
+                  label="亮度"
+                  description="玻璃内画面的整体亮度：0 与玻璃外的背景等亮，负数压暗、正数提亮。"
+                  value={draft.liquidGlass.brightness}
+                  onChange={(value) => patchLiquidGlass({ brightness: value })}
+                  min={-50}
+                  max={50}
+                  sliderId="brightness"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
+                />
+                <SliderRow
+                  label="玻璃不透明度"
+                  description="100% 为各面板基准（面板 1、有色按钮 0.6）；调低后玻璃更透，底下底色更明显。"
+                  value={draft.liquidGlass.opacity}
+                  onChange={(value) => patchLiquidGlass({ opacity: value })}
+                  sliderId="opacity"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
+                />
+                <SliderRow
+                  label="倒角厚度"
+                  description="棱边厚度，100% 对应圆角半径；0 接近平板玻璃，越大越像厚玻璃块。"
+                  value={draft.liquidGlass.bevel}
+                  onChange={(value) => patchLiquidGlass({ bevel: value })}
+                  max={200}
+                  sliderId="bevel"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
+                />
+
+                <SwitchGroupLabel>光学</SwitchGroupLabel>
+                <SliderRow
+                  label="镜面反光"
+                  description="多光源 Blinn-Phong 高光，与「边缘高光」一起构成亮边。"
+                  value={draft.liquidGlass.gloss}
+                  onChange={(value) => patchLiquidGlass({ gloss: value })}
+                  sliderId="gloss"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
+                />
+                <SliderRow
+                  label="菲涅耳反射"
+                  description="掠射角的反射强度，100% 为库默认；调大后边缘反光更亮。"
+                  value={draft.liquidGlass.fresnel}
+                  onChange={(value) => patchLiquidGlass({ fresnel: value })}
+                  max={200}
+                  sliderId="fresnel"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
+                />
+                <SliderRow
+                  label="微失真"
+                  description="玻璃表面的细微噪点扰动，0 为完全平滑。"
+                  value={draft.liquidGlass.distortion}
+                  onChange={(value) => patchLiquidGlass({ distortion: value })}
+                  sliderId="distortion"
+                  activeSliderId={isolatedSlider}
+                  onActiveSliderChange={setIsolatedSlider}
+                />
+
                 <SwitchGroupLabel>区域</SwitchGroupLabel>
                 <SwitchRow
                   label="侧边栏"
@@ -416,9 +543,13 @@ export default function SettingsDialog({
                   checked={draft.liquidGlass.overlays}
                   onCheckedChange={(checked) => patchLiquidGlass({ overlays: checked })}
                 />
-              </>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
-          </SettingsSection>
+            </div>
+          </section>
 
           {/* 高级选项:默认收起,标题整行可点。grid-rows 0fr/1fr 过渡做高度折叠动画
               (overflow-hidden 的网格项自动 min-height:0,0fr 才压得平) */}
@@ -461,7 +592,7 @@ export default function SettingsDialog({
                   />
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-foreground">直接编辑配置文件</div>
+                      <div className="text-sm font-medium text-foreground">编辑配置文件</div>
                       <div className="text-xs text-muted-foreground">在系统默认编辑器中打开 INI 配置文件。</div>
                     </div>
                     <Button

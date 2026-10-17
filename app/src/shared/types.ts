@@ -61,18 +61,56 @@ export type LiquidGlassArea =
   | 'inputs'
   | 'overlays'
 
-/** 液态玻璃效果配置:总开关(液态玻璃/毛玻璃)+ 效果强度 + 区域开关 */
+/**
+ * 液态玻璃效果配置。
+ *
+ * 设置界面暴露的分组:
+ *   1. 强度(百分比,乘算各面板的基准值):折射 / 背景模糊 / 边缘高光 / 边缘色散;
+ *   2. 材质与光学(绝对值,直接覆盖基准值):亮度 / 玻璃不透明度 / 倒角厚度 /
+ *      镜面反光 / 菲涅耳反射 / 微失真;
+ *   3. 玻璃样式与区域开关。
+ * 其余键(饱和度、冷色着色、棱面模式、投影、按压反馈)不再出现在设置界面,
+ * 按各自的默认值生效,仍可通过 INI 手动调整。
+ *
+ * 每一项都对应 @ybouane/liquidglass 的 per-element 配置键,写进 [LiquidGlass] 配置节。
+ */
 export interface LiquidGlassConfig {
-  /** 总开关:true=液态玻璃(Vaso 实时渲染),false=毛玻璃(高透 backdrop 模糊回退) */
+  /** 总开关:true=液态玻璃(WebGL 实时折射),false=毛玻璃(高透 backdrop 模糊回退) */
   enabled: boolean
-  /** 折射强度 0-100(%):乘算各面板自身的折射深度,0 为关闭 */
+  /** 折射强度 0-100(%):乘算基准折射(面板 1.2 / 控件 0.69),0 为关闭 */
   refraction: number
-  /** 边缘色散强度 0-100(%):仅侧边栏接入(渲染开销成倍增加,不铺开到批量小玻璃),0 为关闭 */
+  /** 边缘色散 0-100(%):乘算基准色散(面板 0.2 / 控件 0.05),0 为关闭 */
   dispersion: number
-  /** 背景模糊强度 0-100(%):乘算各面板自身的模糊半径,0 为关闭 */
+  /** 背景模糊 0-100(%):乘算基准模糊(0.3),0 为关闭 */
   blur: number
-  /** 边缘高光强度 0-100(%):乘算边缘镜面反光,0 为关闭 */
-  specular: number
+  /** 边缘高光 0-100(%):乘算内沿高光(面板 0.05 / 指示条 0.2),0 为关闭 */
+  edgeHighlight: number
+  /** 亮度 -50~50(%):正数提亮、负数压暗玻璃里的画面(0 = 与背景等亮) */
+  brightness: number
+  /** 饱和度 -100~100(%):-100 灰度、0 原样、100 更艳 */
+  saturation: number
+  /** 冷色着色 0-100(%):玻璃整体偏冷蓝的着色强度 */
+  tint: number
+  /** 玻璃不透明度 0-100(%):乘算各面板基准(面板 1、有色按钮 0.6),越低越透 */
+  opacity: number
+  /** 倒角厚度 0-200(%):乘算「圆角 = 厚度」基准,越大棱面越厚(仍按元素最短边收口) */
+  bevel: number
+  /** 棱面模式:0=双凸(两面折射)、1=穹顶(平面底 + 单面折射,近放大镜) */
+  bevelMode: number
+  /** 镜面反光 0-100(%):Blinn-Phong 高光强度(默认 0,不开启) */
+  gloss: number
+  /** 菲涅耳反射 0-200(%):掠射角反射强度(基准 100% = 库默认 1.0) */
+  fresnel: number
+  /** 微失真 0-100(%):玻璃表面的细微噪点扰动 */
+  distortion: number
+  /** 额外投影 0-100(%):在各面板基准投影之上叠加的投影不透明度 */
+  shadow: number
+  /** 投影扩散(px):基准 10 */
+  shadowSpread: number
+  /** 投影垂直偏移(px):基准 1 */
+  shadowOffsetY: number
+  /** 按钮悬浮提亮 / 按下压平棱面(按钮与输入框档位启用) */
+  buttonFeedback: boolean
   /** 侧边栏 */
   sidebar: boolean
   /** 模组卡片 */
@@ -94,7 +132,20 @@ export const LIQUID_GLASS_DEFAULTS: LiquidGlassConfig = {
   refraction: 100,
   dispersion: 100,
   blur: 100,
-  specular: 100,
+  edgeHighlight: 100,
+  brightness: 0,
+  saturation: 0,
+  tint: 0,
+  opacity: 100,
+  bevel: 100,
+  bevelMode: 0,
+  gloss: 0,
+  fresnel: 100,
+  distortion: 0,
+  shadow: 0,
+  shadowSpread: 10,
+  shadowOffsetY: 1,
+  buttonFeedback: true,
   sidebar: true,
   modCards: true,
   toolbar: true,
@@ -110,6 +161,11 @@ export const LIQUID_GLASS_KEYS = Object.keys(LIQUID_GLASS_DEFAULTS) as (keyof Li
 export const UI_CORNER_RADIUS_DEFAULT = 16
 export const UI_CORNER_RADIUS_MIN = 0
 export const UI_CORNER_RADIUS_MAX = 32
+
+/** 背景颜色遮罩不透明度(%):0=无遮罩,100=最初的完整强度;默认 50 对应减半后的观感 */
+export const BACKGROUND_MASK_OPACITY_DEFAULT = 50
+export const BACKGROUND_MASK_OPACITY_MIN = 0
+export const BACKGROUND_MASK_OPACITY_MAX = 100
 
 export interface AppConfigData {
   configPath: string
@@ -134,6 +190,8 @@ export interface AppConfigData {
   fpsCounterEnabled: boolean
   /** 全局圆角(px):写入 :root 的 --radius,所有控件的圆角刻度由它单点派生 */
   uiCornerRadius: number
+  /** 背景颜色遮罩不透明度(%):衬托 UI 的颜色遮罩相对完整强度的比例 */
+  backgroundMaskOpacity: number
   liquidGlass: LiquidGlassConfig
 }
 
@@ -152,6 +210,7 @@ export interface AppConfigPatch {
   testImagesEnabled?: boolean
   fpsCounterEnabled?: boolean
   uiCornerRadius?: number
+  backgroundMaskOpacity?: number
   liquidGlass?: Partial<LiquidGlassConfig>
 }
 

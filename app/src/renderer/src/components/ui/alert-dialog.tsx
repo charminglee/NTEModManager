@@ -2,7 +2,7 @@ import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 import { cn } from '@/lib/utils'
 import { LiquidGlass } from '@/components/liquid-glass'
-import { buttonVariants, GlassButtonOverlay, GLASS_BUTTON_CONTENT_CLASS } from '@/components/ui/button'
+import { buttonVariants, GlassButton } from '@/components/ui/button'
 
 const AlertDialog = AlertDialogPrimitive.Root
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
@@ -52,8 +52,6 @@ const AlertDialogContent = React.forwardRef<
         )}
         fallbackClassName="glass-dialog frosted"
         contentClassName="grid gap-4 p-6"
-        depth={1}
-        blur={4}
       >
         {children}
       </LiquidGlass>
@@ -104,15 +102,18 @@ const AlertDialogAction = React.forwardRef<
 >(({ className, variant = 'default', children, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
+    asChild
+    {...props}
+  >
+    <GlassButton
     className={cn(
       buttonVariants({ variant: variant === 'destructive' ? 'destructive' : 'default' }),
       'group relative disabled:opacity-100',
       className
     )}
-    {...props}
-  >
-    <GlassButtonOverlay />
-    <span className={GLASS_BUTTON_CONTENT_CLASS}>{children}</span>
+    >
+      {children}
+    </GlassButton>
   </AlertDialogPrimitive.Action>
 ))
 AlertDialogAction.displayName = AlertDialogPrimitive.Action.displayName
@@ -123,11 +124,15 @@ const AlertDialogCancel = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <AlertDialogPrimitive.Cancel
     ref={ref}
-    className={cn(buttonVariants({ variant: 'outline' }), 'group relative disabled:opacity-100', className)}
+    asChild
     {...props}
   >
-    <GlassButtonOverlay />
-    <span className={GLASS_BUTTON_CONTENT_CLASS}>{children}</span>
+    <GlassButton
+    className={cn(buttonVariants({ variant: 'outline' }), 'group relative disabled:opacity-100', className)}
+    tinted={false}
+    >
+      {children}
+    </GlassButton>
   </AlertDialogPrimitive.Cancel>
 ))
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName

@@ -59,8 +59,6 @@ const DialogContent = React.forwardRef<
         )}
         fallbackClassName="glass-dialog frosted"
         contentClassName="grid gap-4 p-6"
-        depth={1}
-        blur={4}
       >
         {children}
         <Tooltip>

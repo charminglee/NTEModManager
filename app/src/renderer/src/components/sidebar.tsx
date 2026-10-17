@@ -10,7 +10,7 @@ import {
 import { ALL_CATEGORY, OTHER_CATEGORY } from '@shared/types'
 import { cn } from '@/lib/utils'
 import { LiquidGlass } from '@/components/liquid-glass'
-import { GlassButtonOverlay, GLASS_BUTTON_CONTENT_CLASS } from '@/components/ui/button'
+import { GlassButton } from '@/components/ui/button'
 
 export interface SidebarProps {
   /** 侧边栏展示顺序:全部在最上,普通分类按用户排序,其他固定在底部 */
@@ -25,7 +25,7 @@ export interface SidebarProps {
   onLaunchGame: () => void
   onOpenLogs: () => void
   onOpenSettings: () => void
-  /** F11 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
+  /** F9 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
   uiHidden?: boolean
 }
 
@@ -68,7 +68,6 @@ function Sidebar({
     grabOffset: number
     y: number
     pressClientY: number
-    startY: number
     moved: boolean
   } | null>(null)
   // 松手时选中框还在途中:settling 期间保持放大(与玻璃点亮)滑到位,
@@ -137,14 +136,14 @@ function Sidebar({
         // 按下后还没真正移动:只更新锚点基准(指针位置),不动 y——
         // 让「滑向所按行」的预览动画继续走,2px 内的抖动不算拖动
         if (Math.abs(event.clientY - prev.pressClientY) <= 2) return
-        // 进入拖动:按滑向预览的实时动画位置重新锚定抓取点,无缝转 1:1 跟随
-        let anchor = prev.y
-        if (indicatorRef.current) {
-          const cs = getComputedStyle(indicatorRef.current)
-          if (cs.translate !== 'none') anchor = parseFloat(cs.translate.split(' ')[1])
-        }
-        const y = Math.min(last.offsetTop + last.offsetHeight - rowHeight, Math.max(min, anchor))
-        dragRef.current = { grabOffset: contentY(event.clientY) - anchor, y, moved: true, pressClientY: prev.pressClientY }
+        // 进入拖动:始终沿用按下时「指针相对目标行」的抓取偏移。不能从
+        // 预览动画的中途位置重新锚定——动画通常还未滑到所按行,重新锚定会把
+        // 剩余动画距离永久转成指针与选中框的固定偏差,松手时也会落到错误分类。
+        const y = Math.min(
+          last.offsetTop + last.offsetHeight - rowHeight,
+          Math.max(min, contentY(event.clientY) - prev.grabOffset)
+        )
+        dragRef.current = { ...prev, y, moved: true }
         setDrag({ y, moved: true })
         return
       }
@@ -233,9 +232,6 @@ function Sidebar({
         uiHidden && 'ui-fade-hidden'
       )}
       contentClassName="flex h-full min-h-0 flex-col"
-      depth={1}
-      blur={2.5}
-      dispersion={1}
     >
       {/* 品牌区 */}
       <div className="flex items-center gap-3 px-5 pb-5 pt-6">
@@ -269,12 +265,18 @@ function Sidebar({
             动画滑向所按行,真正拖动后 translate 零过渡 1:1 跟随指针。opacity 过渡
             不能落在它自身或祖先上(opacity<1 会截断玻璃的 backdrop 采样),
             显隐用 visibility 瞬切 */}
-        <div
+        {/* 滑动选中框:玻璃长在指示条本体上(pill 档参数:
+            不模糊 + 强内沿高光 + 投影),opacity 让底色里的紫罗兰衬色透出来 */}
+        <LiquidGlass
           ref={indicatorRef}
           aria-hidden
           data-ready={indicatorReady || undefined}
           data-pressed={drag !== null || undefined}
           data-dragging={(drag?.moved && !settling) || undefined}
+          overlay
+          crisp={false}
+          variant="pill"
+          opacity={0.65}
           className="sidebar-active-indicator pointer-events-none absolute left-3 right-3 top-0 rounded-lg bg-primary/15 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]"
           style={{
             height: indicator?.height ?? 0,
@@ -282,9 +284,7 @@ function Sidebar({
             scale: drag !== null ? '1.07' : '1',
             visibility: (view === 'mods' || drag !== null) && indicator ? 'visible' : 'hidden'
           }}
-        >
-          <GlassButtonOverlay />
-        </div>
+        />
         {displayCategories.map((category) => {
           const isSpecial = !isNormalCategory(category)
           const active = view === 'mods' && currentCategory === category
@@ -326,10 +326,9 @@ function Sidebar({
                   : 'text-foreground/75 hover:bg-foreground/[0.05] hover:text-foreground'
               )}
             >
-              {/* 选中框已上移为 nav 里的滑动指示条(玻璃覆盖层跟指示条走),按钮只剩文字强调;
-                  内容层仍包 GLASS_BUTTON_CONTENT_CLASS——禁用淡出落内容层,
-                  根元素 opacity<1 会截断玻璃的 backdrop 采样 */}
-              <span className={cn(GLASS_BUTTON_CONTENT_CLASS, 'w-full gap-2.5 text-left')}>
+              {/* 选中框是 nav 里的滑动指示条(玻璃长在指示条本体上),分类行本身不是玻璃,
+                  只有文字与头像的强调差异 */}
+              <span className="relative inline-flex w-full items-center gap-2.5 text-left transition-opacity group-disabled:opacity-50">
                 {isSpecial ? (
                   <span
                     className={cn(
@@ -374,19 +373,15 @@ function Sidebar({
 
       {/* 底部操作区 */}
       <div className="space-y-2 border-t border-foreground/[0.08] p-3">
-        {/* filter(brightness) 会成为 backdrop root,悬停时打碎玻璃层的背景采样,悬停反馈改用色标过渡 */}
-        <button
+        <GlassButton
           type="button"
           disabled={busy}
           onClick={onLaunchGame}
-          className="group relative flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-linear-to-r from-violet-600/80 to-fuchsia-600/80 text-sm font-semibold text-white shadow-glow transition-all duration-150 hover:from-violet-500/85 hover:to-fuchsia-500/85 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-100"
+          className="group relative flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-linear-to-r from-violet-600/80 to-fuchsia-600/80 text-sm font-semibold text-white shadow-glow transition-all duration-150 hover:from-violet-500/85 hover:to-fuchsia-500/85 active:scale-95 disabled:pointer-events-none disabled:opacity-100"
         >
-          <GlassButtonOverlay />
-          <span className={GLASS_BUTTON_CONTENT_CLASS}>
-            <Play className="h-4 w-4 fill-current" />
-            启动游戏
-          </span>
-        </button>
+          <Play className="h-4 w-4 fill-current" />
+          启动游戏
+        </GlassButton>
         <div className="grid grid-cols-2 gap-2">
           <SideActionButton icon={<FileText className="h-4 w-4" />} label="日志" active={view === 'logs'} disabled={busy} onClick={onOpenLogs} />
           <SideActionButton icon={<Settings className="h-4 w-4" />} label="设置" disabled={busy} onClick={onOpenSettings} />
@@ -410,23 +405,20 @@ function SideActionButton({
   disabled?: boolean
 }) {
   return (
-    <button
+    <GlassButton
       type="button"
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'group relative flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-100',
+        'group relative flex h-9 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium transition-all duration-150 active:scale-95 disabled:pointer-events-none disabled:opacity-100',
         active
           ? 'bg-primary/15 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]'
           : 'glass-btn-root text-foreground/75'
       )}
     >
-      <GlassButtonOverlay />
-      <span className={GLASS_BUTTON_CONTENT_CLASS}>
-        {icon}
-        {label}
-      </span>
-    </button>
+      {icon}
+      {label}
+    </GlassButton>
   )
 }
 

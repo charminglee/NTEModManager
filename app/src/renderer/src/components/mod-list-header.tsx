@@ -30,11 +30,11 @@ interface ModListHeaderProps {
   onRefresh: () => void
   onImport: () => void
   onPackageMod: () => void
-  /** F11 隐藏 UI 时为 true:玻璃面板自身淡出(不能用祖先 opacity,会破坏 backdrop 采样) */
+  /** F9 隐藏 UI 时为 true:玻璃面板自身淡出(不能用祖先 opacity,会破坏 backdrop 采样) */
   uiHidden?: boolean
 }
 
-/** memo:日志推送等无关状态变化时不重渲染工具栏(含 vaso 实例);搜索输入仍正常更新 */
+/** memo:日志推送等无关状态变化时不重渲染工具栏(含玻璃元素);搜索输入仍正常更新 */
 function ModListHeader({
   category,
   count,
@@ -71,8 +71,6 @@ function ModListHeader({
         area="toolbar"
         className={cn('ui-fade ml-auto rounded-2xl', uiHidden && 'ui-fade-hidden')}
         contentClassName="flex flex-wrap items-center gap-2 px-2.5 py-2"
-        depth={1}
-        blur={2}
       >
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

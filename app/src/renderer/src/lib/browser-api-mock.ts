@@ -1,6 +1,7 @@
 import type { Api } from '../../../preload/index'
 import {
   ALL_CATEGORY,
+  BACKGROUND_MASK_OPACITY_DEFAULT,
   LIQUID_GLASS_DEFAULTS,
   OTHER_CATEGORY,
   SortOrder,
@@ -17,7 +18,8 @@ import {
  * 浏览器测试模式(npm run dev):渲染层不经 Electron 直接跑在浏览器里,
  * window.api 缺失时注入此 mock。数据为内存样例;文件系统/对话框/启动游戏等
  * 原生能力一律拒绝或返回取消。背景图复用调试图集(与 Electron dev 的
- * test_images=1 行为一致),分类缩略图用仓库 img/bg 下的 256×256 图。
+ * test_images=1 行为一致),并响应「使用测试背景图」开关(浏览器无真实图库,
+ * 关闭后背景清空以体现切换生效);分类缩略图用仓库 img/bg 下的 256×256 图。
  */
 
 const CATEGORIES = [
@@ -41,11 +43,12 @@ const CATEGORIES = [
   '早雾'
 ]
 
-/** 调试图集(测量过像素尺寸);web.vite.config.ts 的 serveTestImages 插件经 /test-images/ 伺服 */
+/** 调试图集(测量过像素尺寸,与 F:/pictures/test 当前内容一致);
+ *  web.vite.config.ts 的 serveTestImages 插件经 /test-images/ 伺服 */
 const BACKGROUND_IMAGES: { url: string; width: number; height: number }[] = [
-  { url: '/test-images/HSWdzR2aQAAvBs6.jpg', width: 2048, height: 1536 },
-  { url: '/test-images/photo_5183804761118018770_y.jpg', width: 1106, height: 1280 },
-  { url: '/test-images/photo_4934122395052739790_y.jpg', width: 713, height: 1267 }
+  { url: '/test-images/0b75ec85-cad5-4d7e-af49-fc6bc3dac554.jpg', width: 2048, height: 1536 },
+  { url: '/test-images/下载 - 2024-02-17T004743.640.jpg', width: 1104, height: 828 },
+  { url: '/test-images/photo_6269019679716215625_w.jpg', width: 1886, height: 2048 }
 ]
 
 /** 模拟主进程的 cover 裁剪:取与视口同比例、居中的最大源图矩形 */
@@ -310,6 +313,7 @@ const config: AppConfigData = {
   testImagesEnabled: true,
   fpsCounterEnabled: false,
   uiCornerRadius: UI_CORNER_RADIUS_DEFAULT,
+  backgroundMaskOpacity: BACKGROUND_MASK_OPACITY_DEFAULT,
   liquidGlass: { ...LIQUID_GLASS_DEFAULTS }
 }
 
@@ -320,9 +324,14 @@ const bootstrapLogs: LogEntry[] = [
 // ============ 背景轮播 mock ============
 let backgroundIndex = 0
 let backgroundGeneration = 0
-let backgroundListener: ((state: BackgroundState) => void) | null = null
+let backgroundListener: ((state: BackgroundState | null) => void) | null = null
 
-function makeBackgroundState(): BackgroundState {
+/** 与 Electron 端一致:关闭「使用测试背景图」后不再提供调试图集。
+ *  浏览器模式没有真实图库可切,故返回 null(背景清空),让开关效果可见。 */
+function makeBackgroundState(): BackgroundState | null {
+  if (!config.testImagesEnabled) {
+    return null
+  }
   const image = BACKGROUND_IMAGES[backgroundIndex % BACKGROUND_IMAGES.length]
   return {
     generation: backgroundGeneration,
@@ -515,10 +524,17 @@ const api: Api = {
   },
 
   async updateConfig(patch) {
+    const testImagesBefore = config.testImagesEnabled
     const { liquidGlass, ...rest } = patch
     Object.assign(config, rest)
     if (liquidGlass) {
       config.liquidGlass = { ...config.liquidGlass, ...liquidGlass }
+    }
+    // 切换「使用测试背景图」后立即推送新的背景状态(与 Electron 端 reloadImages 对应)
+    if (config.testImagesEnabled !== testImagesBefore) {
+      backgroundGeneration++
+      backgroundIndex++
+      backgroundListener?.(makeBackgroundState())
     }
     return { ...config, liquidGlass: { ...config.liquidGlass } }
   },
@@ -582,7 +598,7 @@ const api: Api = {
   },
 
   async getCurrentBackgroundPath() {
-    return makeBackgroundState().path
+    return makeBackgroundState()?.path ?? null
   },
 
   async getCurrentBackgroundState() {

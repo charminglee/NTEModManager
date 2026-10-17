@@ -6,6 +6,9 @@ import { ntemmConfigFile } from './ntemm-paths'
 import { parseIni, serializeIni, splitList, unquote } from './ini'
 import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '../shared/types'
 import {
+  BACKGROUND_MASK_OPACITY_DEFAULT,
+  BACKGROUND_MASK_OPACITY_MAX,
+  BACKGROUND_MASK_OPACITY_MIN,
   LIQUID_GLASS_DEFAULTS,
   SortOrder,
   UI_CORNER_RADIUS_DEFAULT,
@@ -74,7 +77,21 @@ const LIQUID_GLASS_INI_KEYS: Record<keyof LiquidGlassConfig, string> = {
   refraction: 'refraction',
   dispersion: 'dispersion',
   blur: 'blur',
-  specular: 'specular',
+  // 历史键名:这一项是「边缘高光」强度,沿用旧版写下的 specular 键,避免升级后用户配置被重置
+  edgeHighlight: 'specular',
+  brightness: 'brightness',
+  saturation: 'saturation',
+  tint: 'tint',
+  opacity: 'opacity',
+  bevel: 'bevel',
+  bevelMode: 'bevel_mode',
+  gloss: 'gloss',
+  fresnel: 'fresnel',
+  distortion: 'distortion',
+  shadow: 'shadow',
+  shadowSpread: 'shadow_spread',
+  shadowOffsetY: 'shadow_offset_y',
+  buttonFeedback: 'button_feedback',
   sidebar: 'sidebar',
   modCards: 'mod_cards',
   toolbar: 'toolbar',
@@ -82,6 +99,34 @@ const LIQUID_GLASS_INI_KEYS: Record<keyof LiquidGlassConfig, string> = {
   buttons: 'buttons',
   inputs: 'inputs',
   overlays: 'overlays'
+}
+
+/** 旧配置里这几项是开关写法:'1'/'true' → 100%,'0'/'false' → 0%(其余数值项按原值解析) */
+const LIQUID_GLASS_PERCENT_KEYS = new Set<keyof LiquidGlassConfig>([
+  'refraction',
+  'dispersion',
+  'blur',
+  'edgeHighlight'
+])
+
+/** 数值项取值范围(未列出的按 0-200 收口) */
+const LIQUID_GLASS_NUMBER_RANGES: Partial<Record<keyof LiquidGlassConfig, [number, number]>> = {
+  refraction: [0, 100],
+  dispersion: [0, 100],
+  blur: [0, 100],
+  edgeHighlight: [0, 200],
+  brightness: [-50, 50],
+  saturation: [-100, 100],
+  tint: [0, 100],
+  opacity: [0, 100],
+  bevel: [0, 200],
+  bevelMode: [0, 1],
+  gloss: [0, 100],
+  fresnel: [0, 200],
+  distortion: [0, 100],
+  shadow: [0, 100],
+  shadowSpread: [0, 40],
+  shadowOffsetY: [-20, 20]
 }
 
 /**
@@ -255,6 +300,9 @@ export function getAppConfig(): AppConfigData {
     uiCornerRadius: clampUiCornerRadius(
       getInt('Preferences', 'ui_corner_radius', UI_CORNER_RADIUS_DEFAULT)
     ),
+    backgroundMaskOpacity: clampBackgroundMaskOpacity(
+      getInt('Preferences', 'background_mask_opacity', BACKGROUND_MASK_OPACITY_DEFAULT)
+    ),
     liquidGlass: getLiquidGlassConfig(ini)
   }
 }
@@ -277,17 +325,22 @@ function getLiquidGlassConfig(ini: ReturnType<typeof parseIni>): LiquidGlassConf
       ;(result[configKey] as boolean) = raw === '1' || raw === 'true'
       continue
     }
-    if (raw === '1' || raw === 'true') {
-      // 布尔开关的视觉等效值:强度按 100% 迁移(色散现仅作用于侧边栏/工具栏,可安全开启)
-      ;(result[configKey] as number) = 100
-    } else if (raw === '0' || raw === 'false') {
-      ;(result[configKey] as number) = 0
-    } else {
-      const parsed = Number.parseFloat(raw)
-      ;(result[configKey] as number) = Number.isFinite(parsed)
-        ? Math.min(100, Math.max(0, parsed))
-        : LIQUID_GLASS_DEFAULTS[configKey]
+    // 旧版本的强度项是开关写法,迁移时按 0 / 100 处理
+    if (LIQUID_GLASS_PERCENT_KEYS.has(configKey)) {
+      if (raw === '1' || raw === 'true') {
+        ;(result[configKey] as number) = 100
+        continue
+      }
+      if (raw === '0' || raw === 'false') {
+        ;(result[configKey] as number) = 0
+        continue
+      }
     }
+    const [min, max] = LIQUID_GLASS_NUMBER_RANGES[configKey] ?? [0, 200]
+    const parsed = Number.parseFloat(raw)
+    ;(result[configKey] as number) = Number.isFinite(parsed)
+      ? Math.min(max, Math.max(min, parsed))
+      : LIQUID_GLASS_DEFAULTS[configKey]
   }
   return result
 }
@@ -304,6 +357,13 @@ function clampUiCornerRadius(value: number): number {
     return UI_CORNER_RADIUS_DEFAULT
   }
   return Math.min(UI_CORNER_RADIUS_MAX, Math.max(UI_CORNER_RADIUS_MIN, Math.round(value)))
+}
+
+function clampBackgroundMaskOpacity(value: number): number {
+  if (!Number.isFinite(value)) {
+    return BACKGROUND_MASK_OPACITY_DEFAULT
+  }
+  return Math.min(BACKGROUND_MASK_OPACITY_MAX, Math.max(BACKGROUND_MASK_OPACITY_MIN, Math.round(value)))
 }
 
 export function setSortOrder(sortOrder: SortOrder): void {
@@ -443,6 +503,11 @@ export function updateAppConfig(patch: AppConfigPatch): void {
   if (patch.uiCornerRadius !== undefined) {
     preferenceEntries.ui_corner_radius = String(clampUiCornerRadius(patch.uiCornerRadius))
   }
+  if (patch.backgroundMaskOpacity !== undefined) {
+    preferenceEntries.background_mask_opacity = String(
+      clampBackgroundMaskOpacity(patch.backgroundMaskOpacity)
+    )
+  }
   if (patch.restoreLastCategory !== undefined) {
     preferenceEntries.restore_last_category = patch.restoreLastCategory ? '1' : '0'
   }
@@ -465,12 +530,14 @@ export function updateAppConfig(patch: AppConfigPatch): void {
       if (!iniKey) {
         continue
       }
-      entries[iniKey] =
-        typeof value === 'boolean'
-          ? value
-            ? '1'
-            : '0'
-          : String(Math.min(100, Math.max(0, Math.round(value))))
+      if (typeof value === 'boolean') {
+        entries[iniKey] = value ? '1' : '0'
+        continue
+      }
+      // 取值范围与解析端同表:亮度/饱和度/投影偏移可为负,倒角厚度/菲涅耳可到 200
+      const [min, max] =
+        LIQUID_GLASS_NUMBER_RANGES[key as keyof LiquidGlassConfig] ?? [0, 200]
+      entries[iniKey] = String(Math.min(max, Math.max(min, Math.round(value))))
     }
     ini.LiquidGlass = entries
   }

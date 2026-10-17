@@ -83,8 +83,6 @@ const SelectContent = React.forwardRef<
         className="ui-fade-popover flex max-h-(--radix-select-content-available-height) min-w-[8rem] flex-col overflow-hidden rounded-xl text-popover-foreground shadow-card"
         contentClassName="flex min-h-0 flex-1 flex-col"
         fallbackClassName="glass-dialog frosted"
-        depth={1}
-        blur={4}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport

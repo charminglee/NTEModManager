@@ -20,7 +20,7 @@ const LEVEL_LABELS: Record<LogEntry['level'], string> = {
 }
 
 interface LogViewProps {
-  /** F11 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
+  /** F9 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
   uiHidden?: boolean
 }
 
@@ -107,8 +107,6 @@ function LogView({ uiHidden }: LogViewProps) {
           className={cn('ui-fade h-full rounded-xl', uiHidden && 'ui-fade-hidden')}
           fallbackClassName="glass-dialog frosted"
           contentClassName="h-full"
-          depth={1}
-          blur={2}
         >
         <div
           ref={containerRef}

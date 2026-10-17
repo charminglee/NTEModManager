@@ -22,7 +22,7 @@ interface BatchActionBarProps {
   onReinstall: () => void
   onRepackage: () => void
   onDelete: () => void
-  /** F11 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
+  /** F9 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
   uiHidden?: boolean
 }
 
@@ -56,8 +56,6 @@ function BatchActionBar({
             uiHidden && 'ui-fade-hidden'
           )}
           contentClassName="flex items-center gap-1.5 px-2.5 py-2"
-          depth={1}
-          blur={2}
         >
         <span className="select-none whitespace-nowrap px-2 text-xs font-semibold text-foreground/90">
           已选 {count} 个

@@ -5,7 +5,7 @@ import { LiquidGlass } from '@/components/liquid-glass'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 focus-visible:outline-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 focus-visible:outline-none disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-95',
   {
     variants: {
       variant: {
@@ -17,7 +17,7 @@ const buttonVariants = cva(
           'border border-border bg-transparent hover:bg-secondary/70 hover:text-secondary-foreground',
         secondary: 'bg-secondary/70 text-secondary-foreground hover:bg-secondary/50',
         ghost: 'hover:bg-secondary/60 hover:text-secondary-foreground',
-        // 无底色:默认与悬浮都不画任何自有矩形(悬浮反馈见 index.css 的 glass-btn-overlay
+        // 无底色:默认与悬浮都不画任何自有矩形(悬浮反馈见 index.css 的 glass-btn-root
         // 规则——液态玻璃悬停=覆盖层高光增强,玻璃关闭=轻底色由 CSS 按覆盖层状态切换)
         glass: 'text-foreground',
         link: 'text-primary underline-offset-4 hover:underline'
@@ -41,51 +41,66 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 /**
- * 液态玻璃覆盖层:所有按钮(全部变体)共用。玻璃垫在按钮底色之上(pointer-events:none),
- * inset 必须为 0 与底色完全重合——外扩会让玻璃的内沿高光环浮在底色边界外侧,
- * 看起来像玻璃叠在另一层色块上。悬浮反馈见 index.css 的 glass-btn-overlay 规则;
- * 玻璃关闭时回退为空层,按钮退回各自变体的普通外观。
+ * 实心变体(有底色)的玻璃不透明度:玻璃压在半透明底色之上,让底色透出来形成
+ * 「有色玻璃」,靠 opacity 把产品配色(紫罗兰主色等)保留下来
  */
-export function GlassButtonOverlay() {
-  return (
-    <LiquidGlass
-      area="buttons"
-      aria-hidden
-      crisp={false}
-      className="glass-btn-overlay pointer-events-none rounded-[inherit]"
-      fallbackClassName=""
-      style={{ position: 'absolute', inset: '0', clipPath: 'inset(0)' }}
-      depth={0}
-      blur={2}
-    />
-  )
+const TINTED_GLASS_OPACITY = 0.6
+
+export interface GlassButtonProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'ref'> {
+  /** 有底色的按钮:让底色透过玻璃(有色玻璃);无底色的玻璃按钮用 false */
+  tinted?: boolean
+  /** 交互反馈:悬浮提亮、按下压平棱面 */
+  button?: boolean
 }
 
-/** 玻璃按钮的内容层:禁用淡出必须落在内容上——根元素 opacity<1 会截断玻璃的 backdrop 采样 */
-export const GLASS_BUTTON_CONTENT_CLASS =
-  'relative inline-flex items-center justify-center gap-2 transition-opacity group-disabled:opacity-50'
+/**
+ * 自定义外观按钮的玻璃封装:玻璃长在 <button> 本体上(注入 canvas + z-index:-1),
+ * 文字/图标照常是活的 DOM。列表卡片、侧边栏底部等自绘按钮统一走这里,
+ * 于是「玻璃 + 可控外观」不必再维护覆盖层 + 内容层两层结构。
+ */
+export const GlassButton = React.forwardRef<HTMLButtonElement, GlassButtonProps>(
+  ({ className, children, tinted = true, button = true, ...props }, ref) => (
+    <LiquidGlass
+      component="button"
+      ref={ref}
+      area="buttons"
+      overlay
+      crisp={false}
+      variant="control"
+      button={button}
+      opacity={tinted ? TINTED_GLASS_OPACITY : 1}
+      // 玻璃关闭时按钮不做毛玻璃回退:它自身的变体样式(实心底色/描边/悬停)就是回退外观
+      fallbackClassName=""
+      className={className}
+      {...props}
+    >
+      {children}
+    </LiquidGlass>
+  )
+)
+GlassButton.displayName = 'GlassButton'
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, children, ...props }, ref) => {
-    // 玻璃不能让 vaso 直接渲染按钮根:vaso 的玻璃层与根元素用同一标签渲染,
-    // component="button" 会产生 button 嵌套 button 的非法结构,因此按钮保持唯一的
-    // <button> 根,玻璃作为 pointer-events:none 的覆盖层盖在内容之下,
-    // 并以 style 内联定位覆盖 vaso 根元素自带的 position:relative。
+    // 玻璃直接长在 <button> 上:折射层是按钮内的注入画布(z-index:-1),
+    // 文字等内容照常是活的 DOM;按钮因此能拿到悬浮提亮/按下压平反馈
+    // (该反馈需要指针事件落在玻璃元素上)
     if (!asChild) {
       return (
-        <button
+        <GlassButton
           ref={ref}
+          button={variant !== 'link'}
+          tinted={variant !== 'glass'}
           className={cn(
             buttonVariants({ variant, size, className }),
-            'group relative disabled:opacity-100',
-            // glass 变体无自有底色,悬停反馈由 index.css 按覆盖层状态切换(需此标记类定位)
+            // glass 变体无自有底色,玻璃关闭时它的悬停反馈由 CSS 按标记类切换
             variant === 'glass' && 'glass-btn-root'
           )}
           {...props}
         >
-          <GlassButtonOverlay />
-          <span className={GLASS_BUTTON_CONTENT_CLASS}>{children}</span>
-        </button>
+          {children}
+        </GlassButton>
       )
     }
     // asChild(Slot)无法注入覆盖层子元素,退回无玻璃的普通渲染

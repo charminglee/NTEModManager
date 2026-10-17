@@ -4,6 +4,7 @@ import { Blocks, LoaderCircle } from 'lucide-react'
 import {
   ALL_CATEGORY,
   OTHER_CATEGORY,
+  BACKGROUND_MASK_OPACITY_DEFAULT,
   type AppConfigData,
   type BatchModAction,
   type LiquidGlassConfig,
@@ -21,7 +22,7 @@ import {
 } from '@shared/mod-list-logic'
 import { basenameWithoutExtension, joinPath } from '@/lib/format'
 import BackgroundLayer from '@/components/background-layer'
-import { LiquidGlass, LiquidGlassConfigProvider } from '@/components/liquid-glass'
+import { LiquidGlass, LiquidGlassProvider } from '@/components/liquid-glass'
 import Sidebar from '@/components/sidebar'
 import ModListHeader from '@/components/mod-list-header'
 import ModCard, { type ModCardActions } from '@/components/mod-card'
@@ -76,9 +77,10 @@ export default function App() {
   const [chromeHidden, setChromeHidden] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  /** 设置对话框打开期间的实时预览草稿(圆角 + 玻璃效果,滑动/切换立即生效);null 表示用已保存值 */
+  /** 设置对话框打开期间的实时预览草稿(圆角 + 背景遮罩 + 玻璃效果,滑动/切换立即生效);null 表示用已保存值 */
   const [settingsPreview, setSettingsPreview] = useState<{
     uiCornerRadius: number
+    backgroundMaskOpacity: number
     liquidGlass: LiquidGlassConfig
   } | null>(null)
 
@@ -738,7 +740,8 @@ export default function App() {
         target !== null &&
         (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
 
-      if (event.key === 'F11') {
+      // F9 隐藏/恢复界面;F11 不做拦截,交给 Chrome/Electron 原生全屏
+      if (event.key === 'F9') {
         event.preventDefault()
         setChromeHidden((value) => !value)
         return
@@ -824,11 +827,15 @@ export default function App() {
   }, [busy, handleImportArchives, isArchiveFile])
 
   // 全局圆角:写入 :root 的 --radius,所有圆角刻度(rounded-* 工具类/滚动条/toast)由它单点派生;
-  // 液态玻璃的折射贴图半径经 UICornerRadiusProvider 同步给 vaso(见 liquid-glass.tsx)
+  // 液态玻璃的圆角经 UICornerRadiusProvider 同时同步给 CSS 与玻璃 shader(见 liquid-glass.tsx)
   const cornerRadius = settingsPreview?.uiCornerRadius ?? config?.uiCornerRadius ?? UI_CORNER_RADIUS_DEFAULT
   useEffect(() => {
     document.documentElement.style.setProperty('--radius', `${cornerRadius}px`)
   }, [cornerRadius])
+
+  // 背景颜色遮罩不透明度:优先用设置对话框的实时预览值,否则用已保存值
+  const backgroundMaskOpacity =
+    settingsPreview?.backgroundMaskOpacity ?? config?.backgroundMaskOpacity ?? BACKGROUND_MASK_OPACITY_DEFAULT
 
   // ============ 渲染 ============
   if (!config) {
@@ -840,429 +847,365 @@ export default function App() {
   }
 
   return (
-    <LiquidGlassConfigProvider
+    <LiquidGlassProvider
       config={settingsPreview?.liquidGlass ?? config.liquidGlass}
       cornerRadius={cornerRadius}
+      suspended={chromeHidden}
+      className="flex h-full"
     >
       <TooltipProvider delayDuration={400}>
-        <div className="flex h-full">
-          <BackgroundLayer masked={!chromeHidden} />
-          <GlassWarmup />
+        <BackgroundLayer masked={!chromeHidden} maskOpacity={backgroundMaskOpacity} />
 
-          <div
-            className={cn(
-              'flex h-full min-w-0 flex-1',
-              chromeHidden && 'pointer-events-none'
-            )}
-          >
-            <Sidebar
-              appIcon={appIcon}
-              displayCategories={displayCategories}
-              counts={counts}
-              currentCategory={currentCategory}
-              categoryImages={categoryImages}
-              busy={busy}
-              view={view}
-              uiHidden={chromeHidden}
-              onSelectCategory={handleSelectCategory}
-              onLaunchGame={handleLaunchGame}
-              onOpenLogs={handleToggleLogsView}
-              onOpenSettings={handleOpenSettings}
-            />
+        <div
+          className={cn('flex h-full min-w-0 flex-1', chromeHidden && 'pointer-events-none')}
+        >
+          <Sidebar
+            appIcon={appIcon}
+            displayCategories={displayCategories}
+            counts={counts}
+            currentCategory={currentCategory}
+            categoryImages={categoryImages}
+            busy={busy}
+            view={view}
+            uiHidden={chromeHidden}
+            onSelectCategory={handleSelectCategory}
+            onLaunchGame={handleLaunchGame}
+            onOpenLogs={handleToggleLogsView}
+            onOpenSettings={handleOpenSettings}
+          />
 
-            <main className="relative flex min-w-0 flex-1 flex-col">
-              {view === 'mods' ? (
-                <>
-                  <ModListHeader
-                    category={currentCategory}
-                    count={visibleMods.length}
-                    installedCount={installedCount}
-                    search={search}
-                    sortOrder={config.sortOrder}
+          <main className="relative flex min-w-0 flex-1 flex-col">
+            {view === 'mods' ? (
+              <>
+                <ModListHeader
+                  category={currentCategory}
+                  count={visibleMods.length}
+                  installedCount={installedCount}
+                  search={search}
+                  sortOrder={config.sortOrder}
+                  busy={busy}
+                  uiHidden={chromeHidden}
+                  onSearchChange={setSearch}
+                  onSortOrderChange={handleSortOrderChange}
+                  onInstallAll={handleInstallAllAction}
+                  onUninstallAll={handleUninstallAllAction}
+                  onRefresh={handleRefreshMods}
+                  onImport={handleImportAction}
+                  onPackageMod={handlePackageModAction}
+                />
+
+                {/* key 按视图+分类:卡片列表每次重新出现(启动、切换分类、从日志视图返回)都整体重挂载,
+                    卡片的推入入场动画随挂载自然重放;顺带把滚动位置重置回顶部 */}
+                <div
+                  key={`cards-${view}:${currentCategory}`}
+                  className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pl-4 pr-1.5 pb-4 [scrollbar-gutter:stable]"
+                >
+                  {visibleMods.length === 0 ? (
+                    <div
+                      className={cn(
+                        'flex h-full min-h-40 flex-col items-center justify-center gap-3 text-center transition-opacity duration-300',
+                        chromeHidden && 'opacity-0'
+                      )}
+                    >
+                      <LiquidGlass
+                        className="glass h-16 w-16 rounded-2xl"
+                        contentClassName="flex h-full items-center justify-center"
+                      >
+                        <Blocks className="h-7 w-7 text-muted-foreground" />
+                      </LiquidGlass>
+                      <div className="text-lg font-medium text-foreground/85">该分类还没有导入模组</div>
+                      <div className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+                        将 .zip / .rar / .7z 压缩包拖放到窗口的任意位置，或点击右上角「导入」按钮。
+                        <br />
+                        模组名称需符合「角色名-二级名称」格式才能自动归类。
+                      </div>
+                    </div>
+                  ) : groupedMods ? (
+                    groupedMods.map((group) => (
+                      <div key={group.secondary} className="space-y-2">
+                        <div
+                          className={cn(
+                            'px-1 pb-1 pt-2 text-sm font-semibold text-foreground/85 text-shadow-soft transition-opacity duration-300',
+                            chromeHidden && 'opacity-0'
+                          )}
+                        >
+                          {group.secondary}
+                        </div>
+                        {group.mods.map((mod) => (
+                          <ModCard
+                            key={mod.name}
+                            mod={mod}
+                            actions={modCardActions}
+                            disabled={busy}
+                            selected={selectedNames.has(mod.name)}
+                            selectionActive={selectedNames.size > 0}
+                            uiHidden={chromeHidden}
+                          />
+                        ))}
+                      </div>
+                    ))
+                  ) : (
+                    visibleMods.map((mod) => (
+                      <ModCard
+                        key={mod.name}
+                        mod={mod}
+                        actions={modCardActions}
+                        disabled={busy}
+                        selected={selectedNames.has(mod.name)}
+                        selectionActive={selectedNames.size > 0}
+                        uiHidden={chromeHidden}
+                      />
+                    ))
+                  )}
+                </div>
+
+                {/* 多选批量操作栏(有选中项时从窗口底边滑出) */}
+                {selectedNames.size > 0 && (
+                  <BatchActionBar
+                    count={selectedNames.size}
+                    allSelected={allVisibleSelected}
+                    canInstall={canInstallSelected}
+                    canUninstall={canUninstallSelected}
                     busy={busy}
                     uiHidden={chromeHidden}
-                    onSearchChange={setSearch}
-                    onSortOrderChange={handleSortOrderChange}
-                    onInstallAll={handleInstallAllAction}
-                    onUninstallAll={handleUninstallAllAction}
-                    onRefresh={handleRefreshMods}
-                    onImport={handleImportAction}
-                    onPackageMod={handlePackageModAction}
+                    onSelectAll={handleSelectAllVisible}
+                    onClear={handleClearSelection}
+                    onInstall={handleBatchInstallAction}
+                    onUninstall={handleBatchUninstallAction}
+                    onReinstall={handleBatchReinstallAction}
+                    onRepackage={handleBatchRepackageAction}
+                    onDelete={handleBatchDeleteAction}
                   />
-
-                  {/* key 按视图+分类:卡片列表每次重新出现(启动、切换分类、从日志视图返回)都整体重挂载,
-                      卡片的推入入场动画随挂载自然重放;顺带把滚动位置重置回顶部 */}
-                  <div
-                    key={`cards-${view}:${currentCategory}`}
-                    className="min-h-0 flex-1 space-y-2 overflow-y-auto overflow-x-hidden pl-4 pr-1.5 pb-4 [scrollbar-gutter:stable]"
-                  >
-                    {visibleMods.length === 0 ? (
-                      <div
-                        className={cn(
-                          'flex h-full min-h-40 flex-col items-center justify-center gap-3 text-center transition-opacity duration-300',
-                          chromeHidden && 'opacity-0'
-                        )}
-                      >
-                        <LiquidGlass
-                          className="glass h-16 w-16 rounded-2xl"
-                          contentClassName="flex h-full items-center justify-center"
-                          depth={1.5}
-                          blur={0.4}
-                        >
-                          <Blocks className="h-7 w-7 text-muted-foreground" />
-                        </LiquidGlass>
-                        <div className="text-lg font-medium text-foreground/85">该分类还没有导入模组</div>
-                        <div className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-                          将 .zip / .rar / .7z 压缩包拖放到窗口的任意位置，或点击右上角「导入」按钮。
-                          <br />
-                          模组名称需符合「角色名-二级名称」格式才能自动归类。
-                        </div>
-                      </div>
-                    ) : groupedMods ? (
-                      groupedMods.map((group) => (
-                        <div key={group.secondary} className="space-y-2">
-                          <div
-                            className={cn(
-                              'px-1 pb-1 pt-2 text-sm font-semibold text-foreground/85 text-shadow-soft transition-opacity duration-300',
-                              chromeHidden && 'opacity-0'
-                            )}
-                          >
-                            {group.secondary}
-                          </div>
-                          {group.mods.map((mod) => (
-                            <ModCard
-                              key={mod.name}
-                              mod={mod}
-                              actions={modCardActions}
-                              disabled={busy}
-                              selected={selectedNames.has(mod.name)}
-                              selectionActive={selectedNames.size > 0}
-                              uiHidden={chromeHidden}
-                            />
-                          ))}
-                        </div>
-                      ))
-                    ) : (
-                      visibleMods.map((mod) => (
-                        <ModCard
-                          key={mod.name}
-                          mod={mod}
-                          actions={modCardActions}
-                          disabled={busy}
-                          selected={selectedNames.has(mod.name)}
-                          selectionActive={selectedNames.size > 0}
-                          uiHidden={chromeHidden}
-                        />
-                      ))
-                    )}
-                  </div>
-
-                  {/* 多选批量操作栏(有选中项时从窗口底边滑出) */}
-                  {selectedNames.size > 0 && (
-                    <BatchActionBar
-                      count={selectedNames.size}
-                      allSelected={allVisibleSelected}
-                      canInstall={canInstallSelected}
-                      canUninstall={canUninstallSelected}
-                      busy={busy}
-                      uiHidden={chromeHidden}
-                      onSelectAll={handleSelectAllVisible}
-                      onClear={handleClearSelection}
-                      onInstall={handleBatchInstallAction}
-                      onUninstall={handleBatchUninstallAction}
-                      onReinstall={handleBatchReinstallAction}
-                      onRepackage={handleBatchRepackageAction}
-                      onDelete={handleBatchDeleteAction}
-                    />
-                  )}
-                </>
-              ) : (
-                <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-6">
-                  {/* 日志数据由 LogView 自管理(拉取/订阅/刷新),不经过 App state */}
-                  <LogView uiHidden={chromeHidden} />
-                </div>
-              )}
-            </main>
-          </div>
-
-          {/* FPS 计数悬浮(性能诊断):状态栏已移除,改为独立悬浮角标,UI 隐藏时保持可见以便测量 */}
-          {config.fpsCounterEnabled && (
-            <div className="fixed top-0 left-0 z-30">
-              <div className="glass frosted rounded-md px-2 py-1 text-xs select-none tabular-nums text-foreground">
-                <FpsCounter />
+                )}
+              </>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-6">
+                {/* 日志数据由 LogView 自管理(拉取/订阅/刷新),不经过 App state */}
+                <LogView uiHidden={chromeHidden} />
               </div>
-            </div>
-          )}
-
-          {/* 拖放导入遮罩:visibility 随 opacity 一起过渡——淡出动画播完才真正隐藏,
-              隐藏后 Chromium 跳过整棵渲染,内部的 vaso 玻璃层不再常驻 backdrop-filter 开销 */}
-          <div
-            className={cn(
-              'pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-primary/10 transition-[opacity,visibility] duration-200',
-              dragOver && !busy ? 'visible opacity-100' : 'invisible opacity-0'
             )}
-          >
-            <LiquidGlass
-              className="glass-dialog rounded-2xl"
-              contentClassName="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/60 px-16 py-12"
-              depth={1.5}
-              blur={2.5}
-            >
-              <Blocks className="h-10 w-10 text-primary" />
-              <div className="text-lg font-semibold text-foreground">松开以导入模组</div>
-              <div className="text-xs text-muted-foreground">支持 .zip / .rar / .7z 压缩包</div>
-            </LiquidGlass>
+          </main>
+        </div>
+
+        {/* FPS 计数悬浮(性能诊断):状态栏已移除,改为独立悬浮角标,UI 隐藏时保持可见以便测量 */}
+        {config.fpsCounterEnabled && (
+          <div className="fixed top-0 left-0 z-30">
+            <div className="glass frosted rounded-md px-2 py-1 text-xs select-none tabular-nums text-foreground">
+              <FpsCounter />
+            </div>
           </div>
+        )}
 
-          {/* 双击背景恢复 UI */}
-          {chromeHidden && (
-            <div
-              className="fixed inset-0 z-0"
-              onDoubleClick={() => setChromeHidden(false)}
-              title="双击恢复界面"
-            />
+        {/* 拖放导入遮罩:visibility 随 opacity 一起过渡——淡出动画播完才真正隐藏,
+            隐藏后 Chromium 跳过整棵渲染,内部的玻璃画布不再参与合成 */}
+        <div
+          className={cn(
+            'pointer-events-none fixed inset-0 z-40 flex items-center justify-center bg-primary/10 transition-[opacity,visibility] duration-200',
+            dragOver && !busy ? 'visible opacity-100' : 'invisible opacity-0'
           )}
+        >
+          <LiquidGlass
+            className="glass-dialog rounded-2xl"
+            contentClassName="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary/60 px-16 py-12"
+          >
+            <Blocks className="h-10 w-10 text-primary" />
+            <div className="text-lg font-semibold text-foreground">松开以导入模组</div>
+            <div className="text-xs text-muted-foreground">支持 .zip / .rar / .7z 压缩包</div>
+          </LiquidGlass>
+        </div>
 
-          {/* 设置对话框 */}
-          <SettingsDialog
-            open={settingsOpen}
-            config={config}
-            onOpenChange={setSettingsOpen}
-            onPreview={setSettingsPreview}
-            onSaved={(next, modsDirectoryChanged) => {
-              setConfig(next)
-              if (modsDirectoryChanged) {
+        {/* 双击背景恢复 UI */}
+        {chromeHidden && (
+          <div
+            className="fixed inset-0 z-0"
+            onDoubleClick={() => setChromeHidden(false)}
+            title="双击恢复界面"
+          />
+        )}
+
+        {/* 设置对话框 */}
+        <SettingsDialog
+          open={settingsOpen}
+          config={config}
+          onOpenChange={setSettingsOpen}
+          onPreview={setSettingsPreview}
+          onSaved={(next, modsDirectoryChanged) => {
+            setConfig(next)
+            if (modsDirectoryChanged) {
+              void refreshMods()
+            }
+          }}
+        />
+
+        {/* 通用输入对话框(重命名/打包命名) */}
+        <PromptDialog
+          open={prompt !== null}
+          title={prompt?.title ?? ''}
+          description={prompt?.description}
+          label={prompt?.label ?? ''}
+          initialValue={prompt?.initialValue ?? ''}
+          onCancel={() => setPrompt(null)}
+          onConfirm={(value) => prompt?.onConfirm(value)}
+        />
+
+        {/* 导入后逐个重命名 */}
+        <PromptDialog
+          open={currentRename !== null}
+          title="重命名模组"
+          description="模组名称需符合「角色名-二级名称」格式才能自动归类到对应分类。"
+          label="模组名称："
+          initialValue={currentRename?.defaultName ?? ''}
+          onCancel={() => setRenameQueue((prev) => prev.slice(1))}
+          onConfirm={(newName) => {
+            const item = currentRename
+            setRenameQueue((prev) => prev.slice(1))
+            if (!item) {
+              return
+            }
+            if (newName.length === 0 || newName === item.modName) {
+              return
+            }
+            void runOperation(`正在重命名 ${item.modName}...`, () =>
+              window.api.renameMod(item.modName, newName)
+            ).then((result) => {
+              if (result) {
                 void refreshMods()
               }
-            }}
-          />
+            })
+          }}
+        />
 
-          {/* 通用输入对话框(重命名/打包命名) */}
-          <PromptDialog
-            open={prompt !== null}
-            title={prompt?.title ?? ''}
-            description={prompt?.description}
-            label={prompt?.label ?? ''}
-            initialValue={prompt?.initialValue ?? ''}
-            onCancel={() => setPrompt(null)}
-            onConfirm={(value) => prompt?.onConfirm(value)}
-          />
-
-          {/* 导入后逐个重命名 */}
-          <PromptDialog
-            open={currentRename !== null}
-            title="重命名模组"
-            description="模组名称需符合「角色名-二级名称」格式才能自动归类到对应分类。"
-            label="模组名称："
-            initialValue={currentRename?.defaultName ?? ''}
-            onCancel={() => setRenameQueue((prev) => prev.slice(1))}
-            onConfirm={(newName) => {
-              const item = currentRename
-              setRenameQueue((prev) => prev.slice(1))
-              if (!item) {
-                return
-              }
-              if (newName.length === 0 || newName === item.modName) {
-                return
-              }
-              void runOperation(`正在重命名 ${item.modName}...`, () =>
-                window.api.renameMod(item.modName, newName)
-              ).then((result) => {
-                if (result) {
-                  void refreshMods()
-                }
-              })
-            }}
-          />
-
-          {/* 确认对话框 */}
-          <AlertDialog open={pendingConfirm !== null} onOpenChange={(open) => !open && setPendingConfirm(null)}>
-            <AlertDialogContent>
-              {pendingConfirm?.kind === 'delete' && (
-                <>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>删除模组</AlertDialogTitle>
-                    <AlertDialogDescription>{`将永久删除“${pendingConfirm.modName}”的备份文件及已安装的模组文件。此操作无法撤销。`}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      onClick={() => {
-                        const modName = pendingConfirm.modName
-                        setPendingConfirm(null)
-                        void runOperation(`正在删除 ${modName}...`, () =>
-                          window.api.removeMod(modName)
-                        ).then((result) => {
+        {/* 确认对话框 */}
+        <AlertDialog open={pendingConfirm !== null} onOpenChange={(open) => !open && setPendingConfirm(null)}>
+          <AlertDialogContent>
+            {pendingConfirm?.kind === 'delete' && (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>删除模组</AlertDialogTitle>
+                  <AlertDialogDescription>{`将永久删除“${pendingConfirm.modName}”的备份文件及已安装的模组文件。此操作无法撤销。`}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={() => {
+                      const modName = pendingConfirm.modName
+                      setPendingConfirm(null)
+                      void runOperation(`正在删除 ${modName}...`, () =>
+                        window.api.removeMod(modName)
+                      ).then((result) => {
+                        if (result) {
+                          void refreshMods()
+                        }
+                      })
+                    }}
+                  >
+                    删除
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
+            {(pendingConfirm?.kind === 'install-invalid' || pendingConfirm?.kind === 'reinstall-invalid') && (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{pendingConfirm.kind === 'reinstall-invalid' ? '重装失效模组' : '安装失效模组'}</AlertDialogTitle>
+                  <AlertDialogDescription>{`“${pendingConfirm.modName}”已标记为失效，可能无法正常工作。是否仍要${pendingConfirm.kind === 'reinstall-invalid' ? '重装' : '安装'}？`}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      const modName = pendingConfirm.modName
+                      const reinstall = pendingConfirm.kind === 'reinstall-invalid'
+                      setPendingConfirm(null)
+                      void (reinstall ? reinstallByName(modName) : runOperation(`正在安装 ${modName}...`, () => window.api.installMod(modName))).then(
+                        (result) => {
                           if (result) {
                             void refreshMods()
                           }
-                        })
-                      }}
-                    >
-                      删除
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </>
-              )}
-              {(pendingConfirm?.kind === 'install-invalid' || pendingConfirm?.kind === 'reinstall-invalid') && (
-                <>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{pendingConfirm.kind === 'reinstall-invalid' ? '重装失效模组' : '安装失效模组'}</AlertDialogTitle>
-                    <AlertDialogDescription>{`“${pendingConfirm.modName}”已标记为失效，可能无法正常工作。是否仍要${pendingConfirm.kind === 'reinstall-invalid' ? '重装' : '安装'}？`}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        const modName = pendingConfirm.modName
-                        const reinstall = pendingConfirm.kind === 'reinstall-invalid'
-                        setPendingConfirm(null)
-                        void (reinstall ? reinstallByName(modName) : runOperation(`正在安装 ${modName}...`, () => window.api.installMod(modName))).then(
-                          (result) => {
-                            if (result) {
-                              void refreshMods()
-                            }
-                          }
-                        )
-                      }}
-                    >
-                      {pendingConfirm.kind === 'reinstall-invalid' ? '仍要重装' : '仍要安装'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </>
-              )}
-              {pendingConfirm?.kind === 'install-all-invalid' && (
-                <>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>安装失效模组</AlertDialogTitle>
-                    <AlertDialogDescription>{`当前操作包含 ${pendingConfirm.modNames.length} 个已标记为失效的模组：\n${pendingConfirm.modNames.join('\n')}\n可能无法正常工作，是否仍要继续？`}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        setPendingConfirm(null)
-                        void runOperation('正在批量安装模组...', () =>
-                          window.api.installAll(currentCategory)
-                        ).then((result) => {
-                          if (result) {
-                            void refreshMods()
-                          }
-                        })
-                      }}
-                    >
-                      仍要继续
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </>
-              )}
-              {pendingConfirm?.kind === 'batch-delete' && (
-                <>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>删除模组</AlertDialogTitle>
-                    <AlertDialogDescription>{`将永久删除选中的 ${pendingConfirm.modNames.length} 个模组的备份文件及已安装的模组文件：\n${pendingConfirm.modNames.join('\n')}\n此操作无法撤销。`}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      onClick={() => {
-                        const modNames = pendingConfirm.modNames
-                        setPendingConfirm(null)
-                        void runBatch(`正在批量删除 ${modNames.length} 个模组...`, 'remove', modNames)
-                      }}
-                    >
-                      删除
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </>
-              )}
-              {pendingConfirm?.kind === 'batch-invalid' && (
-                <>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {pendingConfirm.action === 'reinstall' ? '重装失效模组' : '安装失效模组'}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>{`当前操作包含 ${pendingConfirm.invalidNames.length} 个已标记为失效的模组：\n${pendingConfirm.invalidNames.join('\n')}\n可能无法正常工作，是否仍要继续？`}</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        const { action, modNames } = pendingConfirm
-                        setPendingConfirm(null)
-                        const verb = action === 'reinstall' ? '重新安装' : '安装'
-                        void runBatch(`正在批量${verb} ${modNames.length} 个模组...`, action, modNames)
-                      }}
-                    >
-                      仍要继续
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </>
-              )}
-            </AlertDialogContent>
-          </AlertDialog>
+                        }
+                      )
+                    }}
+                  >
+                    {pendingConfirm.kind === 'reinstall-invalid' ? '仍要重装' : '仍要安装'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
+            {pendingConfirm?.kind === 'install-all-invalid' && (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>安装失效模组</AlertDialogTitle>
+                  <AlertDialogDescription>{`当前操作包含 ${pendingConfirm.modNames.length} 个已标记为失效的模组：\n${pendingConfirm.modNames.join('\n')}\n可能无法正常工作，是否仍要继续？`}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setPendingConfirm(null)
+                      void runOperation('正在批量安装模组...', () =>
+                        window.api.installAll(currentCategory)
+                      ).then((result) => {
+                        if (result) {
+                          void refreshMods()
+                        }
+                      })
+                    }}
+                  >
+                    仍要继续
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
+            {pendingConfirm?.kind === 'batch-delete' && (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>删除模组</AlertDialogTitle>
+                  <AlertDialogDescription>{`将永久删除选中的 ${pendingConfirm.modNames.length} 个模组的备份文件及已安装的模组文件：\n${pendingConfirm.modNames.join('\n')}\n此操作无法撤销。`}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={() => {
+                      const modNames = pendingConfirm.modNames
+                      setPendingConfirm(null)
+                      void runBatch(`正在批量删除 ${modNames.length} 个模组...`, 'remove', modNames)
+                    }}
+                  >
+                    删除
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
+            {pendingConfirm?.kind === 'batch-invalid' && (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    {pendingConfirm.action === 'reinstall' ? '重装失效模组' : '安装失效模组'}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>{`当前操作包含 ${pendingConfirm.invalidNames.length} 个已标记为失效的模组：\n${pendingConfirm.invalidNames.join('\n')}\n可能无法正常工作，是否仍要继续？`}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      const { action, modNames } = pendingConfirm
+                      setPendingConfirm(null)
+                      const verb = action === 'reinstall' ? '重新安装' : '安装'
+                      void runBatch(`正在批量${verb} ${modNames.length} 个模组...`, action, modNames)
+                    }}
+                  >
+                    仍要继续
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
+          </AlertDialogContent>
+        </AlertDialog>
 
-          <Toaster />
-        </div>
+        <Toaster />
       </TooltipProvider>
-    </LiquidGlassConfigProvider>
-  )
-}
-
-/**
- * 启动空闲期空跑一次玻璃渲染管线。前几次打开菜单/对话框的明显卡顿来自
- * backdrop 滤镜管线编译、大尺寸 backdrop 纹理分配,以及 vaso 位移图首次生成
- * (canvas 绘制 + data URL 解码进 SVG 滤镜);这里用几乎不可见的同款面板把
- * 成本提前挪到启动空闲期。预热要完整走一遍「打开 → 关闭」周期:
- * 关闭时的 backdrop-filter 半径过渡是逐帧重新过滤,首跑编译最贵。
- */
-function GlassWarmup() {
-  const [phase, setPhase] = useState<'waiting' | 'warming' | 'closing' | 'done'>('waiting')
-
-  useEffect(() => {
-    let closeTimer: number | undefined
-    let doneTimer: number | undefined
-    const idleId = window.requestIdleCallback(
-      () => {
-        setPhase('warming')
-        closeTimer = window.setTimeout(() => setPhase('closing'), 150)
-        doneTimer = window.setTimeout(() => setPhase('done'), 550)
-      },
-      { timeout: 4000 }
-    )
-    return () => {
-      window.cancelIdleCallback(idleId)
-      window.clearTimeout(closeTimer)
-      window.clearTimeout(doneTimer)
-    }
-  }, [])
-
-  if (phase === 'done') {
-    return null
-  }
-  return (
-    <div
-      aria-hidden
-      data-state={phase === 'closing' ? 'closed' : 'open'}
-      className="pointer-events-none fixed inset-0 z-[-5] opacity-[0.02]"
-    >
-      {/* 对话框同款毛玻璃面板,按真实对话框尺寸预热大纹理路径(弹出菜单也是同款面板) */}
-      <div className="glass-dialog frosted ui-fade-popover shadow-card absolute left-8 top-8 h-[24rem] w-[36rem] rounded-xl">
-        <div className="p-6">
-          <span className="text-xs">warmup</span>
-        </div>
-      </div>
-      {/* 拖放遮罩同款液态玻璃 */}
-      <LiquidGlass
-        depth={1.5}
-        blur={2.5}
-        className="glass-dialog ui-fade-popover absolute left-8 top-[28rem] h-32 w-64 rounded-2xl"
-        contentClassName="p-1"
-      >
-        <span className="text-xs">warmup</span>
-      </LiquidGlass>
-    </div>
+    </LiquidGlassProvider>
   )
 }
