@@ -47,9 +47,12 @@ export default defineConfig({
   publicDir: resolve(__dirname, '../img/bg'),
   plugins: [react(), tailwindcss(), serveTestImages()],
   resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src/renderer/src'),
-      '@shared': resolve(__dirname, 'src/shared')
-    }
+    // 与 electron.vite.config.ts 保持一致:裸包名 `lucide-react` 指向图标转出表,
+    // 深路径 lucide-react/dist/esm/icons/*.js 保持解析到真实包(见 src/renderer/src/lib/icons.ts)
+    alias: [
+      { find: '@shared', replacement: resolve(__dirname, 'src/shared') },
+      { find: '@', replacement: resolve(__dirname, 'src/renderer/src') },
+      { find: /^lucide-react$/, replacement: resolve(__dirname, 'src/renderer/src/lib/icons.ts') }
+    ]
   }
 })

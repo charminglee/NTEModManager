@@ -13,13 +13,13 @@
     "preview": "node scripts/test-images.mjs on && electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "node scripts/typecheck.mjs",
     "docs:tutorial": "node scripts/build-tutorial.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.4.7",
-    "iconv-lite": "^0.6.3",
-    "vaso": "^1.0.0"
+    "@ybouane/liquidglass": "1.0.3",
+    "iconv-lite": "^0.6.3"
   },
   "devDependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.4",

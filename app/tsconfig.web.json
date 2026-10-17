@@ -19,7 +19,8 @@
     "outDir": "./out/tsbuildinfo/web",
     "paths": {
       "@/*": ["./src/renderer/src/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "lucide-react": ["./src/renderer/src/lib/icons.ts"]
     }
   },
   "include": ["src/renderer/src/**/*", "src/shared/**/*", "src/preload/**/*"]

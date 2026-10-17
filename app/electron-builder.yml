@@ -13,6 +13,9 @@ extraResources:
 # 或项目根的 python/ 解析(见 config.ts pythonAssetsDir),部署时把 python/ 目录
 # 放到 exe 旁边即可
 asar: true
+# 无原生模块(依赖只有 @radix-ui/react-slider、@ybouane/liquidglass、iconv-lite,均纯 JS),
+# 跳过 @electron/rebuild 的原生依赖重建;将来引入 .node 原生模块时删掉这行。
+npmRebuild: false
 # Electron 压缩包走 npmmirror:与 install-electron 的下载 URL 同源,才能命中
 # %LOCALAPPDATA%\electron\Cache 的共享缓存(缓存键=下载 URL 的哈希,镜像不同则永远 miss)
 electronDownload:
