@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { ArrowUpDown, Download, Package, PackageOpen, RefreshCw, Search, Upload } from 'lucide-react'
+import { ArrowUpDown, FolderInput, Package, PackageCheck, PackageOpen, RefreshCw, Search } from 'lucide-react'
 import { SORT_OPTIONS, type SortOrder } from '@shared/types'
 import { cn } from '@/lib/utils'
 import { LiquidGlass } from '@/components/liquid-glass'
@@ -122,7 +122,7 @@ function ModListHeader({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="glass" disabled={busy} onClick={onInstallAll}>
-              <Download />
+              <PackageCheck />
               全部安装
             </Button>
           </TooltipTrigger>
@@ -156,7 +156,7 @@ function ModListHeader({
               onClick={onImport}
               className="rounded-lg bg-linear-to-r from-violet-600/80 to-fuchsia-600/80 font-semibold text-white shadow-glow hover:from-violet-500/85 hover:to-fuchsia-500/85"
             >
-              <Upload />
+              <FolderInput />
               导入
             </Button>
           </TooltipTrigger>
