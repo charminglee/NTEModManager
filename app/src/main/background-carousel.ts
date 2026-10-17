@@ -69,9 +69,10 @@ class BackgroundCarousel {
   }
 
   /** 配置里的背景目录/测试图开关变化后刷新图库:重新收集并按需切换,无需重启应用。
-   *  当前图仍存在于新图库时无缝保留;否则立即切到新图库的第一张;
-   *  新图库为空则清空背景并暂停轮播,等下次刷新恢复。 */
-  reloadImages(): void {
+   *  来源未变(普通保存)时当前图仍存在于新图库则无缝保留;
+   *  forceSwitch(来源确实变更)时即使当前图仍在新图库里也换一张,
+   *  让「切换使用测试背景图」总能直观生效;新图库为空则清空背景并暂停轮播。 */
+  reloadImages(forceSwitch = false): void {
     this.images = collectBackgroundImages()
     logger.info(`背景图库已刷新：${this.images.length} 张`)
 
@@ -92,8 +93,8 @@ class BackgroundCarousel {
     this.staged = null
     this.pendingDetectionPaths = []
 
-    // 当前图仍在新图库:无缝保留,只确保轮换计时在跑
-    if (this.current && this.images.includes(this.current.path)) {
+    // 当前图仍在新图库且来源未变:无缝保留,只确保轮换计时在跑
+    if (!forceSwitch && this.current && this.images.includes(this.current.path)) {
       this.scheduleRotation()
       return
     }
@@ -221,15 +222,26 @@ class BackgroundCarousel {
     }, ROTATION_INTERVAL_MS)
   }
 
-  /** 随机选一张可读取的图(从随机起点顺序尝试,全部失败返回 null) */
+  /** 随机选一张可读取的图(从随机起点顺序尝试,全部失败返回 null)。
+   *  与其他候选并存时把当前图排到最后兜底:轮换/手动 ↓ 抽到同一张会看起来
+   *  「没有切换」,测试图库只有数张时尤其明显。 */
   private loadSlot(): BackgroundSlot | null {
     const count = this.images.length
     if (count === 0) {
       return null
     }
     const startIndex = Math.floor(Math.random() * count)
+    const preferred: string[] = []
+    const deferred: string[] = []
     for (let offset = 0; offset < count; offset++) {
       const path = this.images[(startIndex + offset) % count]
+      if (count > 1 && path === this.current?.path) {
+        deferred.push(path)
+      } else {
+        preferred.push(path)
+      }
+    }
+    for (const path of [...preferred, ...deferred]) {
       const image = nativeImage.createFromPath(path)
       if (image.isEmpty()) {
         logger.warning(`无法读取背景图片：${path}`)
@@ -262,11 +274,13 @@ class BackgroundCarousel {
     if (!this.modelReady) {
       logger.info('视觉识别模型仍在加载，后台检测将等待模型就绪')
     }
+    // 待命图优先配对:轮换抽中与当前图相同的路径时两者 path 相等,
+    // 若先匹配 current,识别结果会写回当前图、staged 永不晋级,切换即丢失
     const slot =
-      this.current?.path === path
-        ? this.current
-        : this.staged?.path === path
-          ? this.staged
+      this.staged?.path === path
+        ? this.staged
+        : this.current?.path === path
+          ? this.current
           : null
     try {
       logger.debug(`开始识别背景：${path}`)

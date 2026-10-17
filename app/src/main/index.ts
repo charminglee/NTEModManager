@@ -18,7 +18,18 @@ import { registerIpcHandlers, setMainWindowProvider } from './ipc'
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'media',
-    privileges: { secure: true, supportFetchAPI: true, stream: true }
+    // standard: 让 media://local/... 具备规范 origin,配合下方的 CORS 响应头,
+    // 背景图才能以 crossOrigin="anonymous" 提前加载并被画进 canvas:
+    // 液态玻璃的场景合成需要把背景图画进画布上传为 WebGL 纹理,
+    // 跨源图会把画布标记为 tainted,纹理上传直接抛 SecurityError
+    // corsEnabled: 允许图片带 crossOrigin="anonymous" 跨源加载(见下)
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      corsEnabled: true
+    }
   }
 ])
 
@@ -30,9 +41,10 @@ app.commandLine.appendSwitch('ignore-gpu-blocklist')
 // Skia Graphite:GPU 优先的新渲染后端。默认后端里 backdrop-filter 的 url(#svg) 位移滤镜
 // 走 CPU 光栅(GPU 占用率低、CPU 高);Graphite 把图像滤镜搬到 GPU 执行。
 app.commandLine.appendSwitch('enable-features', 'SkiaGraphite')
-// 仅 dev:开放 CDP 调试端口(自动化验证走 127.0.0.1:9222),打包版不开放
+// 仅 dev:开放 CDP 调试端口(自动化验证走 127.0.0.1:9222),打包版不开放。
+// 9222 被其他并行实例占用时可用 NTEMM_CDP_PORT 改口,互不干扰。
 if (!app.isPackaged) {
-  app.commandLine.appendSwitch('remote-debugging-port', '9222')
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.NTEMM_CDP_PORT ?? '9222')
 }
 
 // 加固:拦截 window.open 与页面发起的导航(渲染层只应加载本地 dev server / 打包文件),
@@ -108,6 +120,19 @@ function createWindow(): void {
     }
   })
   setMainWindowProvider(() => mainWindow)
+
+  // F11 原生全屏:应用菜单已置空(Menu.setApplicationMenu(null)),没有默认
+  // 加速键,这里在主进程直接接管,与 Chrome 的 F11 行为对齐(窗口真实全屏,
+  // 而非隐藏 UI;再按一次 F11 退出全屏)。
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && !input.isAutoRepeat && input.key === 'F11') {
+      event.preventDefault()
+      const win = mainWindow
+      if (win) {
+        win.setFullScreen(!win.isFullScreen())
+      }
+    }
+  })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
@@ -241,7 +266,11 @@ function registerMediaProtocol(): void {
     try {
       const data = await readFile(path)
       return new Response(new Uint8Array(data), {
-        headers: { 'content-type': contentType }
+        headers: {
+          'content-type': contentType,
+          // 允许渲染层把图片画进 canvas(液态玻璃背景合成);图片仅来自本机白名单目录
+          'access-control-allow-origin': '*'
+        }
       })
     } catch (error) {
       logger.warning(`读取图片失败：${path}：${describeError(error)}`)

@@ -396,6 +396,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     return { success: true, message: '已打开配置文件' }
   })
   ipcMain.handle('config:update', (_event, patch: AppConfigPatch) => {
+    const before = getAppConfig()
     updateAppConfig(patch)
     logger.info(
       `配置已更新：${Object.keys(patch)
@@ -403,9 +404,14 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
         .join(',')}`
     )
     const next = getAppConfig()
-    // 背景来源相关配置变化:刷新轮播图库,无需重启应用
+    // 背景来源相关配置变化:刷新轮播图库,无需重启应用。
+    // 来源确实变更(测试图开关翻转/背景目录改动)时强制换一张,
+    // 即使旧图恰好仍在新图库中也立即体现切换结果;普通保存保持「无缝保留」。
     if (patch.backgroundImagesDirectory !== undefined || patch.testImagesEnabled !== undefined) {
-      backgroundCarousel.reloadImages()
+      const sourceChanged =
+        before.testImagesEnabled !== next.testImagesEnabled ||
+        before.backgroundImagesDirectory !== next.backgroundImagesDirectory
+      backgroundCarousel.reloadImages(sourceChanged)
     }
     return next
   })
