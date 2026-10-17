@@ -37,6 +37,12 @@ export interface GlassEngineOptions {
 
 /** 影子外扩(与库 SHADOW_PAD 一致):判断玻璃是否在视口内时留出余量 */
 const SHADOW_PAD = 20
+/**
+ * 可见判定的预加载边距:至少提前一张卡的高度把即将进入视口的玻璃纳入渲染。
+ * 滚动驱动入场动画会让卡片在视口边缘就开始移动,若等玻璃真正相交才首绘,
+ * 首帧会短暂露出未采样的透明画布。
+ */
+const VISIBILITY_PRELOAD_PX = 160
 /** 高斯模糊迭代数(与库 defaults.ts 的 BLUR_ITERATIONS 一致;库 1.0.3 未导出该常量) */
 const BLUR_ITERATIONS = 6
 /**
@@ -291,10 +297,12 @@ export class GlassEngine {
                 if (entry.isIntersecting) {
                   const wasVisible = this.visibleGlass.has(el)
                   this.visibleGlass.add(el)
-                  // 带挂起脏标记(deferred)的玻璃回到视口:唤醒补画。
-                  // 注:滚动进入的玻璃同时会因位置变化被渲染循环判为
-                  // posChanged,这里只兜底「位置未变但内容已过期」的场景
-                  if (!wasVisible && this.deferred.delete(el)) {
+                  // 每次从不可见变为可见都必须主动补画。不能只依赖下一次
+                  // 渲染循环的 posChanged 判定:快速甩动后滚动事件可能先停止,
+                  // 渲染循环随即回到空闲,而 IO 回调此时才把卡片纳入可见集;
+                  // 缺少这枚脏标记时,画布会一直停在旧位置的采样上。
+                  if (!wasVisible) {
+                    this.deferred.delete(el)
                     this.internals._glassDirty.add(el)
                   }
                 } else {
@@ -302,9 +310,9 @@ export class GlassEngine {
                 }
               }
             },
-            // 与 isOnScreen 的 SHADOW_PAD 语义对齐;宁可比判定边界多算几个,
-            // 不多占渲染,也不能让边缘玻璃迟画
-            { rootMargin: '40px' }
+            // 视口外预加载一段:卡片即将滚入时先按目标位置完成首绘,等真正
+            // 进入视口时画布已经可用,不会先露出透明/旧采样的一帧
+            { rootMargin: `${VISIBILITY_PRELOAD_PX}px` }
           )
     this.patchInternals()
     this.patchRendererInternals()
