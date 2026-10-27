@@ -502,12 +502,20 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     const { spawn } = await import('node:child_process')
     try {
       const child = spawn(launcherPath, [], { detached: true, stdio: 'ignore' })
+      await new Promise<void>((resolve, reject) => {
+        child.once('spawn', resolve)
+        child.once('error', reject)
+      })
       child.unref()
-    } catch {
-      logger.error(`无法启动游戏启动器：${launcherPath}`)
+    } catch (error) {
+      logger.error(`无法启动游戏启动器：${launcherPath}，${describeError(error)}`)
       return failure('无法启动游戏启动器。')
     }
     logger.info(`已启动游戏启动器：${launcherPath}`)
+    const window = mainWindowProvider()
+    if (window && !window.isDestroyed()) {
+      window.minimize()
+    }
     return { success: true, message: '已启动游戏启动器' }
   })
 
