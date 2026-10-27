@@ -46,6 +46,47 @@ class BackgroundCarousel {
   private detector = new VisualRegionDetector()
   private lastState: BackgroundState | null = null
   private getWindow: () => Electron.BrowserWindow | null = () => null
+  private suspended = false
+  private session = 0
+  private shutdown: Promise<void> = Promise.resolve()
+
+  pause(): void {
+    if (this.suspended) return
+    this.suspended = true
+    ++this.session
+    if (this.rotationTimer) clearTimeout(this.rotationTimer)
+    if (this.resizeTimer) clearTimeout(this.resizeTimer)
+    this.rotationTimer = null
+    this.resizeTimer = null
+    this.staged = null
+    this.pendingDetectionPaths = []
+    this.detectionInProgress = false
+    this.modelReady = false
+    this.warmupStarted = false
+    this.transitioningUntil = 0
+    this.shutdown = this.detector.dispose(true)
+    logger.info('背景轮播已暂停，正在关闭 Python 视觉识别进程')
+  }
+
+  async resume(): Promise<void> {
+    if (!this.suspended) return
+    const session = this.session
+    await this.shutdown
+    if (!this.suspended || session !== this.session || this.getWindow()?.isMinimized()) return
+    this.suspended = false
+    this.detector = new VisualRegionDetector()
+    if (this.current) {
+      this.push()
+      this.ensureModelWarmup()
+      void this.requestDetection(this.current.path)
+      this.scheduleRotation()
+    } else if (this.images.length > 0) {
+      this.reloadImages()
+    } else {
+      this.pushClear()
+    }
+    logger.info('窗口已恢复，背景轮播与视觉识别已重启')
+  }
 
   start(getWindow: () => Electron.BrowserWindow | null): void {
     this.getWindow = getWindow
@@ -75,6 +116,15 @@ class BackgroundCarousel {
   reloadImages(forceSwitch = false): void {
     this.images = collectBackgroundImages()
     logger.info(`背景图库已刷新：${this.images.length} 张`)
+    if (this.suspended) {
+      this.staged = null
+      this.pendingDetectionPaths = []
+      if (forceSwitch || !this.current || !this.images.includes(this.current.path)) {
+        this.current = null
+        this.lastState = null
+      }
+      return
+    }
 
     if (this.images.length === 0) {
       if (this.rotationTimer) {
@@ -112,7 +162,7 @@ class BackgroundCarousel {
   /** 切换到随机背景(手动 ↓ 与定时轮换共用;切换期间调用会被忽略)。
    * 新图先"待命"并做 AI 识别,识别完成才切入显示,避免先显示未识别的居中裁剪再跳变。 */
   switchBackground(): void {
-    if (this.images.length < 2 || Date.now() < this.transitioningUntil) {
+    if (this.suspended || this.images.length < 2 || Date.now() < this.transitioningUntil) {
       return
     }
     const slot = this.loadSlot()
@@ -126,7 +176,7 @@ class BackgroundCarousel {
   }
 
   handleWindowResized(): void {
-    if (!this.current) {
+    if (this.suspended || !this.current) {
       return
     }
     if (this.resizeTimer) {
@@ -156,19 +206,10 @@ class BackgroundCarousel {
 
   /** 检测环境变化(Python 解释器路径等)后重建识别进程:清空当前图缓存结果并立即重新检测 */
   restartDetection(): void {
-    void (async () => {
-      await this.detector.dispose()
-      this.modelReady = false
-      this.warmupStarted = false
-      if (this.current) {
-        this.current.region = emptyRegion()
-        this.push()
-      }
-      await this.warmup()
-      if (this.current) {
-        void this.requestDetection(this.current.path)
-      }
-    })()
+    if (this.current) this.current.region = emptyRegion()
+    if (this.suspended) return
+    this.pause()
+    void this.resume()
   }
 
   currentPath(): string | null {
@@ -181,20 +222,15 @@ class BackgroundCarousel {
   }
 
   async dispose(): Promise<void> {
-    if (this.rotationTimer) {
-      clearTimeout(this.rotationTimer)
-      this.rotationTimer = null
-    }
-    if (this.resizeTimer) {
-      clearTimeout(this.resizeTimer)
-      this.resizeTimer = null
-    }
-    await this.detector.dispose()
+    this.pause()
+    await this.shutdown
   }
 
   private async warmup(): Promise<void> {
+    const session = this.session
     logger.info('开始加载视觉识别模型')
     const ready = await this.detector.warmup()
+    if (this.suspended || session !== this.session) return
     this.modelReady = ready
     if (ready) {
       logger.info('视觉识别模型加载完成')
@@ -205,7 +241,7 @@ class BackgroundCarousel {
 
   /** 模型预热只做一次:启动时无图跳过初始化的场景,由 reloadImages 补触发 */
   private ensureModelWarmup(): void {
-    if (this.warmupStarted) {
+    if (this.suspended || this.warmupStarted) {
       return
     }
     this.warmupStarted = true
@@ -216,6 +252,8 @@ class BackgroundCarousel {
     if (this.rotationTimer) {
       clearTimeout(this.rotationTimer)
     }
+    this.rotationTimer = null
+    if (this.suspended || this.images.length === 0) return
     this.rotationTimer = setTimeout(() => {
       this.rotationTimer = null
       this.switchBackground()
@@ -261,7 +299,7 @@ class BackgroundCarousel {
   }
 
   private async requestDetection(path: string): Promise<void> {
-    if (!path) {
+    if (this.suspended || !path) {
       return
     }
     if (this.detectionInProgress) {
@@ -271,6 +309,8 @@ class BackgroundCarousel {
       return
     }
     this.detectionInProgress = true
+    const session = this.session
+    const detector = this.detector
     if (!this.modelReady) {
       logger.info('视觉识别模型仍在加载，后台检测将等待模型就绪')
     }
@@ -284,13 +324,16 @@ class BackgroundCarousel {
           : null
     try {
       logger.debug(`开始识别背景：${path}`)
-      const region = await this.detector.detect(
+      await detector.warmup()
+      if (this.suspended || session !== this.session) return
+      const region = await detector.detect(
         path,
         slot
           ? { width: slot.width, height: slot.height }
           : { width: 0, height: 0 },
         this.viewportSize()
       )
+      if (this.suspended || session !== this.session) return
       if (slot && slot.path === path) {
         slot.region = region
       }
@@ -316,8 +359,9 @@ class BackgroundCarousel {
     } catch (error) {
       logger.error(`背景识别失败：${error instanceof Error ? error.message : String(error)}`)
     } finally {
-      this.detectionInProgress = false
+      if (session === this.session) this.detectionInProgress = false
     }
+    if (this.suspended || session !== this.session) return
     const pendingPath = this.pendingDetectionPaths.shift()
     if (pendingPath) {
       void this.requestDetection(pendingPath)
@@ -325,6 +369,7 @@ class BackgroundCarousel {
   }
 
   private push(): void {
+    if (this.suspended) return
     const slot = this.current
     if (!slot) {
       return

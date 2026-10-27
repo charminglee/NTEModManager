@@ -152,6 +152,7 @@ class PythonBridge {
   private process: ChildProcessWithoutNullStreams | null = null
   private stdout: LineReader | null = null
   private ready = false
+  private disposed = false
   private stderrBuffer = ''
   /** 串行化检测请求(Python 端逐行处理,不允许并发) */
   private chain: Promise<unknown> = Promise.resolve()
@@ -225,6 +226,7 @@ class PythonBridge {
       logger.debug(`忽略 Python 进程输出行：${line.slice(0, 200)}`)
       line = null
     }
+    if (this.disposed) return false
     if (!line) {
       logger.error('Python 视觉识别进程未返回 ready 响应')
       this.kill()
@@ -262,6 +264,7 @@ class PythonBridge {
     })
     this.process!.stdin.write(request + '\n')
     const line = await this.stdout?.read(DETECT_TIMEOUT_MS)
+    if (this.disposed) return emptyRegion()
     if (!line) {
       this.ready = false
       logger.error('Python 视觉识别进程未返回检测结果')
@@ -349,15 +352,21 @@ class PythonBridge {
     region.debugOverlayStatus = '调试线框已解码'
   }
 
-  /** 礼貌退出,3 秒后强杀 */
-  async dispose(): Promise<void> {
+  /** 最小化时立即终止，其余情况礼貌退出，3 秒后强杀。 */
+  async dispose(immediate = false): Promise<void> {
+    this.disposed = true
     const child = this.process
     if (!child || child.exitCode !== null) {
       return
     }
     this.ready = false
-    child.stdin.write('__quit__\n')
+    this.stdout?.end()
     const exited = new Promise<void>((resolve) => child.once('close', () => resolve()))
+    if (immediate) {
+      child.kill()
+    } else {
+      child.stdin.write('__quit__\n')
+    }
     const timedKill = setTimeout(() => child.kill(), 3000)
     await exited
     clearTimeout(timedKill)
@@ -397,8 +406,11 @@ function logStandardErrorLine(line: string): void {
  */
 export class VisualRegionDetector {
   private bridge: PythonBridge | null = null
+  private warmupPromise: Promise<boolean> | null = null
+  private disposed = false
 
   async warmup(): Promise<boolean> {
+    if (this.disposed) return false
     if (!existsSync(orientationModel())) {
       logger.warning('方向模型不存在，使用 fallback 视觉检测')
       return true
@@ -406,10 +418,11 @@ export class VisualRegionDetector {
     if (!this.bridge) {
       this.bridge = new PythonBridge()
     }
-    return this.bridge.warmup()
+    return (this.warmupPromise ??= this.bridge.warmup())
   }
 
   async detect(imagePath: string, imageSize: Size, viewportSize: Size): Promise<VisualRegion> {
+    if (this.disposed) return emptyRegion()
     if (imageSize.width <= 0 || imageSize.height <= 0) {
       return emptyRegion()
     }
@@ -420,16 +433,18 @@ export class VisualRegionDetector {
       this.bridge = new PythonBridge()
     }
     const pythonRegion = await this.bridge.detect(imagePath, imageSize, viewportSize)
+    if (this.disposed) return emptyRegion()
     if ((pythonRegion.hasCrop && pythonRegion.bounds) || pythonRegion.debugOverlay) {
       return pythonRegion
     }
     return fallbackDetect(imagePath, imageSize)
   }
 
-  async dispose(): Promise<void> {
+  async dispose(immediate = false): Promise<void> {
+    this.disposed = true
     const bridge = this.bridge
     this.bridge = null
-    await bridge?.dispose()
+    await bridge?.dispose(immediate)
   }
 }
 

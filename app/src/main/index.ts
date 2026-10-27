@@ -14,6 +14,7 @@ import {
 import { TEST_IMAGES_ROOT, decodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { registerIpcHandlers, setMainWindowProvider } from './ipc'
+import { registerWindowLifecycle } from './window-lifecycle'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -120,6 +121,7 @@ function createWindow(): void {
     }
   })
   setMainWindowProvider(() => mainWindow)
+  registerWindowLifecycle(mainWindow)
 
   // F11 原生全屏:应用菜单已置空(Menu.setApplicationMenu(null)),没有默认
   // 加速键,这里在主进程直接接管,与 Chrome 的 F11 行为对齐(窗口真实全屏,
