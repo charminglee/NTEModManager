@@ -30,6 +30,18 @@ BackgroundLayer(渲染端):等图片解码 → 900ms 交叉淡化 → 按裁剪�
 | Preload 暴露 | `app/src/preload/index.ts` |
 | 渲染端背景层 | `app/src/renderer/src/components/background-layer.tsx` |
 
+## Python 日志协议
+
+`--server` 模式使用独立的 stderr 日志通道，编码为 UTF-8，每行一个 JSON 对象。stdin 的识别请求、退出命令和 stdout 的握手、识别结果协议保持不变。
+
+```json
+{"type":"log","version":1,"timestamp":"2026-10-28T00:00:00+00:00","level":"info","logger":"visual_region_detector","message":"视觉识别服务已就绪"}
+```
+
+`level` 为 `debug`、`info`、`warning` 或 `error`，Python 的 CRITICAL 归入 `error`。`timestamp` 是日志产生时的 UTC 时间；管理器沿用接收时间显示。异常和调用栈分别放入可选的 `exception`、`stack` 字符串字段，内部换行由 JSON 转义，因此单条协议消息不会被堆栈换行拆散。
+
+管理器校验消息类型、协议版本及字段类型，保留级别，并将正文与堆栈逐行转发为 `[Python] 日志内容`。没有使用协议的第三方 stderr 文本、无效 JSON 和未知版本消息作为警告原文保留。分片消息先缓冲，退出时补齐未以换行结尾的尾行。独立 `--http` 模式保持原来的可读文本日志。
+
 ## 背景图目录约定
 
 `collectBackgroundImages()` 读取配置的 `background_images_directory`:
