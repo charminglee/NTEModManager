@@ -5,6 +5,7 @@ import { nativeImage } from 'electron'
 import { orientationModel, pythonExecutable, pythonModelCache, visualRegionScript } from './config'
 import { ensurePythonCacheDirs, ntemmCacheDir } from './ntemm-paths'
 import { logger } from './logger'
+import { PythonLogReceiver } from './python-log'
 import type { BackgroundRect } from '../shared/types'
 
 export interface Size {
@@ -153,7 +154,7 @@ class PythonBridge {
   private stdout: LineReader | null = null
   private ready = false
   private disposed = false
-  private stderrBuffer = ''
+  private readonly logs = new PythonLogReceiver((level, message) => logger[level](message))
   /** 串行化检测请求(Python 端逐行处理,不允许并发) */
   private chain: Promise<unknown> = Promise.resolve()
 
@@ -193,7 +194,7 @@ class PythonBridge {
     this.process = child
     this.stdout = new LineReader(child.stdout)
     child.stderr.setEncoding('utf-8')
-    child.stderr.on('data', (chunk: string) => this.drainStandardError(chunk))
+    child.stderr.on('data', (chunk: string) => this.logs.push(chunk))
     child.on('error', (error) => {
       logger.error(`Python 视觉识别进程错误：${error.message}`)
       this.ready = false
@@ -201,7 +202,7 @@ class PythonBridge {
     })
     child.on('close', () => {
       this.ready = false
-      this.drainStandardError('', true)
+      this.logs.end()
       this.stdout?.end()
     })
     child.stdin.on('error', (error) => {
@@ -377,27 +378,6 @@ class PythonBridge {
     if (child && child.exitCode === null) {
       child.kill()
     }
-  }
-
-  private drainStandardError(chunk = '', flush = false): void {
-    this.stderrBuffer += chunk
-    let index = this.stderrBuffer.indexOf('\n')
-    while (index >= 0) {
-      logStandardErrorLine(this.stderrBuffer.slice(0, index))
-      this.stderrBuffer = this.stderrBuffer.slice(index + 1)
-      index = this.stderrBuffer.indexOf('\n')
-    }
-    if (flush && this.stderrBuffer.trim().length > 0) {
-      logStandardErrorLine(this.stderrBuffer)
-      this.stderrBuffer = ''
-    }
-  }
-}
-
-function logStandardErrorLine(line: string): void {
-  const message = line.trim()
-  if (message) {
-    logger.warning(`Python stderr：${message}`)
   }
 }
 

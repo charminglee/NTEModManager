@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# =================================================
+#   Author: Nuoyan <https://github.com/charminglee>
+#   Email : 1279735247@qq.com
+#   Date  : 2026-10-28
+# =================================================
+
+
 from __future__ import annotations
 
 import argparse
@@ -23,24 +31,10 @@ from PIL import Image, ImageDraw
 from ultralytics import YOLO
 from torchvision import models, transforms
 
+from service_logging import configure_logging
+
 
 LOGGER = logging.getLogger("visual_region_detector")
-
-
-def configure_logging() -> None:
-    for stream in (sys.stdin, sys.stdout, sys.stderr):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is not None:
-            try:
-                stream.reconfigure(encoding="utf-8", errors="backslashreplace")
-            except (OSError, ValueError):
-                pass
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(name)s: %(message)s",
-        stream=sys.stderr,
-        force=True,
-    )
 
 
 DEFAULT_MODEL = "yolo26x-pose.pt"
@@ -1499,8 +1493,11 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> int:
-    configure_logging()
+    """
+    按运行模式配置日志通道，然后启动视觉识别服务。
+    """
     arguments = parse_arguments()
+    configure_logging(structured=arguments.server)
     resolved_model_path = resolve_model_path(arguments.model, arguments.cache_dir)
     log_startup_information(arguments, resolved_model_path)
     if arguments.http:
