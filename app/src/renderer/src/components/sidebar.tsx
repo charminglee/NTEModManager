@@ -46,7 +46,6 @@ function Sidebar({
     <aside className="character-sidebar">
       <div className="sidebar-heading">
         <h2>角色分类</h2>
-        <span className="hazard-mark" aria-hidden />
       </div>
       <label className="character-search">
         <Search size={16} />

@@ -975,7 +975,6 @@ export default function App() {
                     <section className="mod-group" key={group.secondary}>
                       <div className="mod-group-heading">
                         <h2>{group.secondary || '其他模组'}</h2>
-                        <span className="hazard-mark" aria-hidden />
                       </div>
                       <div className="mod-group-rows">
                         {group.mods.map((mod) => (

@@ -48,7 +48,6 @@ export default function ModDetail({
     <aside className="mod-detail ink-panel" aria-label="模组详情">
       <div className="detail-heading">
         <h2>模组详情</h2>
-        <span className="hazard-mark" aria-hidden />
         <Button variant="ghost" size="icon" aria-label="关闭模组详情" onClick={onClose}>
           <X />
         </Button>
