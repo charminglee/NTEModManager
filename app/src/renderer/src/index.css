@@ -62,9 +62,9 @@
   --peach: #f4e3de;
   --rule: #d4ccbf;
   --window-controls-width: 138px;
-  --surface-ink: rgb(32 32 30 / 78%);
-  --surface-paper: rgb(243 239 230 / 50%);
-  --surface-cream: rgb(255 252 246 / 80%);
+  --surface-ink: rgb(32 32 30 / 65%);
+  --surface-paper: rgb(243 239 230 / 40%);
+  --surface-cream: rgb(255 252 246 / 75%);
 }
 * {
   box-sizing: border-box;
@@ -587,14 +587,14 @@ select {
   border-bottom: 0;
 }
 .mod-row:hover {
-  background: rgb(244 237 226 / 86%);
+  background: rgb(244 237 226 / 80%);
 }
 .mod-row.is-active {
-  background: rgb(244 227 222 / 88%);
+  background: rgb(244 227 222 / 82%);
   box-shadow: inset 3px 0 var(--vermilion);
 }
 .mod-row.is-selected {
-  background: rgb(244 227 222 / 88%);
+  background: rgb(244 227 222 / 82%);
 }
 .mod-checkbox {
   display: flex;
