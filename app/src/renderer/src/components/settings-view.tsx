@@ -3,6 +3,7 @@ import { Folder, FolderOpen, Info, Settings, Wrench } from 'lucide-react'
 import type { AppConfigData, AppConfigPatch } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import Switch from './ui/switch'
 import { toast } from './toast-card'
 interface Props {
   config: AppConfigData
@@ -114,11 +115,11 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
         <strong>{label}</strong>
         <small>{help}</small>
       </span>
-      <input
-        type="checkbox"
+      <Switch
+        aria-label={label}
         checked={draft[key]}
         disabled={saving}
-        onChange={(e) => update(key, e.target.checked)}
+        onCheckedChange={(checked) => update(key, checked)}
       />
     </label>
   )
