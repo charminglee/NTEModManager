@@ -55,7 +55,7 @@ export default function AppHeader({
           onClick={onLaunch}
         >
           <Play size={17} />
-          启动游戏<span aria-hidden>↗</span>
+          启动游戏
         </button>
       </div>
       {busy && (
