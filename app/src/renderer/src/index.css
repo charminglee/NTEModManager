@@ -294,11 +294,17 @@ input[type='checkbox'] {
 .launch-city {
   position: absolute;
   inset: 0;
-  width: 100%;
+  width: auto;
   height: 100%;
   color: #8b8376;
   opacity: 0.28;
   pointer-events: none;
+  animation: launch-city-scroll 48s linear infinite;
+}
+@keyframes launch-city-scroll {
+  to {
+    transform: translateX(-50%);
+  }
 }
 .launch-icon,
 .launch-text {
@@ -1452,6 +1458,9 @@ select {
   .barcode,
   .title-accent {
     display: none;
+  }
+  .launch-button .launch-city {
+    display: block;
   }
   .global-toolbar {
     padding: 0 8px;
