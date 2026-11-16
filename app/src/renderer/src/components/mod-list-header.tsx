@@ -65,7 +65,6 @@ function ModListHeader(p: Props) {
         </select>
         <Button variant="outline" onClick={p.onRefresh} disabled={p.busy} title="重新扫描模组目录">
           <RefreshCw />
-          <span className="rescan-label">重新扫描</span>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

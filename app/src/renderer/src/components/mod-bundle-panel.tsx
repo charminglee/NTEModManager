@@ -18,7 +18,6 @@ export default function ModBundlePanel({ mod, busy, onToggle }: {
         <h4><Layers />整合包</h4>
         <span aria-live="polite">已选择 {selected}／{children.length}</span>
       </div>
-      <p>{mod.installed ? '切换立即生效。整包卸载后保留选择。' : '选择要启用的子模组，安装整包后生效。'}</p>
       <ul>
         {children.map((child) => (
           <li key={child.name}>
@@ -32,7 +31,6 @@ export default function ModBundlePanel({ mod, busy, onToggle }: {
           </li>
         ))}
       </ul>
-      <p className="bundle-footnote">仅管理第一层子模组。更深目录随所属子模组启停，根目录资源随整包启停。</p>
     </section>
   )
 }
