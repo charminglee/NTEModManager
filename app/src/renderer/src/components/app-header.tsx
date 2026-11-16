@@ -27,10 +27,7 @@ export default function AppHeader({
         <span className="barcode" aria-hidden />
       </div>
       <div className="global-toolbar">
-        <div className="game-mark">
-          <strong>NTE</strong>
-          <span>NEVERNESS TO EVERNESS</span>
-        </div>
+        <img className="header-city" src={cityline} alt="" />
         <nav aria-label="主导航">
           {(
             [
@@ -51,12 +48,6 @@ export default function AppHeader({
             </button>
           ))}
         </nav>
-        <div className="toolbar-spacer">
-          <span className="hazard-mark" aria-hidden />
-        </div>
-        <span className="game-path-state">
-          {hasGamePath ? '游戏路径已配置' : '请先配置游戏路径'}
-        </span>
         <button
           type="button"
           className="launch-button"
@@ -66,7 +57,6 @@ export default function AppHeader({
           <Play size={17} />
           启动游戏<span aria-hidden>↗</span>
         </button>
-        <img className="header-city" src={cityline} alt="" />
       </div>
       {busy && (
         <div className="operation-progress" role="status">

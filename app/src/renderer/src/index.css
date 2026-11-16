@@ -238,26 +238,6 @@ input[type='checkbox'] {
   gap: 12px;
   border-bottom: 1px solid var(--paper);
 }
-.game-mark {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-right: 16px;
-  border-right: 1px solid #65635b;
-  flex-shrink: 0;
-}
-.game-mark strong {
-  font-style: italic;
-  font-size: 18px;
-  background: var(--vermilion);
-  padding: 1px 5px;
-  transform: rotate(-8deg);
-}
-.game-mark span {
-  font-size: 8px;
-  letter-spacing: 1px;
-  width: 110px;
-}
 .global-toolbar nav {
   display: flex;
   gap: 6px;
@@ -282,12 +262,6 @@ input[type='checkbox'] {
 .global-nav-item:not(.is-active):hover {
   background: #393832;
 }
-.toolbar-spacer {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-  min-width: 0;
-}
 .hazard-mark {
   display: inline-block;
   height: 7px;
@@ -295,16 +269,8 @@ input[type='checkbox'] {
   flex-shrink: 0;
   background: repeating-linear-gradient(130deg, var(--vermilion) 0 4px, transparent 4px 7px);
 }
-.toolbar-spacer .hazard-mark {
-  width: 90px;
-  opacity: 0.85;
-}
-.game-path-state {
-  font-size: 11px;
-  color: #c6c0b4;
-  white-space: nowrap;
-}
 .launch-button {
+  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,6 +290,7 @@ input[type='checkbox'] {
   opacity: 0.45;
 }
 .header-city {
+  flex-shrink: 0;
   width: 108px;
   height: 52px;
   align-self: flex-end;
@@ -1405,10 +1372,7 @@ select {
   }
 }
 @media (max-width: 1350px) {
-  .game-mark span,
-  .header-city,
-  .ticket-stamp,
-  .toolbar-spacer .hazard-mark {
+  .ticket-stamp {
     display: none;
   }
   .global-toolbar {
@@ -1454,9 +1418,6 @@ select {
   .mod-package-icon {
     display: flex;
   }
-  .game-path-state {
-    display: none;
-  }
 }
 @media (max-width: 760px) {
   .character-sidebar {
@@ -1478,7 +1439,6 @@ select {
   .sidebar-heading h2 {
     font-size: 17px;
   }
-  .game-mark,
   .global-nav-item svg,
   .launch-button svg,
   .barcode,
