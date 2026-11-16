@@ -841,7 +841,7 @@ select {
 }
 .bundle-panel ul {
   padding: 0;
-  margin: 12px 0;
+  margin: 12px 0 0;
   list-style: none;
 }
 .bundle-panel li {
@@ -850,6 +850,9 @@ select {
   gap: 10px;
   padding: 12px 0;
   border-top: 1px solid #726c61;
+}
+.bundle-panel li:last-child {
+  padding-bottom: 0;
 }
 .bundle-child-copy {
   flex: 1;
