@@ -4,7 +4,6 @@ import type { ModInfo } from '@shared/types'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
-import ModActions from './mod-actions'
 export interface ModCardActions {
   onToggleInstall: (mod: ModInfo) => void
   onToggleSubMod: (mod: ModInfo, childName: string, enabled: boolean) => void
@@ -109,7 +108,6 @@ function ModCard({
       >
         {mod.installed ? '卸载' : mod.invalid ? '仍要安装' : '安装'}
       </Button>
-      <ModActions mod={mod} actions={actions} disabled={disabled} />
     </article>
   )
 }
