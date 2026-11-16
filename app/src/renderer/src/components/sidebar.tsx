@@ -43,12 +43,14 @@ function Sidebar({
   )
   return (
     <aside className="character-sidebar">
-      {categoryButton(ALL_CATEGORY)}
       <nav className="character-scroll" aria-label="角色分类">
         {characterCategories.map(categoryButton)}
         {!characterCategories.length && <p className="px-3 py-5 text-sm">暂无角色分类</p>}
       </nav>
-      <div className="other-category">{categoryButton(OTHER_CATEGORY)}</div>
+      <div className="other-category">
+        {categoryButton(ALL_CATEGORY)}
+        {categoryButton(OTHER_CATEGORY)}
+      </div>
     </aside>
   )
 }
