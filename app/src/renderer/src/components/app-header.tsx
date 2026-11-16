@@ -1,6 +1,5 @@
 import { FileText, LoaderCircle, Package, Play, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import cityline from '@/assets/cityline.svg'
 import { HeaderModActions } from './header-mod-actions'
 export type AppView = 'mods' | 'logs' | 'settings'
 interface Props {
@@ -32,7 +31,6 @@ export default function AppHeader({
         <span className="barcode" aria-hidden />
       </div>
       <div className="global-toolbar">
-        <img className="header-city" src={cityline} alt="" />
         <nav aria-label="主导航">
           {(
             [
@@ -60,8 +58,25 @@ export default function AppHeader({
           disabled={busy || !hasGamePath}
           onClick={onLaunch}
         >
-          <Play size={17} />
-          启动游戏
+          <svg
+            className="launch-city"
+            viewBox="0 0 360 100"
+            preserveAspectRatio="xMidYMax meet"
+            fill="none"
+            aria-hidden="true"
+          >
+            <g fill="currentColor">
+              <path d="M0 95h360v5H0zM6 78h24v17H6zM36 64h23v31H36zM64 82h18v13H64zM88 46h27v49H88zM95 28h13v20H95zM99 12h5v20h-5zM123 73h24v22h-24zM154 57h24v38h-24zM161 39h10v19h-10zM183 80h16v15h-16zM206 28h8v67h-8zM203 44h14v4h-14zM207 14h6v18h-6zM209 2h2v14h-2zM227 62h29v33h-29zM264 74h18v21h-18zM299 41h5v54h-5zM344 14h5v81h-5z" />
+              <path d="m290 40 59-26v5l-59 26zm0 35 59-39v5l-59 39z" />
+            </g>
+            <path
+              d="m291 44 53 42m-39-46 39 34m-25-41 25 24M2 96h356"
+              stroke="currentColor"
+              strokeWidth={2}
+            />
+          </svg>
+          <Play className="launch-icon" size={17} />
+          <span className="launch-text">启动游戏</span>
         </button>
       </div>
       {busy && (

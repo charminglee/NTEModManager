@@ -87,8 +87,7 @@
 .category-row .category-name,
 .category-row img,
 .category-placeholder,
-.mod-package-icon,
-.launch-button > svg {
+.mod-package-icon {
   transition: translate var(--motion-normal) var(--motion-out),
     scale var(--motion-normal) var(--motion-settle),
     color var(--motion-fast) ease-out;
@@ -98,7 +97,6 @@
   .category-row:hover img,
   .category-row:hover .category-placeholder { scale: 1.05; }
   .mod-row:hover .mod-package-icon { translate: 0 -1px; }
-  .launch-button:hover > svg { translate: 2px 0; }
 }
 .mod-row {
   transition: background-color var(--motion-normal) ease-out,
@@ -206,6 +204,5 @@
   .category-row:hover img,
   .category-row:hover .category-placeholder { scale: 1; }
   .category-row:hover .category-name,
-  .mod-row:hover .mod-package-icon,
-  .launch-button:hover > svg { translate: none; }
+  .mod-row:hover .mod-package-icon { translate: none; }
 }
