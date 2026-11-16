@@ -6,6 +6,7 @@ import { ModStatus } from './mod-card'
 import { Button } from './ui/button'
 import FileTree from './file-tree'
 import ModActions from './mod-actions'
+import ModBundlePanel from './mod-bundle-panel'
 import cityline from '@/assets/cityline.svg'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 interface Props {
@@ -65,6 +66,7 @@ export default function ModDetail({
           <h3>{mod.name}</h3>
           <ModStatus mod={mod} />
         </div>
+        <ModBundlePanel mod={mod} busy={busy} onToggle={actions.onToggleSubMod} />
         <div
           className="detail-tabs"
           ref={tabsRef}

@@ -824,6 +824,74 @@ select {
   border-bottom: 1px solid #a09a90;
   margin-bottom: 13px;
 }
+.bundle-badge {
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--vermilion);
+  font-weight: 800;
+}
+.bundle-panel {
+  margin-bottom: 20px;
+  border: 1px solid #726c61;
+  border-top: 3px solid var(--vermilion);
+  border-radius: 2px;
+  padding: 12px;
+  background: var(--ink);
+}
+.bundle-heading, .bundle-heading h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bundle-heading {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.bundle-heading h4 {
+  margin: 0;
+  font-weight: 800;
+}
+.bundle-heading svg, .bundle-panel li > svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.bundle-heading > span, .bundle-panel p, .bundle-child-copy small {
+  font-size: 12px;
+  color: #c2b9aa;
+}
+.bundle-panel p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+.bundle-panel ul {
+  padding: 0;
+  margin: 12px 0;
+  list-style: none;
+}
+.bundle-panel li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid #726c61;
+}
+.bundle-child-copy {
+  flex: 1;
+  min-width: 0;
+}
+.bundle-child-copy strong, .bundle-child-copy small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.bundle-child-copy strong {
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+.bundle-panel button:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 4px;
+}
 .detail-tabs button {
   padding: 6px 24px;
   font-weight: 800;

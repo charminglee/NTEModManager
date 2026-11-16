@@ -653,6 +653,11 @@ export default function App() {
   const modCardActions = useMemo<ModCardActions>(
     () => ({
       onToggleInstall: handleToggleInstall,
+      onToggleSubMod: (mod, childName, enabled) => {
+        void runOperation(`正在更新子模组：${childName}…`, () =>
+          window.api.setSubModEnabled(mod.name, childName, enabled)
+        ).then(() => refreshMods())
+      },
       onReinstall: handleReinstall,
       onRename: (mod) => {
         setPrompt({

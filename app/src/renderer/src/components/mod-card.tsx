@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Check, Circle, Package, TriangleAlert } from 'lucide-react'
+import { Check, Circle, Layers, Package, TriangleAlert } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -7,6 +7,7 @@ import { Button } from './ui/button'
 import ModActions from './mod-actions'
 export interface ModCardActions {
   onToggleInstall: (mod: ModInfo) => void
+  onToggleSubMod: (mod: ModInfo, childName: string, enabled: boolean) => void
   onReinstall: (mod: ModInfo) => void
   onRename: (mod: ModInfo) => void
   onRepackage: (mod: ModInfo) => void
@@ -86,11 +87,12 @@ function ModCard({
         title={mod.name}
       >
         <span className="mod-package-icon">
-          <Package />
+          {mod.subMods?.length ? <Layers /> : <Package />}
         </span>
         <span className="mod-row-copy">
           <strong>{displayName}</strong>
           <small>
+            {!!mod.subMods?.length && <span className="bundle-badge">整合包 · {mod.subMods.length} 个子模组</span>}
             {formatFileSize(mod.sizeBytes)} · {formatImportedAt(mod.importedAt)}
           </small>
         </span>
