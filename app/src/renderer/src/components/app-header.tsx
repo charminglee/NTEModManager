@@ -7,6 +7,7 @@ interface Props {
   busy: boolean
   activity: string
   hasGamePath: boolean
+  isFullScreen: boolean
   onNavigate: (view: AppView) => void
   onLaunch: () => void
   onImport: () => void
@@ -17,6 +18,7 @@ export default function AppHeader({
   busy,
   activity,
   hasGamePath,
+  isFullScreen,
   onNavigate,
   onLaunch,
   onImport,
@@ -24,12 +26,14 @@ export default function AppHeader({
 }: Props) {
   return (
     <header className="app-header">
-      <div className="brand-strip">
-        <span className="brand-wordmark">NTEMM</span>
-        <span className="brand-slash" />
-        <span>异环模组管理器</span>
-        <span className="barcode" aria-hidden />
-      </div>
+      {!isFullScreen && (
+        <div className="brand-strip">
+          <span className="brand-wordmark">NTEMM</span>
+          <span className="brand-slash" />
+          <span>异环模组管理器</span>
+          <span className="barcode" aria-hidden />
+        </div>
+      )}
       <div className="global-toolbar">
         <nav aria-label="主导航">
           {(

@@ -38,6 +38,9 @@ export function registerWindowControls(window: BrowserWindow): void {
           else if (window.isMaximized()) window.unmaximize()
           else window.maximize()
           break
+        case 'toggle-fullscreen':
+          window.setFullScreen(!window.isFullScreen())
+          break
         case 'close':
           // 先应答，再走正常关闭流程，保留已有窗口状态保存与退出处理。
           setImmediate(() => {

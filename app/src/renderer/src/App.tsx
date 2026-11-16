@@ -79,6 +79,7 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
   const [chromeHidden, setChromeHidden] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [settingsDirty, setSettingsDirty] = useState(false)
   const [pendingView, setPendingView] = useState<AppView | null>(null)
@@ -812,10 +813,14 @@ export default function App() {
         target !== null &&
         (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
 
-      // F9 隐藏/恢复界面;F11 不做拦截,交给 Chrome/Electron 原生全屏
+      // F9 隐藏/恢复界面;F11 由主进程切换原生全屏,浏览器模式同步窗口状态。
       if (event.key === 'F9') {
         event.preventDefault()
         setChromeHidden((value) => !value)
+        return
+      }
+      if (event.key === 'F11') {
+        void window.api.controlWindow('toggle-fullscreen')
         return
       }
       if (
@@ -909,7 +914,7 @@ export default function App() {
   if (!config) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
-        <WindowControls />
+        <WindowControls onFullScreenChange={setIsFullScreen} />
         <LoaderCircle className="h-8 w-8 animate-spin text-primary" aria-label="加载中" />
       </div>
     )
@@ -917,7 +922,7 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={350}>
-      <WindowControls />
+      <WindowControls onFullScreenChange={setIsFullScreen} />
       <BackgroundLayer masked={!chromeHidden} maskOpacity={config.backgroundMaskOpacity} />
       <div className={cn('app-shell', chromeHidden && 'is-ui-hidden')}>
         <AppHeader
@@ -925,6 +930,7 @@ export default function App() {
           busy={busy}
           activity={activity}
           hasGamePath={Boolean(config.gameDirectory)}
+          isFullScreen={isFullScreen}
           onNavigate={requestView}
           onLaunch={handleLaunchGame}
           onImport={handleImportAction}

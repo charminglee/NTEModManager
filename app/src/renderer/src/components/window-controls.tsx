@@ -2,20 +2,28 @@ import { useEffect, useState } from 'react'
 import type { WindowAction, WindowState } from '@shared/types'
 import { toast } from './toast-card'
 
-export default function WindowControls() {
+interface Props {
+  onFullScreenChange: (isFullScreen: boolean) => void
+}
+
+export default function WindowControls({ onFullScreenChange }: Props) {
   const [state, setState] = useState<WindowState>({ isMaximized: false, isFullScreen: false })
   const [pending, setPending] = useState(false)
   useEffect(() => {
     let active = true
     let receivedUpdate = false
+    const applyState = (next: WindowState) => {
+      setState(next)
+      onFullScreenChange(next.isFullScreen)
+    }
     const unsubscribe = window.api.onWindowStateChanged((next) => {
       receivedUpdate = true
-      if (active) setState(next)
+      if (active) applyState(next)
     })
     void window.api
       .getWindowState()
       .then((next) => {
-        if (active && !receivedUpdate) setState(next)
+        if (active && !receivedUpdate) applyState(next)
       })
       .catch((error) => {
         if (active) toast.error('无法读取窗口状态', { description: String(error) })
@@ -24,7 +32,7 @@ export default function WindowControls() {
       active = false
       unsubscribe()
     }
-  }, [])
+  }, [onFullScreenChange])
   const control = async (action: WindowAction) => {
     if (pending) return
     setPending(true)
@@ -38,6 +46,7 @@ export default function WindowControls() {
     }
   }
   const expanded = state.isMaximized || state.isFullScreen
+  if (state.isFullScreen) return null
   return (
     <div className="window-controls" role="group" aria-label="窗口控制">
       <button

@@ -388,6 +388,14 @@ const api: Api = {
     return { ...previewWindowState }
   },
   async controlWindow(action) {
+    if (action === 'toggle-fullscreen') {
+      previewWindowState = {
+        ...previewWindowState,
+        isFullScreen: !previewWindowState.isFullScreen
+      }
+      for (const listener of windowStateListeners) listener({ ...previewWindowState })
+      return { success: true, message: '' }
+    }
     if (action !== 'toggle-maximize') {
       return unavailable(action === 'minimize' ? '最小化窗口' : '关闭窗口')
     }
