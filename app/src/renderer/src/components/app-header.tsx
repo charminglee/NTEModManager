@@ -1,6 +1,7 @@
 import { FileText, LoaderCircle, Package, Play, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import cityline from '@/assets/cityline.svg'
+import { HeaderModActions } from './header-mod-actions'
 export type AppView = 'mods' | 'logs' | 'settings'
 interface Props {
   view: AppView
@@ -9,6 +10,8 @@ interface Props {
   hasGamePath: boolean
   onNavigate: (view: AppView) => void
   onLaunch: () => void
+  onImport: () => void
+  onPackageMod: () => void
 }
 export default function AppHeader({
   view,
@@ -16,7 +19,9 @@ export default function AppHeader({
   activity,
   hasGamePath,
   onNavigate,
-  onLaunch
+  onLaunch,
+  onImport,
+  onPackageMod
 }: Props) {
   return (
     <header className="app-header">
@@ -48,6 +53,7 @@ export default function AppHeader({
             </button>
           ))}
         </nav>
+        <HeaderModActions busy={busy} onImport={onImport} onPackageMod={onPackageMod} />
         <button
           type="button"
           className="launch-button"

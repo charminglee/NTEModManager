@@ -912,6 +912,8 @@ export default function App() {
           hasGamePath={Boolean(config.gameDirectory)}
           onNavigate={requestView}
           onLaunch={handleLaunchGame}
+          onImport={handleImportAction}
+          onPackageMod={handlePackageModAction}
         />
         {view === 'mods' ? (
           <div className="mod-workspace">
@@ -942,8 +944,6 @@ export default function App() {
                   if (!enabled) handleClearSelection()
                 }}
                 onRefresh={handleRefreshMods}
-                onImport={handleImportAction}
-                onPackageMod={handlePackageModAction}
                 onInstallAll={() => void handleInstallAll()}
                 onUninstallAll={() => void handleUninstallAll()}
               />

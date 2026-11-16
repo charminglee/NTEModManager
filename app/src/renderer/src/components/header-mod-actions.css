@@ -1,0 +1,32 @@
+.header-mod-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.header-mod-actions > button {
+  height: 38px;
+}
+.header-action-divider {
+  width: 1px;
+  height: 38px;
+  background: var(--rule);
+  opacity: 0.6;
+  margin-left: 2px;
+}
+.header-mod-actions + .launch-button {
+  margin-left: 0;
+}
+@media (max-width: 760px) {
+  .header-mod-actions {
+    gap: 6px;
+  }
+  .header-mod-actions > button {
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+  .header-mod-actions svg {
+    display: none;
+  }
+}

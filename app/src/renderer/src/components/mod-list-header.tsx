@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Import, MoreHorizontal, Package, RefreshCw, Search } from 'lucide-react'
+import { MoreHorizontal, RefreshCw, Search } from 'lucide-react'
 import { SORT_OPTIONS, type SortOrder } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,8 +24,6 @@ interface Props {
   onStatusChange: (status: StatusFilter) => void
   onSelectionModeChange: (enabled: boolean) => void
   onRefresh: () => void
-  onImport: () => void
-  onPackageMod: () => void
   onInstallAll: () => void
   onUninstallAll: () => void
 }
@@ -43,16 +41,6 @@ function ModListHeader(p: Props) {
           </p>
         </div>
         <img className="ticket-stamp" src={ticket} alt="" />
-        <div className="library-actions">
-          <Button onClick={p.onImport} disabled={p.busy}>
-            <Import />
-            导入模组
-          </Button>
-          <Button variant="outline" onClick={p.onPackageMod} disabled={p.busy}>
-            <Package />
-            打包模组
-          </Button>
-        </div>
       </div>
       <div className="library-search-row">
         <label className="library-search">
