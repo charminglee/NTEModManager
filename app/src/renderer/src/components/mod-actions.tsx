@@ -55,7 +55,7 @@ export default function ModActions({
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.onAddArchive(mod)}>
           <FolderInput />
-          添加压缩包
+          添加
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.onReplaceArchive(mod)}>
           <CircleArrowUp />
