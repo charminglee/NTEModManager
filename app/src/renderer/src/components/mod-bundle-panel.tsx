@@ -26,18 +26,22 @@ export default function ModBundlePanel({ mod, busy, onToggle, onRename }: {
             <Package aria-hidden="true" />
             <div className="bundle-child-copy">
               <div className="bundle-child-title">
-                <strong>{child.name}</strong>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="bundle-rename-button"
-                  disabled={busy}
-                  aria-label={`重命名子模组：${child.name}`}
-                  title="重命名子模组"
-                  onClick={() => onRename(mod, child.name)}
-                >
-                  <Pencil aria-hidden="true" />
-                </Button>
+                <strong>
+                  {child.name}
+                  <span className="bundle-rename-anchor">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="bundle-rename-button"
+                      disabled={busy}
+                      aria-label={`重命名子模组：${child.name}`}
+                      title="重命名子模组"
+                      onClick={() => onRename(mod, child.name)}
+                    >
+                      <Pencil aria-hidden="true" />
+                    </Button>
+                  </span>
+                </strong>
               </div>
               <small>{formatFileSize(child.sizeBytes)}</small>
             </div>

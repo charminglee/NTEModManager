@@ -877,24 +877,34 @@ select {
   min-width: 0;
 }
 .bundle-child-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 2px;
+  display: block;
 }
 .bundle-child-copy strong, .bundle-child-copy small {
   display: block;
   overflow-wrap: anywhere;
 }
 .bundle-child-title strong {
-  flex: 0 1 auto;
   min-width: 0;
 }
 .bundle-child-copy strong {
+  position: relative;
   font-size: 13px;
   line-height: 1.35;
   margin-bottom: 3px;
+  padding-right: calc(1.35em + 4px);
+}
+.bundle-rename-anchor {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 1em;
+  vertical-align: top;
 }
 .bundle-panel .bundle-rename-button {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  display: inline-flex;
   width: 1.35em;
   height: 1.35em;
   padding: 0;
