@@ -925,6 +925,16 @@ export default function App() {
               onSelectCategory={handleSelectCategory}
             />
             <main className="mod-library">
+              {categoryImages.get(currentCategory) && (
+                <img
+                  key={currentCategory}
+                  className="library-portrait"
+                  src={categoryImages.get(currentCategory)!}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                />
+              )}
               <ModListHeader
                 category={currentCategory}
                 counts={statusCounts}
@@ -1052,7 +1062,6 @@ export default function App() {
                   key={focusedMod.name}
                   mod={focusedMod}
                   category={categoryForMod(focusedMod, categories)}
-                  image={categoryImages.get(categoryForMod(focusedMod, categories)) ?? null}
                   busy={busy}
                   actions={modCardActions}
                   onClose={() => setDetailsOpen(false)}

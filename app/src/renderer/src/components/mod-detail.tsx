@@ -7,12 +7,10 @@ import { Button } from './ui/button'
 import FileTree from './file-tree'
 import ModActions from './mod-actions'
 import ModBundlePanel from './mod-bundle-panel'
-import cityline from '@/assets/cityline.svg'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 interface Props {
   mod: ModInfo
   category: string
-  image: string | null
   busy: boolean
   actions: ModCardActions
   onClose: () => void
@@ -20,7 +18,6 @@ interface Props {
 export default function ModDetail({
   mod,
   category,
-  image,
   busy,
   actions,
   onClose
@@ -50,18 +47,6 @@ export default function ModDetail({
         </Button>
       </div>
       <div className="detail-scroll">
-        <div className="detail-preview">
-          <img className="detail-preview-city" src={cityline} alt="" />
-          {image ? (
-            <img className="detail-portrait" src={image} alt={category} />
-          ) : (
-            <Package className="detail-preview-package" />
-          )}
-          <span className="detail-preview-label">
-            {category}
-            <small>MOD ARCHIVE／01</small>
-          </span>
-        </div>
         <div className="detail-name">
           <h3>{mod.name}</h3>
           <ModStatus mod={mod} />
