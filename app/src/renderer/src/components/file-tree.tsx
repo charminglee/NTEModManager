@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronRight, File, Folder } from 'lucide-react'
+import { ChevronRight, File, Folder } from 'lucide-react'
 import type { ModFileEntry } from '@shared/types'
 import { formatFileSize } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -48,15 +48,12 @@ function TreeRow({ entry, depth, relativeBase, onRenameFile }: TreeRowProps) {
       <div>
         <button
           type="button"
+          aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
           className="group flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left transition-colors hover:bg-foreground/[0.05]"
           style={{ paddingLeft: `${depth * 18 + 8}px` }}
         >
-          {expanded ? (
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          )}
+          <ChevronRight className="tree-chevron h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <Folder className="h-3.5 w-3.5 shrink-0 text-[#c6a47e]" />
           <span className="truncate text-[13px] font-medium text-foreground/80">{entry.name}</span>
           <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground/70">
@@ -64,6 +61,7 @@ function TreeRow({ entry, depth, relativeBase, onRenameFile }: TreeRowProps) {
           </span>
         </button>
         <div
+          {...(!expanded ? { inert: '' } : {})}
           className={cn(
             'grid transition-[grid-template-rows] duration-200 ease-out',
             expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'

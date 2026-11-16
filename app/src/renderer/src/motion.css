@@ -1,0 +1,211 @@
+/* 应用动效：短促响应、柔和落定；所有位移保持在小范围内。 */
+:root {
+  --motion-fast: 140ms;
+  --motion-normal: 240ms;
+  --motion-slow: 360ms;
+  --motion-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-settle: cubic-bezier(0.22, 1.15, 0.36, 1);
+  --animate-dialog-in: motion-dialog-in 280ms var(--motion-out);
+  --animate-dialog-out: motion-exit 160ms ease-in;
+}
+
+.app-shell {
+  animation: motion-fade-in var(--motion-slow) ease-out;
+  transition: opacity var(--motion-normal) ease;
+}
+
+/* 只为实际进入的新页面和内容播放入场，不因输入或日志刷新而重播。 */
+.mod-workspace,
+.settings-workspace,
+.logs-workspace,
+.settings-content,
+.mod-list-scroll,
+.detail-file-panel,
+.detail-metadata {
+  animation: motion-content-in var(--motion-slow) var(--motion-out);
+}
+.character-sidebar,
+.settings-navigation {
+  animation: motion-sidebar-in var(--motion-slow) var(--motion-out);
+}
+.mod-detail {
+  animation: motion-detail-in var(--motion-slow) var(--motion-out);
+}
+.library-empty,
+.log-empty,
+.operation-progress,
+.import-result-row {
+  animation: motion-content-in var(--motion-normal) var(--motion-out);
+}
+.settings-content > *,
+.mod-group:nth-child(-n + 6),
+.mod-group-rows > .mod-row:nth-child(-n + 6) {
+  animation: motion-content-in 300ms var(--motion-out) backwards;
+}
+.settings-content > :nth-child(2),
+.mod-group:nth-child(2),
+.mod-group-rows > .mod-row:nth-child(2) { animation-delay: 24ms; }
+.settings-content > :nth-child(3),
+.mod-group:nth-child(3),
+.mod-group-rows > .mod-row:nth-child(3) { animation-delay: 48ms; }
+.settings-content > :nth-child(n + 4),
+.mod-group:nth-child(n + 4),
+.mod-group-rows > .mod-row:nth-child(n + 4) { animation-delay: 72ms; }
+
+/* 将退场限制在面板本身，避免影响窗口按钮、提示和固定定位。 */
+.motion-presence { display: contents; }
+.motion-presence[data-state='closed'] > * {
+  pointer-events: none;
+  animation: motion-exit 160ms ease-in both;
+}
+.batch-bar-enter {
+  animation: motion-content-in 300ms var(--motion-settle);
+}
+.import-drag-overlay {
+  animation: motion-fade-in var(--motion-fast) ease-out;
+}
+.import-drag-overlay > div {
+  animation: motion-dialog-in var(--motion-slow) var(--motion-settle);
+}
+
+/* 控件仅过渡明确的属性，不让布局尺寸跟随 transition-all。 */
+.app-shell button,
+.overlay-panel button,
+.solid-popover [role^='menuitem'],
+[role='option'] {
+  transition-property: background-color, color, border-color, box-shadow, opacity, scale;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+.app-shell button:active:not(:disabled),
+.overlay-panel button:active:not(:disabled) {
+  scale: 0.975;
+  transition-duration: 70ms;
+}
+.app-shell button:disabled,
+.overlay-panel button:disabled { scale: 1; }
+.category-row .category-name,
+.category-row img,
+.category-placeholder,
+.mod-package-icon,
+.launch-button > svg {
+  transition: translate var(--motion-normal) var(--motion-out),
+    scale var(--motion-normal) var(--motion-settle),
+    color var(--motion-fast) ease-out;
+}
+@media (hover: hover) {
+  .category-row:hover .category-name { translate: 3px 0; }
+  .category-row:hover img,
+  .category-row:hover .category-placeholder { scale: 1.05; }
+  .mod-row:hover .mod-package-icon { translate: 0 -1px; }
+  .launch-button:hover > svg { translate: 2px 0; }
+}
+.mod-row {
+  transition: background-color var(--motion-normal) ease-out,
+    box-shadow var(--motion-normal) ease-out;
+}
+.mod-status {
+  animation: motion-fade-in var(--motion-normal) ease-out;
+  transition: color var(--motion-fast) ease-out,
+    background-color var(--motion-fast) ease-out;
+}
+[data-sonner-toast] { transition-duration: var(--motion-slow); }
+.toast-surface > svg { animation: motion-popover-in 280ms var(--motion-settle); }
+.app-shell input,
+.app-shell select,
+.overlay-panel input,
+.library-search {
+  transition: border-color var(--motion-fast) ease-out,
+    background-color var(--motion-fast) ease-out,
+    box-shadow var(--motion-fast) ease-out;
+}
+.library-search:focus-within {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--vermilion) 18%, transparent);
+}
+.app-shell [role='switch'] > span {
+  transition: transform var(--motion-normal) var(--motion-settle);
+}
+.tree-chevron {
+  transition: rotate var(--motion-normal) var(--motion-out);
+}
+[aria-expanded='true'] > .tree-chevron { rotate: 90deg; }
+.detail-file-panel .grid {
+  transition-timing-function: var(--motion-out);
+  transition-duration: var(--motion-normal);
+}
+
+/* Radix 负责延迟卸载；保留各浮层的定位，由独立缩放属性完成动效。 */
+[data-radix-popper-content-wrapper] > [data-state='open'] {
+  transform-origin: var(--radix-popper-transform-origin, center);
+  animation: motion-popover-in 200ms var(--motion-out);
+}
+[data-radix-popper-content-wrapper] > [data-state='closed'] {
+  animation: motion-popover-out 120ms ease-in;
+}
+[role='tooltip'] {
+  animation: motion-popover-in var(--motion-fast) var(--motion-out);
+}
+[role='tooltip'][data-state='closed'] {
+  animation: motion-popover-out 100ms ease-in;
+}
+[role='dialog'][data-state='open'],
+[role='alertdialog'][data-state='open'] {
+  animation: motion-dialog-in 280ms var(--motion-out);
+}
+[role='dialog'][data-state='closed'],
+[role='alertdialog'][data-state='closed'] {
+  animation: motion-exit 160ms ease-in;
+}
+.dialog-overlay { animation-duration: 180ms; }
+.background-mask { transition: opacity var(--motion-slow) ease; }
+
+@keyframes motion-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes motion-content-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes motion-sidebar-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes motion-detail-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes motion-dialog-in {
+  from { opacity: 0; translate: 0 8px; scale: 0.985; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes motion-exit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes motion-popover-in {
+  from { opacity: 0; scale: 0.97; }
+  to { opacity: 1; scale: 1; }
+}
+@keyframes motion-popover-out {
+  to { opacity: 0; scale: 0.98; }
+}
+
+/* 减少动态效果时保留状态反馈，关闭位移、回弹与无限循环。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .app-shell button:active:not(:disabled),
+  .overlay-panel button:active:not(:disabled),
+  .category-row:hover img,
+  .category-row:hover .category-placeholder { scale: 1; }
+  .category-row:hover .category-name,
+  .mod-row:hover .mod-package-icon,
+  .launch-button:hover > svg { translate: none; }
+}

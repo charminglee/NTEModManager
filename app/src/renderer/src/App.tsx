@@ -20,6 +20,8 @@ import {
 } from '@shared/mod-list-logic'
 import { basenameWithoutExtension, joinPath } from '@/lib/format'
 import BackgroundLayer from '@/components/background-layer'
+import MotionPresence from '@/components/motion-presence'
+import { useModListMotion } from '@/hooks/use-mod-list-motion'
 import Sidebar from '@/components/sidebar'
 import ModListHeader, { type StatusFilter } from '@/components/mod-list-header'
 import AppHeader, { type AppView } from '@/components/app-header'
@@ -109,6 +111,7 @@ export default function App() {
   const modalOpenRef = useRef(false)
 
   const busyRef = useRef(false)
+  const modListRef = useRef<HTMLDivElement>(null)
   const dragDepthRef = useRef(0)
 
   const refreshMods = useCallback(async (): Promise<ModInfo[]> => {
@@ -262,6 +265,7 @@ export default function App() {
       ),
     [matchingMods, statusFilter]
   )
+  useModListMotion(modListRef, visibleMods, currentCategory, view)
   const focusedMod = detailsOpen
     ? (visibleMods.find((mod) => mod.name === focusedName) ?? visibleMods[0] ?? null)
     : null
@@ -944,7 +948,8 @@ export default function App() {
                 onUninstallAll={() => void handleUninstallAll()}
               />
               <div
-                key={currentCategory}
+                ref={modListRef}
+                key={`${currentCategory}:${statusFilter}`}
                 className={cn('mod-list-scroll', selectedNames.size > 0 && 'has-batch-actions')}
               >
                 {visibleMods.length === 0 ? (
@@ -1013,43 +1018,47 @@ export default function App() {
                 <Package size={24} />
                 <span>拖入 ZIP、RAR、7Z 压缩包以导入</span>
               </button>
-              {selectedNames.size > 0 && (
-                <BatchActionBar
-                  count={selectedNames.size}
-                  allSelected={allVisibleSelected}
-                  canInstall={canInstallSelected}
-                  canUninstall={canUninstallSelected}
-                  busy={busy}
-                  onSelectAll={handleSelectAllVisible}
-                  onClear={() => {
-                    handleClearSelection()
-                    setSelectionMode(false)
-                  }}
-                  onInstall={handleBatchInstallAction}
-                  onUninstall={handleBatchUninstallAction}
-                  onReinstall={handleBatchReinstallAction}
-                  onRepackage={handleBatchRepackageAction}
-                  onMarkInvalid={() =>
-                    void runBatch('正在批量标记失效…', 'markInvalid', [...selectedNames])
-                  }
-                  onUnmarkInvalid={() =>
-                    void runBatch('正在取消失效标记…', 'unmarkInvalid', [...selectedNames])
-                  }
-                  onDelete={handleBatchDeleteAction}
-                />
-              )}
+              <MotionPresence present={selectedNames.size > 0}>
+                {selectedNames.size > 0 ? (
+                  <BatchActionBar
+                    count={selectedNames.size}
+                    allSelected={allVisibleSelected}
+                    canInstall={canInstallSelected}
+                    canUninstall={canUninstallSelected}
+                    busy={busy}
+                    onSelectAll={handleSelectAllVisible}
+                    onClear={() => {
+                      handleClearSelection()
+                      setSelectionMode(false)
+                    }}
+                    onInstall={handleBatchInstallAction}
+                    onUninstall={handleBatchUninstallAction}
+                    onReinstall={handleBatchReinstallAction}
+                    onRepackage={handleBatchRepackageAction}
+                    onMarkInvalid={() =>
+                      void runBatch('正在批量标记失效…', 'markInvalid', [...selectedNames])
+                    }
+                    onUnmarkInvalid={() =>
+                      void runBatch('正在取消失效标记…', 'unmarkInvalid', [...selectedNames])
+                    }
+                    onDelete={handleBatchDeleteAction}
+                  />
+                ) : null}
+              </MotionPresence>
             </main>
-            {focusedMod && (
-              <ModDetail
-                key={focusedMod.name}
-                mod={focusedMod}
-                category={categoryForMod(focusedMod, categories)}
-                image={categoryImages.get(categoryForMod(focusedMod, categories)) ?? null}
-                busy={busy}
-                actions={modCardActions}
-                onClose={() => setDetailsOpen(false)}
-              />
-            )}
+            <MotionPresence present={focusedMod !== null}>
+              {focusedMod ? (
+                <ModDetail
+                  key={focusedMod.name}
+                  mod={focusedMod}
+                  category={categoryForMod(focusedMod, categories)}
+                  image={categoryImages.get(categoryForMod(focusedMod, categories)) ?? null}
+                  busy={busy}
+                  actions={modCardActions}
+                  onClose={() => setDetailsOpen(false)}
+                />
+              ) : null}
+            </MotionPresence>
           </div>
         ) : view === 'logs' ? (
           <LogView />
@@ -1070,15 +1079,17 @@ export default function App() {
           <FpsCounter />
         </div>
       )}
-      {dragOver && !busy && (
-        <div className="import-drag-overlay">
-          <div>
-            <Package size={42} />
-            <h2>松开以导入模组</h2>
-            <p>支持 ZIP、RAR、7Z 压缩包</p>
+      <MotionPresence present={dragOver && !busy}>
+        {dragOver && !busy ? (
+          <div className="import-drag-overlay">
+            <div>
+              <Package size={42} />
+              <h2>松开以导入模组</h2>
+              <p>支持 ZIP、RAR、7Z 压缩包</p>
+            </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </MotionPresence>
       {chromeHidden && (
         <div
           className="fixed inset-0 z-0"

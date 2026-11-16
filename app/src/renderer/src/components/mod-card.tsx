@@ -55,6 +55,7 @@ function ModCard({
 }: Props) {
   return (
     <article
+      data-mod-name={mod.name}
       className={cn(
         'mod-row',
         active && 'is-active',

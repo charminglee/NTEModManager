@@ -150,7 +150,7 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
             {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : '高级设置'}
           </h1>
         </div>
-        <div className="settings-content">
+        <div className="settings-content" key={section}>
           {section === 'paths' && (
             <>
               {pathFields.map(({ key, label, help }) => (
