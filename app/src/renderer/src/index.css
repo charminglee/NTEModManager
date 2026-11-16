@@ -61,6 +61,7 @@
   --vermilion: #ce3e35;
   --peach: #f4e3de;
   --rule: #d4ccbf;
+  --window-controls-width: 138px;
 }
 * {
   box-sizing: border-box;
@@ -152,12 +153,14 @@ input[type='checkbox'] {
 }
 .brand-strip {
   -webkit-app-region: drag;
+  /* 拖动区域在按钮左侧结束，避免原生命中测试截走按钮的鼠标事件。 */
+  width: calc(100% - var(--window-controls-width));
   height: 35px;
   border-bottom: 1px solid #65635b;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 158px 0 20px;
+  padding: 0 20px;
   font-size: 14px;
   font-weight: 800;
 }
@@ -166,18 +169,20 @@ input[type='checkbox'] {
   position: fixed;
   top: 0;
   right: 0;
+  width: var(--window-controls-width);
   height: 35px;
   display: flex;
   z-index: 60;
   background: var(--ink);
   color: var(--paper);
+  border-bottom: 1px solid #65635b;
 }
 .window-controls button {
   -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
+  width: calc(var(--window-controls-width) / 3);
   height: 35px;
   border: 0;
   background: transparent;
