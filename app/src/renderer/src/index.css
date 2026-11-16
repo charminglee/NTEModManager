@@ -62,9 +62,9 @@
   --peach: #f4e3de;
   --rule: #d4ccbf;
   --window-controls-width: 138px;
-  --surface-ink: rgb(32 32 30 / 84%);
-  --surface-paper: rgb(243 239 230 / 68%);
-  --surface-cream: rgb(255 252 246 / 86%);
+  --surface-ink: rgb(32 32 30 / 78%);
+  --surface-paper: rgb(243 239 230 / 58%);
+  --surface-cream: rgb(255 252 246 / 80%);
 }
 * {
   box-sizing: border-box;
@@ -587,14 +587,14 @@ select {
   border-bottom: 0;
 }
 .mod-row:hover {
-  background: rgb(244 237 226 / 90%);
+  background: rgb(244 237 226 / 86%);
 }
 .mod-row.is-active {
-  background: rgb(244 227 222 / 92%);
+  background: rgb(244 227 222 / 88%);
   box-shadow: inset 3px 0 var(--vermilion);
 }
 .mod-row.is-selected {
-  background: rgb(244 227 222 / 92%);
+  background: rgb(244 227 222 / 88%);
 }
 .mod-checkbox {
   display: flex;
@@ -690,7 +690,7 @@ select {
   border-radius: 3px;
   min-height: 47px;
   margin: 10px 0 0;
-  background: rgb(255 252 246 / 82%);
+  background: rgb(255 252 246 / 76%);
   font-size: 12px;
   font-weight: 650;
   color: var(--ink);
@@ -1056,7 +1056,7 @@ select {
   align-items: center;
   gap: 10px;
   padding: 13px 16px;
-  background: rgb(231 223 209 / 88%);
+  background: rgb(231 223 209 / 80%);
   font-size: 12px;
   max-width: 1000px;
 }
@@ -1067,7 +1067,7 @@ select {
   gap: 10px;
   padding: 18px 28px;
   border-top: 1px solid var(--ink);
-  background: rgb(243 239 230 / 82%);
+  background: rgb(243 239 230 / 74%);
 }
 .settings-toggle {
   display: flex;
