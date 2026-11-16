@@ -43,9 +43,6 @@ function Sidebar({
   )
   return (
     <aside className="character-sidebar">
-      <div className="sidebar-heading">
-        <h2>角色分类</h2>
-      </div>
       {categoryButton(ALL_CATEGORY)}
       <nav className="character-scroll" aria-label="角色分类">
         {characterCategories.map(categoryButton)}
