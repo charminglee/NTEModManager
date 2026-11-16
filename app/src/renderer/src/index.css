@@ -803,7 +803,7 @@ select {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  padding: 16px 0 12px;
+  padding: 4px 0 12px;
 }
 .detail-name h3 {
   margin: 0;
