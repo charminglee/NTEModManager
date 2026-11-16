@@ -1,4 +1,5 @@
 import type { Api } from '../../../preload/index'
+import { bundleChildren } from '@shared/mod-bundle'
 import {
   ALL_CATEGORY,
   BACKGROUND_MASK_OPACITY_DEFAULT,
@@ -73,12 +74,27 @@ const file = (name: string, sizeBytes: number): ModFileEntry => ({
 
 const directory = (name: string, children: ModFileEntry[]): ModFileEntry => ({
   name,
-  sizeBytes: 0,
+  sizeBytes: children.reduce((total, child) => total + child.sizeBytes, 0),
   directory: true,
   children
 })
 
 const mods: ModInfo[] = [
+  {
+    name: '娜娜莉-整合包',
+    sourcePath: 'D:/Games/NTE/mods.bak/娜娜莉-整合包',
+    sizeBytes: 36_700_160,
+    files: [
+      directory('角色外观', [file('Body_P.pak', 12_582_912)]),
+      directory('战斗特效', [directory('特效资源', [file('VFX_P.pak', 16_777_216)])]),
+      directory('界面立绘', [file('Portrait_P.pak', 7_340_032)]),
+      file('Shared_P.pak', 1024),
+      file('说明.txt', 512)
+    ],
+    importedAt: '2026-11-16T09:00:00',
+    installed: true,
+    invalid: false
+  },
   {
     name: '黑羽-原皮',
     sourcePath: 'D:/Games/NTE/mods/黑羽-原皮',
@@ -292,7 +308,8 @@ const mods: ModInfo[] = [
 ]
 
 function cloneMods(): ModInfo[] {
-  return mods.map((mod) => ({ ...mod }))
+  return mods.map((mod) => ({ ...mod, subMods: bundleChildren(mod.files,
+    mod.subMods?.filter((child) => !child.enabled).map((child) => child.name)) }))
 }
 
 function categoryOfMod(mod: ModInfo): string {
@@ -415,6 +432,18 @@ const api: Api = {
     if (!mod) return { success: false, message: `未找到模组 ${name}` }
     mod.installed = false
     return { success: true, message: `已卸载 ${name}(mock)` }
+  },
+
+  async setSubModEnabled(name, childName, enabled) {
+    const mod = findMod(name)
+    if (!mod) return { success: false, message: '找不到模组。' }
+    const children = bundleChildren(mod.files,
+      mod.subMods?.filter((child) => !child.enabled).map((child) => child.name))
+    const child = children.find((item) => item.name === childName)
+    if (!child) return { success: false, message: '找不到第一层子模组。' }
+    child.enabled = enabled
+    mod.subMods = children
+    return { success: true, message: `已${enabled ? '选择' : '停用'}子模组：${childName}` }
   },
 
   async removeMod(name) {

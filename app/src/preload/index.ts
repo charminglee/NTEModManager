@@ -39,6 +39,8 @@ const api = {
   importArchives: (archivePaths: string[]): Promise<ImportResult[]> =>
     ipcRenderer.invoke('mods:import', archivePaths),
   installMod: (name: string): Promise<OperationResult> => ipcRenderer.invoke('mods:install', name),
+  setSubModEnabled: (name: string, childName: string, enabled: boolean): Promise<OperationResult> =>
+    ipcRenderer.invoke('mods:setSubModEnabled', name, childName, enabled),
   uninstallMod: (name: string): Promise<OperationResult> => ipcRenderer.invoke('mods:uninstall', name),
   removeMod: (name: string): Promise<OperationResult> => ipcRenderer.invoke('mods:remove', name),
   renameMod: (oldName: string, newName: string): Promise<OperationResult> =>

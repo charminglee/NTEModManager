@@ -6,6 +6,7 @@ import { MANIFEST_FILE_NAME, type ModFileEntry, type ModInfo, type OperationResu
 import { find7ZipExecutable, extractArchive } from './archive'
 import { getAppConfig } from './config'
 import { logger } from './logger'
+import { bundleChildren } from '../shared/mod-bundle'
 
 const IGNORED_COPY_EXTENSIONS = new Set(['zip', 'txt', 'png', 'jpg', 'md', 'json'])
 const PACKAGE_EXTENSIONS = ['pak', 'ucas', 'utoc'] as const
@@ -166,7 +167,11 @@ async function scanDirectoryEntry(directoryPath: string): Promise<ModFileEntry> 
   return entry
 }
 
-async function copyDirectory(sourcePath: string, targetPath: string): Promise<OperationResult> {
+async function copyDirectory(
+  sourcePath: string,
+  targetPath: string,
+  disabledChildren: string[] = []
+): Promise<OperationResult> {
   if (!isDirectory(sourcePath)) {
     return failure(`模组源文件夹不存在：${sourcePath}`)
   }
@@ -184,6 +189,11 @@ async function copyDirectory(sourcePath: string, targetPath: string): Promise<Op
       return failure(`无法读取目录：${relative || current}`)
     }
     for (const entryName of entries) {
+      if (
+        relative === '' && disabledChildren.includes(entryName) && isDirectory(join(current, entryName))
+      ) {
+        continue
+      }
       const entryPath = join(current, entryName)
       const relativePath = relative ? `${relative}\\${entryName}` : entryName
       const targetEntryPath = join(targetPath, relativePath)
@@ -342,6 +352,7 @@ async function moveDirectory(sourcePath: string, targetPath: string): Promise<Op
 }
 
 interface ManifestMod {
+  disabledSubMods?: string[]
   importedAt?: string
   lastInstalledAt?: string
   lastUninstalledAt?: string
@@ -378,7 +389,7 @@ function saveManifest(manifest: Manifest): OperationResult {
   try {
     mkdirSync(backupsDirectory(), { recursive: true })
     writeFileSync(temporaryPath, JSON.stringify(manifest, null, 2), 'utf-8')
-    rmSync(filePath, { force: true })
+    // 直接替换原清单，替换失败时保留原有子模组选择，供文件操作回滚。
     renameSync(temporaryPath, filePath)
     return success()
   } catch (error) {
@@ -525,7 +536,8 @@ export async function scan(): Promise<ModInfo[]> {
       files,
       importedAt,
       installed: isDirectory(installedPath),
-      invalid: metadata.invalid === true
+      invalid: metadata.invalid === true,
+      subMods: bundleChildren(files, metadata.disabledSubMods)
     })
   }
   // 已安装的模组排在前面(稳定排序)。
@@ -816,7 +828,7 @@ async function addFromArchiveImpl(mod: ModInfo, archivePath: string, appDir: str
         return deletedInstall
       }
     }
-    const copied = await copyDirectory(mod.sourcePath, installPath)
+    const copied = await copySelectedMod(mod, installPath)
     if (!copied.success) {
       return copied
     }
@@ -886,7 +898,7 @@ async function replaceFromArchiveImpl(mod: ModInfo, archivePath: string, appDir:
         return deletedInstall
       }
     }
-    const copied = await copyDirectory(mod.sourcePath, installPath)
+    const copied = await copySelectedMod(mod, installPath)
     if (!copied.success) {
       return copied
     }
@@ -902,6 +914,86 @@ async function replaceFromArchiveImpl(mod: ModInfo, archivePath: string, appDir:
 
 export async function install(mod: ModInfo): Promise<OperationResult> {
   return finalize('安装模组', await installImpl(mod))
+}
+
+/** 所有安装入口共用选择过滤，更新压缩包后也按最新目录重新识别。 */
+async function copySelectedMod(mod: ModInfo, installPath: string): Promise<OperationResult> {
+  const root = await scanDirectoryEntry(mod.sourcePath)
+  const children = bundleChildren(root.children, loadManifest().mods[mod.name]?.disabledSubMods)
+  const disabled = children.filter((child) => !child.enabled).map((child) => child.name)
+  return copyDirectory(mod.sourcePath, installPath, disabled)
+}
+
+export async function setSubModEnabled(
+  mod: ModInfo,
+  childName: string,
+  enabled: boolean
+): Promise<OperationResult> {
+  return finalize('切换子模组', await setSubModEnabledImpl(mod, childName, enabled))
+}
+
+async function setSubModEnabledImpl(
+  mod: ModInfo,
+  childName: string,
+  enabled: boolean
+): Promise<OperationResult> {
+  if (typeof enabled !== 'boolean' || !mod.subMods?.some((child) => child.name === childName)) {
+    return failure('找不到第一层子模组。')
+  }
+  const manifest = loadManifest()
+  const metadata = manifest.mods[mod.name] ?? {}
+  const disabled = new Set(metadata.disabledSubMods ?? [])
+  if (enabled) disabled.delete(childName)
+  else disabled.add(childName)
+  metadata.disabledSubMods = [...disabled]
+  manifest.mods[mod.name] = metadata
+
+  const targetPath = join(modsDirectory(), mod.name, childName)
+  const previousPath = join(backupsDirectory(), `.submod-old-${randomUUID()}`)
+  // 备份与游戏目录可能位于不同磁盘，通过复制保留回滚副本。
+  const restorePrevious = async (): Promise<OperationResult> => {
+    const restored = await copyDirectory(previousPath, targetPath)
+    if (restored.success) removeInstalledModDirectory(previousPath)
+    return restored
+  }
+  let backedUpPrevious = false
+  let copiedNew = false
+  if (mod.installed) {
+    logger.info(`正在${enabled ? '启用' : '停用'}子模组：${mod.name}／${childName}`)
+    if (existsSync(targetPath)) {
+      if (!isDirectory(targetPath)) return failure('子模组安装位置被同名文件占用。')
+      const backedUp = await copyDirectory(targetPath, previousPath)
+      if (!backedUp.success) return backedUp
+      backedUpPrevious = true
+      const removed = removeInstalledModDirectory(targetPath)
+      if (!removed.success) {
+        logger.warning(`切换已取消，回滚副本保留在：${previousPath}`)
+        return removed
+      }
+    }
+    if (enabled) {
+      const copied = await copyDirectory(join(mod.sourcePath, childName), targetPath)
+      if (!copied.success) {
+        const rollback = backedUpPrevious ? await restorePrevious() : success()
+        return failure(`${copied.message}${rollback.success ? '' : `。回滚失败：${rollback.message}`}`)
+      }
+      copiedNew = true
+    }
+  }
+  const saved = saveManifest(manifest)
+  if (!saved.success) {
+    if (copiedNew) {
+      const removed = removeInstalledModDirectory(targetPath)
+      if (!removed.success) return failure(`${saved.message}。回滚失败：${removed.message}`)
+    }
+    const rollback = backedUpPrevious ? await restorePrevious() : success()
+    return failure(`${saved.message}${rollback.success ? '' : `。回滚失败：${rollback.message}`}`)
+  }
+  if (backedUpPrevious) {
+    const removed = removeInstalledModDirectory(previousPath)
+    if (!removed.success) logger.warning(`子模组已切换，旧文件待清理：${previousPath}`)
+  }
+  return success(`已${enabled ? '选择' : '停用'}子模组：${childName}${mod.installed ? '' : '，安装整合包后生效'}`)
 }
 
 async function installImpl(mod: ModInfo): Promise<OperationResult> {
@@ -922,7 +1014,7 @@ async function installImpl(mod: ModInfo): Promise<OperationResult> {
     return failure(`安装目录中存在同名文件，已停止以保护该文件：${mod.name}`)
   }
 
-  const copied = await copyDirectory(mod.sourcePath, installPath)
+  const copied = await copySelectedMod(mod, installPath)
   if (!copied.success) {
     return copied
   }
@@ -1156,7 +1248,12 @@ function renameFileImpl(
   }
   if (mod.installed) {
     const installedRoot = join(modsDirectory(), mod.name)
-    const installedOperations = appendOperations(installedRoot, '已安装模组文件夹', !packageFile)
+    const disabledChild = mod.subMods?.some(
+      (child) => !child.enabled && child.name === cleanRelativePath.split('/')[0]
+    )
+    const installedOperations = disabledChild
+      ? success()
+      : appendOperations(installedRoot, '已安装模组文件夹', !packageFile)
     if (!installedOperations.success) {
       return installedOperations
     }

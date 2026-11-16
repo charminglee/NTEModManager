@@ -17,6 +17,12 @@ export interface ModFileEntry {
   children: ModFileEntry[]
 }
 
+export interface SubModInfo {
+  name: string
+  sizeBytes: number
+  enabled: boolean
+}
+
 export interface ModInfo {
   name: string
   sourcePath: string
@@ -26,6 +32,8 @@ export interface ModInfo {
   importedAt: string
   installed: boolean
   invalid: boolean
+  /** 仅第一层资源文件夹，两个及以上时视为整合包。 */
+  subMods?: SubModInfo[]
 }
 
 export interface OperationResult {

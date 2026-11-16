@@ -251,6 +251,15 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     })
   )
 
+  ipcMain.handle('mods:setSubModEnabled', (_event, name: string, childName: string, enabled: boolean) =>
+    runExclusive(`切换子模组 ${name}／${childName}`, async (report) => {
+      const mod = await findMod(name)
+      if (!mod) return failure(`找不到模组：${name}`)
+      report(`正在${enabled ? '启用' : '停用'}子模组：${childName}…`)
+      return repository.setSubModEnabled(mod, childName, enabled)
+    })
+  )
+
   ipcMain.handle('mods:uninstall', (_event, name: string) =>
     runExclusive(`卸载 ${name}`, async () => {
       const mod = await findMod(name)
