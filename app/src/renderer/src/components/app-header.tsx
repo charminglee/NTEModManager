@@ -72,12 +72,12 @@ export default function AppHeader({
             <defs>
               <g id="launch-cityscape">
                 <g fill="currentColor">
-                  <path d="M0 95h720v5H0zM6 78h24v17H6zM36 64h23v31H36zM64 82h18v13H64zM88 46h27v49H88zM95 28h13v20H95zM99 12h5v20h-5zM123 73h24v22h-24zM154 57h24v38h-24zM161 39h10v19h-10zM183 80h16v15h-16zM206 28h8v67h-8zM203 44h14v4h-14zM207 14h6v18h-6zM209 2h2v14h-2zM227 62h29v33h-29zM264 74h18v21h-18zM299 41h5v54h-5zM344 14h5v81h-5z" />
-                  <path d="m290 40 59-26v5l-59 26zm0 35 59-39v5l-59 39z" />
+                  <path d="M0 95h720v5H0zM6 78h24v17H6zM36 64h23v31H36zM64 82h18v13H64zM88 46h27v49H88zM95 28h13v20H95zM99 12h5v20h-5zM123 73h24v22h-24zM154 57h24v38h-24zM161 39h10v19h-10zM183 80h16v15h-16zM206 28h8v67h-8zM203 44h14v4h-14zM207 14h6v18h-6zM209 2h2v14h-2zM227 62h29v33h-29zM264 74h18v21h-18z" />
+                  <path d="M288 75h70v4h-70zM300 35h4v60h-4zM340 35h4v60h-4z" />
                   <path d="M365 81h25v14h-25zM397 60h22v35h-22zM403 46h10v14h-10zM427 72h18v23h-18zM453 35h30v60h-30zM459 26h18v9h-18zM467 12h3v14h-3zM491 77h23v18h-23zM522 55h26v40h-26zM529 43h12v12h-12zM556 69h20v26h-20zM584 47h29v48h-29zM590 37h17v10h-17zM620 78h20v17h-20zM650 57h24v38h-24zM657 41h10v16h-10zM683 73h25v22h-25z" />
                 </g>
                 <path
-                  d="m291 44 53 42m-39-46 39 34m-25-41 25 24M2 96h356"
+                  d="M288 75Q296 66 302 37Q322 83 342 37Q348 66 358 75M294 65v10M310 52v23M318 59v16M326 59v16M334 52v23M352 67v8"
                   stroke="currentColor"
                   strokeWidth={2}
                 />
