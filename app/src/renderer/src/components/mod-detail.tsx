@@ -140,13 +140,25 @@ export default function ModDetail({
             <Package />
             重新打包
           </Button>
-          <Button variant="outline" disabled={busy} onClick={() => actions.onReplaceArchive(mod)}>
+          <Button
+            variant="outline"
+            disabled={busy || !mod.installed}
+            onClick={() => actions.onReinstall(mod)}
+          >
             <RefreshCw />
-            更新／替换
+            重新安装
           </Button>
           <Button variant="outline" disabled={busy} onClick={() => actions.onOpenSource(mod)}>
             <FolderOpen />
             打开源目录
+          </Button>
+          <Button
+            variant="outline"
+            disabled={busy || !mod.installed}
+            onClick={() => actions.onOpenInstall(mod)}
+          >
+            <FolderOpen />
+            打开安装目录
           </Button>
           <ModActions mod={mod} actions={actions} disabled={busy} label="更多操作" />
         </div>
