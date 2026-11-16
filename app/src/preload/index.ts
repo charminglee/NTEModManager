@@ -8,7 +8,9 @@ import type {
   LogEntry,
   ModInfo,
   OperationResult,
-  SortOrder
+  SortOrder,
+  WindowAction,
+  WindowState
 } from '../shared/types'
 
 export interface BootstrapPayload {
@@ -23,6 +25,14 @@ export interface BootstrapPayload {
 }
 
 const api = {
+  getWindowState: (): Promise<WindowState> => ipcRenderer.invoke('window:state'),
+  controlWindow: (action: WindowAction): Promise<OperationResult> =>
+    ipcRenderer.invoke('window:control', action),
+  onWindowStateChanged: (callback: (state: WindowState) => void): (() => void) => {
+    const listener = (_event: unknown, state: WindowState) => callback(state)
+    ipcRenderer.on('window:state-changed', listener)
+    return () => ipcRenderer.removeListener('window:state-changed', listener)
+  },
   bootstrap: (): Promise<BootstrapPayload> => ipcRenderer.invoke('app:bootstrap'),
   scanMods: (): Promise<ModInfo[]> => ipcRenderer.invoke('mods:scan'),
 

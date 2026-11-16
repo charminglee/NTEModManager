@@ -34,6 +34,13 @@ export interface OperationResult {
   cancelled?: boolean
 }
 
+export type WindowAction = 'minimize' | 'toggle-maximize' | 'close'
+
+export interface WindowState {
+  isMaximized: boolean
+  isFullScreen: boolean
+}
+
 export interface ImportResult {
   archive: string
   result: OperationResult

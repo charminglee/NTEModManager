@@ -10,7 +10,8 @@ import {
   type BackgroundState,
   type LogEntry,
   type ModFileEntry,
-  type ModInfo
+  type ModInfo,
+  type WindowState
 } from '@shared/types'
 
 /**
@@ -362,7 +363,27 @@ function makeBackgroundState(): BackgroundState | null {
 /** mock 的「上次打开的分类」:仅内存态,刷新页面即模拟重启 */
 let mockLastCategory = ''
 
+let previewWindowState: WindowState = { isMaximized: false, isFullScreen: false }
+const windowStateListeners = new Set<(state: WindowState) => void>()
+
 const api: Api = {
+  async getWindowState() {
+    return { ...previewWindowState }
+  },
+  async controlWindow(action) {
+    if (action !== 'toggle-maximize') {
+      return unavailable(action === 'minimize' ? '最小化窗口' : '关闭窗口')
+    }
+    previewWindowState = { isMaximized: !previewWindowState.isMaximized, isFullScreen: false }
+    for (const listener of windowStateListeners) listener({ ...previewWindowState })
+    return { success: true, message: '' }
+  },
+  onWindowStateChanged(callback) {
+    windowStateListeners.add(callback)
+    return () => {
+      windowStateListeners.delete(callback)
+    }
+  },
   async bootstrap() {
     return {
       config: { ...config },

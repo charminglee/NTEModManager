@@ -24,6 +24,7 @@ import BackgroundLayer from '@/components/background-layer'
 import Sidebar from '@/components/sidebar'
 import ModListHeader, { type StatusFilter } from '@/components/mod-list-header'
 import AppHeader, { type AppView } from '@/components/app-header'
+import WindowControls from '@/components/window-controls'
 import ModDetail from '@/components/mod-detail'
 import { Button } from '@/components/ui/button'
 import ModCard, { type ModCardActions } from '@/components/mod-card'
@@ -885,6 +886,7 @@ export default function App() {
   if (!config) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
+        <WindowControls />
         <LoaderCircle className="h-8 w-8 animate-spin text-primary" aria-label="加载中" />
       </div>
     )
@@ -892,6 +894,7 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={350}>
+      <WindowControls />
       <BackgroundLayer masked={!chromeHidden} maskOpacity={config.backgroundMaskOpacity} />
       <div className={cn('app-shell', chromeHidden && 'is-ui-hidden')}>
         <AppHeader

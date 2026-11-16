@@ -151,14 +151,57 @@ input[type='checkbox'] {
   z-index: 3;
 }
 .brand-strip {
+  -webkit-app-region: drag;
   height: 35px;
   border-bottom: 1px solid #65635b;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 20px;
+  padding: 0 158px 0 20px;
   font-size: 14px;
   font-weight: 800;
+}
+.window-controls {
+  -webkit-app-region: no-drag;
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 35px;
+  display: flex;
+  z-index: 60;
+  background: var(--ink);
+  color: var(--paper);
+}
+.window-controls button {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 35px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+.window-controls button:hover {
+  background: #ffffff20;
+}
+.window-controls button.window-close:hover {
+  background: var(--vermilion);
+  color: #fff;
+}
+.window-controls button:focus-visible {
+  outline-offset: -3px;
+}
+.window-controls button:disabled {
+  opacity: 0.45;
+}
+.window-controls svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.2;
 }
 .brand-wordmark {
   font-size: 27px;
