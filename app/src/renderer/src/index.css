@@ -63,7 +63,7 @@
   --rule: #d4ccbf;
   --window-controls-width: 138px;
   --surface-ink: rgb(32 32 30 / 78%);
-  --surface-paper: rgb(243 239 230 / 58%);
+  --surface-paper: rgb(243 239 230 / 50%);
   --surface-cream: rgb(255 252 246 / 80%);
 }
 * {
