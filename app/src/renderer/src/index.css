@@ -552,13 +552,6 @@ select {
   background: var(--vermilion);
   color: var(--cream);
 }
-.batch-mode-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  white-space: nowrap;
-}
 .mod-list-scroll {
   flex: 1;
   min-height: 0;

@@ -39,7 +39,6 @@ interface Props {
   disabled: boolean
   selected: boolean
   active: boolean
-  selectionActive: boolean
   displayName: string
   onActivate: (name: string) => void
 }
@@ -49,7 +48,6 @@ function ModCard({
   disabled,
   selected,
   active,
-  selectionActive,
   displayName,
   onActivate
 }: Props) {
@@ -59,8 +57,7 @@ function ModCard({
       className={cn(
         'mod-row',
         active && 'is-active',
-        selected && 'is-selected',
-        selectionActive && 'selection-mode'
+        selected && 'is-selected'
       )}
     >
       <label className="mod-checkbox">

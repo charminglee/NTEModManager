@@ -18,11 +18,9 @@ interface Props {
   sortOrder: SortOrder
   status: StatusFilter
   busy: boolean
-  selectionMode: boolean
   onSearchChange: (value: string) => void
   onSortOrderChange: (order: SortOrder) => void
   onStatusChange: (status: StatusFilter) => void
-  onSelectionModeChange: (enabled: boolean) => void
   onRefresh: () => void
   onInstallAll: () => void
   onUninstallAll: () => void
@@ -99,14 +97,6 @@ function ModListHeader(p: Props) {
             </button>
           ))}
         </div>
-        <label className="batch-mode-toggle">
-          <input
-            type="checkbox"
-            checked={p.selectionMode}
-            onChange={(e) => p.onSelectionModeChange(e.target.checked)}
-          />
-          批量选择
-        </label>
       </div>
     </div>
   )

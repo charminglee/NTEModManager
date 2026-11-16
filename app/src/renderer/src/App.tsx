@@ -83,7 +83,6 @@ export default function App() {
   const [settingsDirty, setSettingsDirty] = useState(false)
   const [pendingView, setPendingView] = useState<AppView | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [selectionMode, setSelectionMode] = useState(false)
   const [focusedName, setFocusedName] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(true)
   const [activity, setActivity] = useState('')
@@ -350,7 +349,6 @@ export default function App() {
     setStatusFilter('all')
     setFocusedName(null)
     setDetailsOpen(true)
-    setSelectionMode(false)
     setView('mods')
     setSearch('')
     // 选中集跟随分类视图:切换分类即清空,避免批量操作作用到看不见的模组上
@@ -959,16 +957,11 @@ export default function App() {
                 sortOrder={config.sortOrder}
                 status={statusFilter}
                 busy={busy}
-                selectionMode={selectionMode || selectedNames.size > 0}
                 onSearchChange={setSearch}
                 onSortOrderChange={handleSortOrderChange}
                 onStatusChange={(value) => {
                   setStatusFilter(value)
                   handleClearSelection()
-                }}
-                onSelectionModeChange={(enabled) => {
-                  setSelectionMode(enabled)
-                  if (!enabled) handleClearSelection()
                 }}
                 onRefresh={handleRefreshMods}
                 onInstallAll={() => void handleInstallAll()}
@@ -1021,7 +1014,6 @@ export default function App() {
                             disabled={busy}
                             selected={selectedNames.has(mod.name)}
                             active={focusedMod?.name === mod.name}
-                            selectionActive={selectionMode || selectedNames.size > 0}
                             displayName={
                               currentCategory !== ALL_CATEGORY &&
                               mod.name.startsWith(currentCategory + '-')
@@ -1054,10 +1046,7 @@ export default function App() {
                     canUninstall={canUninstallSelected}
                     busy={busy}
                     onSelectAll={handleSelectAllVisible}
-                    onClear={() => {
-                      handleClearSelection()
-                      setSelectionMode(false)
-                    }}
+                    onClear={handleClearSelection}
                     onInstall={handleBatchInstallAction}
                     onUninstall={handleBatchUninstallAction}
                     onReinstall={handleBatchReinstallAction}
