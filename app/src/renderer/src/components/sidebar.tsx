@@ -1,5 +1,5 @@
-import { memo, useState } from 'react'
-import { Blocks, Search } from 'lucide-react'
+import { memo } from 'react'
+import { Blocks } from 'lucide-react'
 import { ALL_CATEGORY, OTHER_CATEGORY } from '@shared/types'
 import { cn } from '@/lib/utils'
 interface SidebarProps {
@@ -16,7 +16,6 @@ function Sidebar({
   categoryImages,
   onSelectCategory
 }: SidebarProps) {
-  const [query, setQuery] = useState('')
   const categoryButton = (category: string) => {
     const image = categoryImages.get(category)
     return (
@@ -39,31 +38,18 @@ function Sidebar({
       </button>
     )
   }
-  const matches = displayCategories.filter(
-    (name) => name !== ALL_CATEGORY && name !== OTHER_CATEGORY && name.includes(query.trim())
+  const characterCategories = displayCategories.filter(
+    (name) => name !== ALL_CATEGORY && name !== OTHER_CATEGORY
   )
   return (
     <aside className="character-sidebar">
       <div className="sidebar-heading">
         <h2>角色分类</h2>
       </div>
-      <label className="character-search">
-        <Search size={16} />
-        <input
-          aria-label="查找角色"
-          placeholder="查找角色"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </label>
       {categoryButton(ALL_CATEGORY)}
-      <div className="sidebar-section-label">
-        角色
-        <span />
-      </div>
       <nav className="character-scroll" aria-label="角色分类">
-        {matches.map(categoryButton)}
-        {!matches.length && <p className="px-3 py-5 text-sm">没有匹配的角色</p>}
+        {characterCategories.map(categoryButton)}
+        {!characterCategories.length && <p className="px-3 py-5 text-sm">暂无角色分类</p>}
       </nav>
       <div className="other-category">{categoryButton(OTHER_CATEGORY)}</div>
     </aside>
