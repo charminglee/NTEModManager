@@ -36,6 +36,7 @@ export default function ModActions({
         <Button
           variant={label ? 'outline' : 'ghost'}
           size={label ? 'default' : 'icon'}
+          className={label ? undefined : 'h-8'}
           disabled={disabled}
           aria-label={label ?? `更多操作：${mod.name}`}
         >
