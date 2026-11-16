@@ -149,7 +149,6 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
           <h1>
             {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : '高级设置'}
           </h1>
-          <span className="hazard-mark" aria-hidden />
         </div>
         <div className="settings-content">
           {section === 'paths' && (

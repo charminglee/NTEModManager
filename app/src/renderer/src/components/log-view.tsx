@@ -62,7 +62,6 @@ function LogView() {
       <div className="workspace-page-heading">
         <h1>运行日志</h1>
         <p>查看导入、安装与打包结果。</p>
-        <span className="hazard-mark" aria-hidden />
       </div>
       <div className="logs-toolbar">
         <label className="library-search">

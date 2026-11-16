@@ -267,13 +267,6 @@ input[type='checkbox'] {
 .global-nav-item:not(.is-active):hover {
   background: #393832;
 }
-.hazard-mark {
-  display: inline-block;
-  height: 7px;
-  width: 48px;
-  flex-shrink: 0;
-  background: repeating-linear-gradient(130deg, var(--vermilion) 0 4px, transparent 4px 7px);
-}
 .launch-button {
   margin-left: auto;
   display: flex;
@@ -984,9 +977,6 @@ select {
   margin: 0;
   font-size: 12px;
   color: #655c50;
-}
-.workspace-page-heading .hazard-mark {
-  margin-left: auto;
 }
 .settings-content {
   flex: 1;
