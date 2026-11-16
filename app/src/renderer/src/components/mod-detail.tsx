@@ -11,8 +11,6 @@ import { formatFileSize, formatImportedAt } from '@/lib/format'
 interface Props {
   mod: ModInfo
   category: string
-  group: string
-  exempt: boolean
   image: string | null
   busy: boolean
   actions: ModCardActions
@@ -21,8 +19,6 @@ interface Props {
 export default function ModDetail({
   mod,
   category,
-  group,
-  exempt,
   image,
   busy,
   actions,
@@ -131,8 +127,6 @@ export default function ModDetail({
             <dd>{category}</dd>
             <dt>源目录</dt>
             <dd className="select-text break-all">{mod.sourcePath}</dd>
-            <dt>安装规则</dt>
-            <dd>{exempt ? '允许同组共存' : group ? '同分组互斥安装' : '未归类'}</dd>
           </dl>
         )}
         <div className="detail-actions">

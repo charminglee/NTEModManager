@@ -12,7 +12,6 @@ import {
 } from '@shared/types'
 import {
   categoryForMod,
-  secondaryNameForMod,
   countByCategory,
   filterAndSort,
   groupBySecondaryName,
@@ -1040,10 +1039,6 @@ export default function App() {
                 key={focusedMod.name}
                 mod={focusedMod}
                 category={categoryForMod(focusedMod, categories)}
-                group={secondaryNameForMod(focusedMod, categories)}
-                exempt={config.exclusiveInstallExemptGroups.includes(
-                  secondaryNameForMod(focusedMod, categories)
-                )}
                 image={categoryImages.get(categoryForMod(focusedMod, categories)) ?? null}
                 busy={busy}
                 actions={modCardActions}
