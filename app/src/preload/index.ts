@@ -41,6 +41,8 @@ const api = {
   installMod: (name: string): Promise<OperationResult> => ipcRenderer.invoke('mods:install', name),
   setSubModEnabled: (name: string, childName: string, enabled: boolean): Promise<OperationResult> =>
     ipcRenderer.invoke('mods:setSubModEnabled', name, childName, enabled),
+  renameSubMod: (name: string, childName: string, newName: string): Promise<OperationResult> =>
+    ipcRenderer.invoke('mods:renameSubMod', name, childName, newName),
   uninstallMod: (name: string): Promise<OperationResult> => ipcRenderer.invoke('mods:uninstall', name),
   removeMod: (name: string): Promise<OperationResult> => ipcRenderer.invoke('mods:remove', name),
   renameMod: (oldName: string, newName: string): Promise<OperationResult> =>

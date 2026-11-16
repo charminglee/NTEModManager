@@ -260,6 +260,15 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     })
   )
 
+  ipcMain.handle('mods:renameSubMod', (_event, name: string, childName: string, newName: string) =>
+    runExclusive(`重命名子模组 ${name}／${childName}`, async (report) => {
+      const mod = await findMod(name)
+      if (!mod) return failure(`找不到模组：${name}`)
+      report(`正在重命名子模组：${childName}…`)
+      return repository.renameSubMod(mod, childName, newName)
+    })
+  )
+
   ipcMain.handle('mods:uninstall', (_event, name: string) =>
     runExclusive(`卸载 ${name}`, async () => {
       const mod = await findMod(name)

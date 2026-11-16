@@ -446,6 +446,39 @@ const api: Api = {
     return { success: true, message: `已${enabled ? '选择' : '停用'}子模组：${childName}` }
   },
 
+  async renameSubMod(name, childName, newName) {
+    const mod = findMod(name)
+    if (!mod) return { success: false, message: '找不到模组。' }
+    const child = mod.files.find(
+      (entry) => entry.directory && entry.name === childName
+    )
+    if (!child) return { success: false, message: '找不到第一层子模组。' }
+    const trimmedName = newName.trim()
+    if (trimmedName.length === 0) {
+      return { success: false, message: '子模组名称不能为空。' }
+    }
+    if (/[<>:"/\\|?*]/.test(trimmedName) || trimmedName === '.' || trimmedName === '..') {
+      return { success: false, message: '子模组名称包含无效字符，无法重命名。' }
+    }
+    if (
+      mod.files.some(
+        (entry) => entry !== child && entry.name.toLowerCase() === trimmedName.toLowerCase()
+      )
+    ) {
+      return { success: false, message: `模组源文件夹中已存在同名项目：${trimmedName}` }
+    }
+    if (child.name === trimmedName) {
+      return { success: true, message: '子模组名称未变更。' }
+    }
+
+    const disabled = (mod.subMods ?? [])
+      .filter((item) => !item.enabled)
+      .map((item) => (item.name === childName ? trimmedName : item.name))
+    child.name = trimmedName
+    mod.subMods = bundleChildren(mod.files, disabled)
+    return { success: true, message: `已将子模组 ${childName} 重命名为 ${trimmedName}(mock)` }
+  },
+
   async removeMod(name) {
     const index = mods.findIndex((mod) => mod.name === name)
     if (index < 0) return { success: false, message: `未找到模组 ${name}` }

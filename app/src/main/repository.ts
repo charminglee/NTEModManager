@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { mkdir, readdir, copyFile, stat } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { MANIFEST_FILE_NAME, type ModFileEntry, type ModInfo, type OperationResult } from '../shared/types'
 import { find7ZipExecutable, extractArchive } from './archive'
@@ -349,6 +349,34 @@ async function moveDirectory(sourcePath: string, targetPath: string): Promise<Op
     }
   }
   return failure(`移动文件夹失败：${lastError instanceof Error ? lastError.message : String(lastError)}`)
+}
+
+/** Windows 文件系统不区分大小写时，仅修改大小写需要借助临时目录分两步移动。 */
+async function moveDirectoryWithCaseChange(
+  sourcePath: string,
+  targetPath: string
+): Promise<OperationResult> {
+  if (sourcePath === targetPath) {
+    return success()
+  }
+  if (sourcePath.toLowerCase() !== targetPath.toLowerCase()) {
+    return moveDirectory(sourcePath, targetPath)
+  }
+
+  const temporaryPath = join(dirname(sourcePath), `.submod-rename-${randomUUID()}`)
+  const firstMove = await moveDirectory(sourcePath, temporaryPath)
+  if (!firstMove.success) {
+    return firstMove
+  }
+  const secondMove = await moveDirectory(temporaryPath, targetPath)
+  if (secondMove.success) {
+    return success()
+  }
+
+  const rollback = await moveDirectory(temporaryPath, sourcePath)
+  return failure(
+    `${secondMove.message}${rollback.success ? '，已回滚目录名称' : `，回滚失败：${rollback.message}`}`
+  )
 }
 
 interface ManifestMod {
@@ -994,6 +1022,112 @@ async function setSubModEnabledImpl(
     if (!removed.success) logger.warning(`子模组已切换，旧文件待清理：${previousPath}`)
   }
   return success(`已${enabled ? '选择' : '停用'}子模组：${childName}${mod.installed ? '' : '，安装整合包后生效'}`)
+}
+
+export async function renameSubMod(
+  mod: ModInfo,
+  childName: string,
+  newName: string
+): Promise<OperationResult> {
+  return finalize('重命名子模组', await renameSubModImpl(mod, childName, newName))
+}
+
+async function renameSubModImpl(
+  mod: ModInfo,
+  childName: string,
+  newName: string
+): Promise<OperationResult> {
+  if (!mod.subMods?.some((child) => child.name === childName)) {
+    return failure('找不到第一层子模组。')
+  }
+  const trimmedName = newName.trim()
+  if (trimmedName.length === 0) {
+    return failure('子模组名称不能为空。')
+  }
+  const sanitizedName = sanitizeDirectoryName(trimmedName)
+  if (sanitizedName !== trimmedName || trimmedName === '.' || trimmedName === '..') {
+    return failure('子模组名称包含无效字符，无法重命名。')
+  }
+  if (sanitizedName === childName) {
+    return success('子模组名称未变更。')
+  }
+
+  const oldSourcePath = join(mod.sourcePath, childName)
+  const newSourcePath = join(mod.sourcePath, sanitizedName)
+  if (!isDirectory(oldSourcePath)) {
+    return failure(`子模组源文件夹不存在：${childName}`)
+  }
+  const sourceCaseOnlyRename =
+    oldSourcePath !== newSourcePath &&
+    oldSourcePath.toLowerCase() === newSourcePath.toLowerCase()
+  if (existsSync(newSourcePath) && !sourceCaseOnlyRename) {
+    return failure(`模组源文件夹中已存在同名项目：${sanitizedName}`)
+  }
+
+  const oldInstallPath = join(modsDirectory(), mod.name, childName)
+  const newInstallPath = join(modsDirectory(), mod.name, sanitizedName)
+  const installCaseOnlyRename =
+    oldInstallPath !== newInstallPath &&
+    oldInstallPath.toLowerCase() === newInstallPath.toLowerCase()
+  const shouldRenameInstalled = mod.installed && existsSync(oldInstallPath)
+  if (shouldRenameInstalled && !isDirectory(oldInstallPath)) {
+    return failure('子模组安装位置被同名文件占用。')
+  }
+  if (mod.installed && existsSync(newInstallPath) && !installCaseOnlyRename) {
+    return failure(`安装目录中已存在同名项目：${sanitizedName}`)
+  }
+
+  const sourceMoved = await moveDirectoryWithCaseChange(oldSourcePath, newSourcePath)
+  if (!sourceMoved.success) {
+    return failure(`重命名子模组失败：${sourceMoved.message}`)
+  }
+
+  let installedMoved = false
+  if (shouldRenameInstalled) {
+    const installed = await moveDirectoryWithCaseChange(oldInstallPath, newInstallPath)
+    if (!installed.success) {
+      const rollback = await moveDirectoryWithCaseChange(newSourcePath, oldSourcePath)
+      return failure(
+        `重命名子模组失败：无法更新已安装文件：${installed.message}${
+          rollback.success ? '，已回滚源文件夹' : `，源文件夹回滚失败：${rollback.message}`
+        }`
+      )
+    }
+    installedMoved = true
+  }
+
+  const manifest = loadManifest()
+  const metadata = manifest.mods[mod.name]
+  if (metadata?.disabledSubMods?.includes(childName)) {
+    metadata.disabledSubMods = [
+      ...new Set(
+        metadata.disabledSubMods.map((name) => (name === childName ? sanitizedName : name))
+      )
+    ]
+    const saved = saveManifest(manifest)
+    if (!saved.success) {
+      const rollbackFailures: string[] = []
+      if (installedMoved) {
+        const installedRollback = await moveDirectoryWithCaseChange(newInstallPath, oldInstallPath)
+        if (!installedRollback.success) {
+          rollbackFailures.push(`已安装文件夹回滚失败：${installedRollback.message}`)
+        }
+      }
+      const sourceRollback = await moveDirectoryWithCaseChange(newSourcePath, oldSourcePath)
+      if (!sourceRollback.success) {
+        rollbackFailures.push(`源文件夹回滚失败：${sourceRollback.message}`)
+      }
+      return failure(
+        `重命名子模组失败：${saved.message}${
+          rollbackFailures.length === 0
+            ? '，已回滚文件夹名称'
+            : `，${rollbackFailures.join('；')}`
+        }`
+      )
+    }
+  }
+
+  return success(`已将子模组 ${childName} 重命名为 ${sanitizedName}`)
 }
 
 async function installImpl(mod: ModInfo): Promise<OperationResult> {
