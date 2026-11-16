@@ -1,5 +1,14 @@
 import { memo } from 'react'
-import { Download, ListChecks, Package, PackageOpen, RefreshCcw, Trash2, X } from 'lucide-react'
+import {
+  Download,
+  ListChecks,
+  Package,
+  PackageOpen,
+  RefreshCcw,
+  Trash2,
+  TriangleAlert,
+  X
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -13,7 +22,7 @@ import {
 interface BatchActionBarProps {
   /** 当前选中的模组数量 */
   count: number
-  /** 当前视图内全部卡片都已选中时隐藏「全选」 */
+  /** 当前视图内全部卡片都已选中时显示「全不选」 */
   allSelected: boolean
   /** 选中项中存在未安装的模组(否则「安装」无意义,禁用) */
   canInstall: boolean
@@ -57,17 +66,22 @@ function BatchActionBar({
           </span>
           <div className="h-5 w-px bg-foreground/10" />
 
-          {!allSelected && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" disabled={busy} onClick={onSelectAll}>
-                  <ListChecks />
-                  全选
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>选中当前列表中的全部模组(Ctrl+A)</TooltipContent>
-            </Tooltip>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={allSelected ? onClear : onSelectAll}
+              >
+                {allSelected ? <X /> : <ListChecks />}
+                {allSelected ? '全不选' : '全选'}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {allSelected ? '取消当前列表中的全部选择（Esc）' : '选中当前列表中的全部模组（Ctrl+A）'}
+            </TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -127,7 +141,8 @@ function BatchActionBar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" disabled={busy}>
-                失效标记
+                <TriangleAlert />
+                标记失效
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
