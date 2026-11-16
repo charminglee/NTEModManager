@@ -662,6 +662,23 @@ export default function App() {
           window.api.setSubModEnabled(mod.name, childName, enabled)
         ).then(() => refreshMods())
       },
+      onRenameSubMod: (mod, childName) => {
+        setPrompt({
+          title: '重命名子模组',
+          label: '子模组名称：',
+          initialValue: childName,
+          onConfirm: (newName) => {
+            setPrompt(null)
+            void runOperation(`正在重命名子模组 ${childName}...`, () =>
+              window.api.renameSubMod(mod.name, childName, newName)
+            ).then((result) => {
+              if (result) {
+                void refreshMods()
+              }
+            })
+          }
+        })
+      },
       onReinstall: handleReinstall,
       onRename: (mod) => {
         setPrompt({

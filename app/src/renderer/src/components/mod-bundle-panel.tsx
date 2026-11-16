@@ -1,13 +1,15 @@
-import { Layers, Package } from 'lucide-react'
+import { Layers, Package, Pencil } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import { formatFileSize } from '@/lib/format'
+import { Button } from './ui/button'
 import Switch from './ui/switch'
 import type { ModCardActions } from './mod-card'
 
-export default function ModBundlePanel({ mod, busy, onToggle }: {
+export default function ModBundlePanel({ mod, busy, onToggle, onRename }: {
   mod: ModInfo
   busy: boolean
   onToggle: ModCardActions['onToggleSubMod']
+  onRename: ModCardActions['onRenameSubMod']
 }) {
   const children = mod.subMods ?? []
   if (!children.length) return null
@@ -23,7 +25,20 @@ export default function ModBundlePanel({ mod, busy, onToggle }: {
           <li key={child.name}>
             <Package aria-hidden="true" />
             <div className="bundle-child-copy">
-              <strong>{child.name}</strong>
+              <div className="bundle-child-title">
+                <strong>{child.name}</strong>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="bundle-rename-button"
+                  disabled={busy}
+                  aria-label={`重命名子模组：${child.name}`}
+                  title="重命名子模组"
+                  onClick={() => onRename(mod, child.name)}
+                >
+                  <Pencil aria-hidden="true" />
+                </Button>
+              </div>
               <small>{formatFileSize(child.sizeBytes)}</small>
             </div>
             <Switch checked={child.enabled} disabled={busy} aria-label={`启用子模组：${child.name}`}

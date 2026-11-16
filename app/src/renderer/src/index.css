@@ -782,12 +782,28 @@ select {
   gap: 10px;
   padding: 4px 0 12px;
 }
+.detail-name-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
 .detail-name h3 {
   margin: 0;
   font-size: 20px;
   line-height: 1.35;
   font-weight: 850;
   overflow-wrap: anywhere;
+}
+.detail-name .detail-rename-button {
+  width: 1.35em;
+  height: 1.35em;
+  padding: 0;
+  font-size: 20px;
+  color: #c2b9aa;
+}
+.detail-name .detail-rename-button:hover {
+  color: var(--paper);
 }
 .detail-name .mod-status {
   margin-top: 4px;
@@ -857,13 +873,37 @@ select {
   flex: 1;
   min-width: 0;
 }
+.bundle-child-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
 .bundle-child-copy strong, .bundle-child-copy small {
   display: block;
   overflow-wrap: anywhere;
 }
+.bundle-child-title strong {
+  flex: 0 1 auto;
+  min-width: 0;
+}
 .bundle-child-copy strong {
   font-size: 13px;
+  line-height: 1.35;
   margin-bottom: 3px;
+}
+.bundle-panel .bundle-rename-button {
+  width: 1.35em;
+  height: 1.35em;
+  padding: 0;
+  font-size: 13px;
+  color: #c2b9aa;
+}
+.bundle-panel .bundle-rename-button:hover {
+  color: var(--paper);
+}
+.bundle-panel .bundle-rename-button svg {
+  width: 14px;
+  height: 14px;
 }
 .bundle-panel button:focus-visible {
   outline: 2px solid var(--paper);

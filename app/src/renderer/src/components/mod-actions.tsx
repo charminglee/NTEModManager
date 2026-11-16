@@ -4,7 +4,6 @@ import {
   FolderOpen,
   MoreHorizontal,
   Package,
-  Pencil,
   RefreshCcw,
   Trash2,
   TriangleAlert
@@ -45,10 +44,6 @@ export default function ModActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onSelect={() => actions.onRename(mod)}>
-          <Pencil />
-          重命名模组
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.onRepackage(mod)}>
           <Package />
           重新打包

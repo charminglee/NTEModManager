@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { FolderOpen, Package, PackageOpen, RefreshCw, X } from 'lucide-react'
+import { FolderOpen, Package, PackageOpen, Pencil, RefreshCw, X } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import type { ModCardActions } from './mod-card'
 import { ModStatus } from './mod-card'
@@ -48,10 +48,28 @@ export default function ModDetail({
       </div>
       <div className="detail-scroll">
         <div className="detail-name">
-          <h3>{mod.name}</h3>
+          <div className="detail-name-title">
+            <h3>{mod.name}</h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="detail-rename-button"
+              disabled={busy}
+              aria-label={`重命名模组：${mod.name}`}
+              title="重命名模组"
+              onClick={() => actions.onRename(mod)}
+            >
+              <Pencil aria-hidden="true" />
+            </Button>
+          </div>
           <ModStatus mod={mod} />
         </div>
-        <ModBundlePanel mod={mod} busy={busy} onToggle={actions.onToggleSubMod} />
+        <ModBundlePanel
+          mod={mod}
+          busy={busy}
+          onToggle={actions.onToggleSubMod}
+          onRename={actions.onRenameSubMod}
+        />
         <div
           className="detail-tabs"
           ref={tabsRef}

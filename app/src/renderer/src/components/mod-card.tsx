@@ -8,6 +8,7 @@ import ModActions from './mod-actions'
 export interface ModCardActions {
   onToggleInstall: (mod: ModInfo) => void
   onToggleSubMod: (mod: ModInfo, childName: string, enabled: boolean) => void
+  onRenameSubMod: (mod: ModInfo, childName: string) => void
   onReinstall: (mod: ModInfo) => void
   onRename: (mod: ModInfo) => void
   onRepackage: (mod: ModInfo) => void
