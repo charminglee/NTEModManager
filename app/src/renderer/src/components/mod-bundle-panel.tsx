@@ -24,7 +24,7 @@ export default function ModBundlePanel({ mod, busy, onToggle }: {
             <Package aria-hidden="true" />
             <div className="bundle-child-copy">
               <strong>{child.name}</strong>
-              <small>{formatFileSize(child.sizeBytes)} · {child.enabled ? mod.installed ? '已启用' : '待启用' : '已停用'}</small>
+              <small>{formatFileSize(child.sizeBytes)}</small>
             </div>
             <Switch checked={child.enabled} disabled={busy} aria-label={`启用子模组：${child.name}`}
               onCheckedChange={(enabled) => onToggle(mod, child.name, enabled)} />
