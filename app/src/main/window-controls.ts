@@ -13,13 +13,13 @@ export function registerWindowControls(window: BrowserWindow): void {
       throw new Error('窗口控制请求来源无效')
     }
   }
-  const state = (): WindowState => ({
+  const state = (isFullScreen = window.isFullScreen()): WindowState => ({
     isMaximized: window.isMaximized(),
-    isFullScreen: window.isFullScreen()
+    isFullScreen
   })
-  const publishState = (): void => {
+  const publishState = (isFullScreen?: boolean): void => {
     if (!window.isDestroyed() && !window.webContents.isDestroyed()) {
-      window.webContents.send('window:state-changed', state())
+      window.webContents.send('window:state-changed', state(isFullScreen))
     }
   }
   ipcMain.handle('window:state', (event): WindowState => {
@@ -56,11 +56,11 @@ export function registerWindowControls(window: BrowserWindow): void {
       return { success: false, message: describeError(error) }
     }
   })
-  window.on('maximize', publishState)
-  window.on('unmaximize', publishState)
-  window.on('enter-full-screen', publishState)
-  window.on('leave-full-screen', publishState)
-  window.webContents.on('did-finish-load', publishState)
+  window.on('maximize', () => publishState())
+  window.on('unmaximize', () => publishState())
+  window.on('enter-full-screen', () => publishState(true))
+  window.on('leave-full-screen', () => publishState(false))
+  window.webContents.on('did-finish-load', () => publishState())
   window.once('closed', () => {
     ipcMain.removeHandler('window:state')
     ipcMain.removeHandler('window:control')
