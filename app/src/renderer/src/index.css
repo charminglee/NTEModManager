@@ -459,7 +459,7 @@ input[type='checkbox'] {
   width: 130px;
   height: 85px;
   position: absolute;
-  right: 225px;
+  right: 0;
   top: -12px;
   opacity: 0.6;
   pointer-events: none;
