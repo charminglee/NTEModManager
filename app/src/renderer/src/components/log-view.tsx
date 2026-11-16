@@ -3,6 +3,7 @@ import { ArrowDown, RefreshCw, Search } from 'lucide-react'
 import type { LogEntry } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import Switch from './ui/switch'
 const labels: Record<LogEntry['level'], string> = {
   debug: '调试',
   info: '信息',
@@ -61,7 +62,6 @@ function LogView() {
     <section className="logs-workspace">
       <div className="workspace-page-heading">
         <h1>运行日志</h1>
-        <p>查看导入、安装与打包结果。</p>
       </div>
       <div className="logs-toolbar">
         <label className="library-search">
@@ -82,7 +82,12 @@ function LogView() {
           ))}
         </select>
         <label className="follow-toggle">
-          <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
+          <Switch
+            aria-label="跟随滚动"
+            checked={follow}
+            onCheckedChange={setFollow}
+            className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          />
           跟随滚动
         </label>
         <Button
@@ -128,13 +133,15 @@ function LogView() {
         <Button
           className="jump-to-log"
           variant="outline"
+          size="icon"
+          aria-label="查看最新日志"
+          title="查看最新日志"
           onClick={() => {
             setFollow(true)
             if (container.current) container.current.scrollTop = container.current.scrollHeight
           }}
         >
-          <ArrowDown />
-          查看最新日志
+          <ArrowDown aria-hidden="true" />
         </Button>
       )}
     </section>
