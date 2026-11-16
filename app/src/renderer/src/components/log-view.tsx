@@ -5,10 +5,10 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import Switch from './ui/switch'
 const labels: Record<LogEntry['level'], string> = {
-  debug: '调试',
-  info: '信息',
-  warning: '警告',
-  error: '错误'
+  debug: 'DEBUG',
+  info: 'INFO',
+  warning: 'WARN',
+  error: 'ERROR'
 }
 function LogView() {
   const [logs, setLogs] = useState<LogEntry[]>([])
