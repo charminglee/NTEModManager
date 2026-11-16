@@ -63,7 +63,7 @@ function ModListHeader(p: Props) {
             </option>
           ))}
         </select>
-        <Button variant="outline" onClick={p.onRefresh} disabled={p.busy} title="重新扫描模组目录">
+        <Button variant="outline" size="icon" onClick={p.onRefresh} disabled={p.busy} title="重新扫描模组目录">
           <RefreshCw />
         </Button>
         <DropdownMenu>
