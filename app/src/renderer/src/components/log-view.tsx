@@ -88,7 +88,7 @@ function LogView() {
           aria-pressed={follow}
           onClick={() => setFollow((previous) => !previous)}
         >
-          跟随滚动：{follow ? '开' : '关'}
+          跟随滚动
         </Button>
         <Button
           variant="outline"
