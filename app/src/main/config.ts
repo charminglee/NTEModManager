@@ -43,7 +43,8 @@ export const DEFAULT_MOD_CATEGORIES = [
   '海月',
   '卡厄斯',
   '白藏',
-  '明音凛'
+  '明音凛',
+  '曳尔沐'
 ]
 
 export const DEFAULT_CATEGORY_ORDER = [
@@ -67,7 +68,8 @@ export const DEFAULT_CATEGORY_ORDER = [
   '海月',
   '卡厄斯',
   '白藏',
-  '明音凛'
+  '明音凛',
+  '曳尔沐'
 ]
 
 let cachedConfigPath: string | null = null
