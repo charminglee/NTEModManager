@@ -1034,11 +1034,6 @@ select {
   padding: 18px 28px;
   border-top: 1px solid var(--ink);
 }
-.settings-footer > span {
-  margin-right: auto;
-  font-size: 11px;
-  color: #655c50;
-}
 .settings-toggle {
   display: flex;
   align-items: center;
@@ -1486,9 +1481,6 @@ select {
   }
   .settings-footer {
     padding: 14px 16px;
-  }
-  .settings-footer > span {
-    display: none;
   }
   .batch-surface {
     flex-wrap: wrap;

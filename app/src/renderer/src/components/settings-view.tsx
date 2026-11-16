@@ -228,7 +228,6 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
           )}
         </div>
         <div className="settings-footer">
-          <span>{dirty ? '有尚未保存的更改' : '设置已同步'}</span>
           <Button variant="outline" disabled={saving} onClick={onCancel}>
             取消
           </Button>
