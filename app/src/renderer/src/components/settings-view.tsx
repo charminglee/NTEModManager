@@ -149,13 +149,6 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
           <h1>
             {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : '高级设置'}
           </h1>
-          <p>
-            {section === 'paths'
-              ? '配置游戏与模组的存放位置。'
-              : section === 'preferences'
-                ? '调整模组操作与启动习惯。'
-                : '调试选项与配置文件。'}
-          </p>
           <span className="hazard-mark" aria-hidden />
         </div>
         <div className="settings-content">
