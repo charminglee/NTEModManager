@@ -1,10 +1,7 @@
 import {
   CircleArrowUp,
   FolderInput,
-  FolderOpen,
   MoreHorizontal,
-  Package,
-  RefreshCcw,
   Trash2,
   TriangleAlert
 } from 'lucide-react'
@@ -44,10 +41,6 @@ export default function ModActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onSelect={() => actions.onRepackage(mod)}>
-          <Package />
-          重新打包
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.onAddArchive(mod)}>
           <FolderInput />
           添加
@@ -56,27 +49,11 @@ export default function ModActions({
           <CircleArrowUp />
           更新／替换
         </DropdownMenuItem>
-        {mod.installed && (
-          <DropdownMenuItem onSelect={() => actions.onReinstall(mod)}>
-            <RefreshCcw />
-            重新安装
-          </DropdownMenuItem>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => actions.onToggleInvalid(mod)}>
           <TriangleAlert />
           {mod.invalid ? '取消失效标记' : '标记为失效'}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => actions.onOpenSource(mod)}>
-          <FolderOpen />
-          打开源目录
-        </DropdownMenuItem>
-        {mod.installed && (
-          <DropdownMenuItem onSelect={() => actions.onOpenInstall(mod)}>
-            <FolderOpen />
-            打开安装目录
-          </DropdownMenuItem>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem destructive onSelect={() => actions.onDelete(mod)}>
           <Trash2 />
