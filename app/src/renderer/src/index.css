@@ -62,6 +62,9 @@
   --peach: #f4e3de;
   --rule: #d4ccbf;
   --window-controls-width: 138px;
+  --surface-ink: rgb(32 32 30 / 84%);
+  --surface-paper: rgb(243 239 230 / 68%);
+  --surface-cream: rgb(255 252 246 / 86%);
 }
 * {
   box-sizing: border-box;
@@ -125,7 +128,7 @@ input[type='checkbox'] {
   --muted-foreground: 38 12% 74%;
   --border: 38 8% 42%;
   --input: 38 8% 60%;
-  background: var(--ink);
+  background: var(--surface-ink);
   color: var(--paper);
 }
 .ink-panel input:not([type='checkbox']) {
@@ -137,7 +140,7 @@ input[type='checkbox'] {
   height: 100%;
   position: relative;
   z-index: 1;
-  background: var(--paper);
+  background: transparent;
   transition: opacity 0.2s;
 }
 .app-shell.is-ui-hidden {
@@ -146,7 +149,7 @@ input[type='checkbox'] {
 }
 .app-header {
   flex-shrink: 0;
-  background: var(--ink);
+  background: var(--surface-ink);
   color: var(--paper);
   position: relative;
   z-index: 3;
@@ -173,7 +176,7 @@ input[type='checkbox'] {
   height: 35px;
   display: flex;
   z-index: 60;
-  background: var(--ink);
+  background: var(--surface-ink);
   color: var(--paper);
   border-bottom: 1px solid #65635b;
 }
@@ -327,7 +330,7 @@ input[type='checkbox'] {
 .character-sidebar {
   width: clamp(190px, 16vw, 254px);
   flex-shrink: 0;
-  background: var(--ink);
+  background: var(--surface-ink);
   color: var(--paper);
   display: flex;
   flex-direction: column;
@@ -415,6 +418,7 @@ input[type='checkbox'] {
   position: relative;
   padding: 0 18px 16px;
   isolation: isolate;
+  background: var(--surface-paper);
 }
 .library-portrait {
   position: absolute;
@@ -595,20 +599,20 @@ select {
   padding: 10px 9px;
   min-height: 66px;
   border-bottom: 1px solid var(--rule);
-  background: var(--cream);
+  background: var(--surface-cream);
 }
 .mod-row:last-child {
   border-bottom: 0;
 }
 .mod-row:hover {
-  background: #f4ede2;
+  background: rgb(244 237 226 / 90%);
 }
 .mod-row.is-active {
-  background: #f4e3de;
+  background: rgb(244 227 222 / 92%);
   box-shadow: inset 3px 0 var(--vermilion);
 }
 .mod-row.is-selected {
-  background: #f4e3de;
+  background: rgb(244 227 222 / 92%);
 }
 .mod-checkbox {
   display: flex;
@@ -704,7 +708,7 @@ select {
   border-radius: 3px;
   min-height: 47px;
   margin: 10px 0 0;
-  background: var(--cream);
+  background: rgb(255 252 246 / 82%);
   font-size: 12px;
   font-weight: 650;
   color: var(--ink);
@@ -1015,6 +1019,7 @@ select {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  background: var(--surface-paper);
 }
 .workspace-page-heading {
   display: flex;
@@ -1033,7 +1038,7 @@ select {
 .workspace-page-heading p {
   margin: 0;
   font-size: 12px;
-  color: #655c50;
+  color: #514a42;
 }
 .settings-content {
   flex: 1;
@@ -1062,14 +1067,14 @@ select {
   margin: 8px 0 0;
   font-size: 11px;
   line-height: 1.7;
-  color: #655c50;
+  color: #514a42;
 }
 .settings-note {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 13px 16px;
-  background: #e7dfd1;
+  background: rgb(231 223 209 / 88%);
   font-size: 12px;
   max-width: 1000px;
 }
@@ -1080,6 +1085,7 @@ select {
   gap: 10px;
   padding: 18px 28px;
   border-top: 1px solid var(--ink);
+  background: rgb(243 239 230 / 82%);
 }
 .settings-toggle {
   display: flex;
@@ -1101,7 +1107,7 @@ select {
 }
 .settings-toggle small {
   font-size: 11px;
-  color: #655c50;
+  color: #514a42;
 }
 .settings-exempt-groups {
   flex-wrap: wrap;
@@ -1125,6 +1131,7 @@ select {
   flex-direction: column;
   padding: 0 24px 24px;
   position: relative;
+  background: var(--surface-paper);
 }
 .logs-workspace .workspace-page-heading {
   padding-left: 0;
