@@ -1056,6 +1056,14 @@ select {
   font-size: 11px;
   color: #655c50;
 }
+.settings-exempt-groups {
+  flex-wrap: wrap;
+}
+.settings-exempt-groups > input {
+  width: 320px;
+  max-width: 100%;
+  margin-left: auto;
+}
 .settings-config-file {
   display: flex;
   gap: 15px;

@@ -192,18 +192,23 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
                 '启动时恢复上次打开的分类',
                 '关闭后，启动时显示全部模组。'
               )}
-              <div className="settings-field">
-                <label htmlFor="exempt-groups">独占安装豁免分组</label>
-                <div>
-                  <Input
-                    id="exempt-groups"
-                    value={draft.groupsText}
-                    disabled={saving}
-                    onChange={(e) => update('groupsText', e.target.value)}
-                    placeholder="例如：UI，特效"
-                  />
-                  <p>这些分组内允许同时安装多个模组，使用逗号分隔。</p>
-                </div>
+              <div className="settings-toggle settings-exempt-groups">
+                <span>
+                  <strong>
+                    <label htmlFor="exempt-groups">独占安装豁免分组</label>
+                  </strong>
+                  <small id="exempt-groups-help">
+                    这些分组内允许同时安装多个模组，使用逗号分隔。
+                  </small>
+                </span>
+                <Input
+                  id="exempt-groups"
+                  aria-describedby="exempt-groups-help"
+                  value={draft.groupsText}
+                  disabled={saving}
+                  onChange={(e) => update('groupsText', e.target.value)}
+                  placeholder="例如：UI，特效"
+                />
               </div>
             </>
           )}
