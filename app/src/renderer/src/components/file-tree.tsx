@@ -57,7 +57,7 @@ function TreeRow({ entry, depth, relativeBase, onRenameFile }: TreeRowProps) {
           ) : (
             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           )}
-          <Folder className="h-3.5 w-3.5 shrink-0 text-sky-500/80 dark:text-sky-300/70" />
+          <Folder className="h-3.5 w-3.5 shrink-0 text-[#c6a47e]" />
           <span className="truncate text-[13px] font-medium text-foreground/80">{entry.name}</span>
           <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground/70">
             {formatFileSize(entry.sizeBytes)}
@@ -141,6 +141,7 @@ function FileRow({
       <div className="px-2 py-0.5" style={{ paddingLeft: `${depth * 18 + 26}px` }}>
         <Input
           ref={inputRef}
+          aria-label={`重命名文件：${name}`}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}

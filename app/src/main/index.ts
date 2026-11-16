@@ -19,11 +19,7 @@ import { registerWindowLifecycle } from './window-lifecycle'
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'media',
-    // standard: 让 media://local/... 具备规范 origin,配合下方的 CORS 响应头,
-    // 背景图才能以 crossOrigin="anonymous" 提前加载并被画进 canvas:
-    // 液态玻璃的场景合成需要把背景图画进画布上传为 WebGL 纹理,
-    // 跨源图会把画布标记为 tainted,纹理上传直接抛 SecurityError
-    // corsEnabled: 允许图片带 crossOrigin="anonymous" 跨源加载(见下)
+    // 本地媒体协议使用标准来源与受限文件白名单。
     privileges: {
       standard: true,
       secure: true,
@@ -34,14 +30,6 @@ protocol.registerSchemesAsPrivileged([
   }
 ])
 
-// 液态玻璃的 backdrop-filter/SVG 滤镜逐帧开销大,软件渲染下帧率会崩到个位数:
-// 显式开启 GPU 光栅化并忽略驱动黑名单,避免掉进 SwiftShader。GPU 状态会记录在启动日志。
-app.commandLine.appendSwitch('enable-gpu-rasterization')
-app.commandLine.appendSwitch('enable-zero-copy')
-app.commandLine.appendSwitch('ignore-gpu-blocklist')
-// Skia Graphite:GPU 优先的新渲染后端。默认后端里 backdrop-filter 的 url(#svg) 位移滤镜
-// 走 CPU 光栅(GPU 占用率低、CPU 高);Graphite 把图像滤镜搬到 GPU 执行。
-app.commandLine.appendSwitch('enable-features', 'SkiaGraphite')
 // 仅 dev:开放 CDP 调试端口(自动化验证走 127.0.0.1:9222),打包版不开放。
 // 9222 被其他并行实例占用时可用 NTEMM_CDP_PORT 改口,互不干扰。
 if (!app.isPackaged) {
@@ -270,7 +258,7 @@ function registerMediaProtocol(): void {
       return new Response(new Uint8Array(data), {
         headers: {
           'content-type': contentType,
-          // 允许渲染层把图片画进 canvas(液态玻璃背景合成);图片仅来自本机白名单目录
+          // 本地图片响应允许跨源读取，文件来源仍受白名单约束。
           'access-control-allow-origin': '*'
         }
       })

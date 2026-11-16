@@ -2,7 +2,6 @@ import type { Api } from '../../../preload/index'
 import {
   ALL_CATEGORY,
   BACKGROUND_MASK_OPACITY_DEFAULT,
-  LIQUID_GLASS_DEFAULTS,
   OTHER_CATEGORY,
   SortOrder,
   UI_CORNER_RADIUS_DEFAULT,
@@ -92,7 +91,10 @@ const mods: ModInfo[] = [
     name: '黑羽-礼服-衬裙',
     sourcePath: 'D:/Games/NTE/mods/黑羽-礼服-衬裙',
     sizeBytes: 45_088_768,
-    files: [directory('textures', [file('dress_a.dds', 16_777_216), file('dress_b.dds', 12_582_912)]), file('meta.json', 512)],
+    files: [
+      directory('textures', [file('dress_a.dds', 16_777_216), file('dress_b.dds', 12_582_912)]),
+      file('meta.json', 512)
+    ],
     importedAt: '2026-08-12T22:41:00',
     installed: true,
     invalid: false
@@ -119,7 +121,10 @@ const mods: ModInfo[] = [
     name: '伊洛伊-和服-花魁',
     sourcePath: 'D:/Games/NTE/mods/伊洛伊-和服-花魁',
     sizeBytes: 63_503_232,
-    files: [directory('mesh', [file('kimono.mesh', 4_194_304)]), directory('textures', [file('kimono.dds', 41_943_040)])],
+    files: [
+      directory('mesh', [file('kimono.mesh', 4_194_304)]),
+      directory('textures', [file('kimono.dds', 41_943_040)])
+    ],
     importedAt: '2026-05-30T09:52:00',
     installed: false,
     invalid: false
@@ -191,7 +196,13 @@ const mods: ModInfo[] = [
     name: '哈索尔-天使-羽翼',
     sourcePath: 'D:/Games/NTE/mods/哈索尔-天使-羽翼',
     sizeBytes: 57_146_368,
-    files: [directory('wings', [file('wing_l.mesh', 2_097_152), file('wing_r.mesh', 2_097_152), file('feathers.dds', 33_554_432)])],
+    files: [
+      directory('wings', [
+        file('wing_l.mesh', 2_097_152),
+        file('wing_r.mesh', 2_097_152),
+        file('feathers.dds', 33_554_432)
+      ])
+    ],
     importedAt: '2026-05-08T11:21:00',
     installed: true,
     invalid: false
@@ -314,12 +325,15 @@ const config: AppConfigData = {
   testImagesEnabled: true,
   fpsCounterEnabled: false,
   uiCornerRadius: UI_CORNER_RADIUS_DEFAULT,
-  backgroundMaskOpacity: BACKGROUND_MASK_OPACITY_DEFAULT,
-  liquidGlass: { ...LIQUID_GLASS_DEFAULTS }
+  backgroundMaskOpacity: BACKGROUND_MASK_OPACITY_DEFAULT
 }
 
 const bootstrapLogs: LogEntry[] = [
-  { level: 'info', message: '浏览器测试模式:window.api 为内存 mock,文件相关操作不可用', timestamp: new Date().toISOString() }
+  {
+    level: 'info',
+    message: '浏览器测试模式:window.api 为内存 mock,文件相关操作不可用',
+    timestamp: new Date().toISOString()
+  }
 ]
 
 // ============ 背景轮播 mock ============
@@ -351,7 +365,7 @@ let mockLastCategory = ''
 const api: Api = {
   async bootstrap() {
     return {
-      config: { ...config, liquidGlass: { ...config.liquidGlass } },
+      config: { ...config },
       mods: cloneMods(),
       logs: bootstrapLogs,
       initialization: { success: true, message: '' },
@@ -420,16 +434,24 @@ const api: Api = {
   },
 
   async addModArchive(name) {
-    return findMod(name) ? unavailable('添加压缩包') : { success: false, message: `未找到模组 ${name}` }
+    return findMod(name)
+      ? unavailable('添加压缩包')
+      : { success: false, message: `未找到模组 ${name}` }
   },
 
   async replaceModArchive(name) {
-    return findMod(name) ? unavailable('替换压缩包') : { success: false, message: `未找到模组 ${name}` }
+    return findMod(name)
+      ? unavailable('替换压缩包')
+      : { success: false, message: `未找到模组 ${name}` }
   },
 
   async installAll(category) {
     const targets = mods.filter(
-      (mod) => category === ALL_CATEGORY || (category === OTHER_CATEGORY ? categoryOfMod(mod) === OTHER_CATEGORY : categoryOfMod(mod) === category)
+      (mod) =>
+        category === ALL_CATEGORY ||
+        (category === OTHER_CATEGORY
+          ? categoryOfMod(mod) === OTHER_CATEGORY
+          : categoryOfMod(mod) === category)
     )
     for (const mod of targets) mod.installed = true
     return { result: { success: true, message: `已安装 ${targets.length} 个模组(mock)` } }
@@ -437,7 +459,11 @@ const api: Api = {
 
   async uninstallAll(category) {
     const targets = mods.filter(
-      (mod) => category === ALL_CATEGORY || (category === OTHER_CATEGORY ? categoryOfMod(mod) === OTHER_CATEGORY : categoryOfMod(mod) === category)
+      (mod) =>
+        category === ALL_CATEGORY ||
+        (category === OTHER_CATEGORY
+          ? categoryOfMod(mod) === OTHER_CATEGORY
+          : categoryOfMod(mod) === category)
     )
     for (const mod of targets) mod.installed = false
     return { result: { success: true, message: `已卸载 ${targets.length} 个模组(mock)` } }
@@ -494,9 +520,13 @@ const api: Api = {
       changed += 1
     }
     return {
-      result: failures.length === 0
-        ? { success: true, message: `已${labels[action]} ${changed} 个模组(mock)` }
-        : { success: false, message: `已${labels[action]} ${changed} 个模组(mock)\n${failures.join('\n')}` }
+      result:
+        failures.length === 0
+          ? { success: true, message: `已${labels[action]} ${changed} 个模组(mock)` }
+          : {
+              success: false,
+              message: `已${labels[action]} ${changed} 个模组(mock)\n${failures.join('\n')}`
+            }
     }
   },
 
@@ -521,23 +551,19 @@ const api: Api = {
   },
 
   async getConfig() {
-    return { ...config, liquidGlass: { ...config.liquidGlass } }
+    return { ...config }
   },
 
   async updateConfig(patch) {
     const testImagesBefore = config.testImagesEnabled
-    const { liquidGlass, ...rest } = patch
-    Object.assign(config, rest)
-    if (liquidGlass) {
-      config.liquidGlass = { ...config.liquidGlass, ...liquidGlass }
-    }
+    Object.assign(config, patch)
     // 切换「使用测试背景图」后立即推送新的背景状态(与 Electron 端 reloadImages 对应)
     if (config.testImagesEnabled !== testImagesBefore) {
       backgroundGeneration++
       backgroundIndex++
       backgroundListener?.(makeBackgroundState())
     }
-    return { ...config, liquidGlass: { ...config.liquidGlass } }
+    return { ...config }
   },
 
   async openConfigFile() {
@@ -560,7 +586,14 @@ const api: Api = {
   },
 
   async pickArchive() {
-    return null
+    return new Promise<string | null>((resolve) => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.zip,.rar,.7z'
+      input.onchange = () => resolve(input.files?.[0]?.name ?? null)
+      input.oncancel = () => resolve(null)
+      input.click()
+    })
   },
 
   async pickDirectory() {

@@ -2,7 +2,6 @@ import * as React from 'react'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import { Check, ChevronRight, Circle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { LiquidGlass } from '@/components/liquid-glass'
 
 const DropdownMenu = DropdownMenuPrimitive.Root
 const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
@@ -44,16 +43,9 @@ const DropdownMenuSubContent = React.forwardRef<
     )}
     {...props}
   >
-    {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃;ui-fade-popover 让面板随开合
-        淡入淡出且不打断 backdrop 采样。尺寸/圆角/投影在宿主上,内边距在内容层 */}
-    <LiquidGlass
-      area="overlays"
-      className="ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl shadow-card"
-      fallbackClassName="glass-dialog frosted"
-      contentClassName="p-1 text-popover-foreground"
-    >
+    <div className="solid-popover p-4 min-w-[8rem] overflow-hidden rounded-xl shadow-card">
       {children}
-    </LiquidGlass>
+    </div>
   </DropdownMenuPrimitive.SubContent>
 ))
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName
@@ -72,16 +64,9 @@ const DropdownMenuContent = React.forwardRef<
       )}
       {...props}
     >
-      {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃;ui-fade-popover 让面板随开合
-          淡入淡出且不打断 backdrop 采样。尺寸/圆角/投影在宿主上,内边距在内容层 */}
-      <LiquidGlass
-        area="overlays"
-        className="ui-fade-popover min-w-[8rem] overflow-hidden rounded-xl shadow-card"
-        fallbackClassName="glass-dialog frosted"
-        contentClassName="p-1 text-popover-foreground"
-      >
+      <div className="solid-popover p-4 min-w-[8rem] overflow-hidden rounded-xl shadow-card">
         {children}
-      </LiquidGlass>
+      </div>
     </DropdownMenuPrimitive.Content>
   </DropdownMenuPrimitive.Portal>
 ))
@@ -161,7 +146,11 @@ const DropdownMenuLabel = React.forwardRef<
 >(({ className, inset, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
-    className={cn('px-2 py-1.5 text-xs font-medium text-muted-foreground', inset && 'pl-8', className)}
+    className={cn(
+      'px-2 py-1.5 text-xs font-medium text-muted-foreground',
+      inset && 'pl-8',
+      className
+    )}
     {...props}
   />
 ))
@@ -180,9 +169,7 @@ const DropdownMenuSeparator = React.forwardRef<
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName
 
 const DropdownMenuShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
-  return (
-    <span className={cn('ml-auto text-xs tracking-widest opacity-60', className)} {...props} />
-  )
+  return <span className={cn('ml-auto text-xs tracking-widest opacity-60', className)} {...props} />
 }
 DropdownMenuShortcut.displayName = 'DropdownMenuShortcut'
 

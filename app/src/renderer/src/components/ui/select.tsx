@@ -2,7 +2,6 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { LiquidGlass } from '@/components/liquid-glass'
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
@@ -15,7 +14,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-9 items-center justify-between gap-2 rounded-lg border border-input bg-[hsl(var(--card)/0.5)] px-3 text-sm whitespace-nowrap shadow-xs outline-none transition-colors data-[placeholder]:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 [&>span]:truncate',
+      'flex h-9 items-center justify-between gap-2 rounded-lg border border-input bg-card px-3 text-sm whitespace-nowrap shadow-xs outline-none transition-colors data-[placeholder]:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 [&>span]:truncate',
       className
     )}
     {...props}
@@ -64,8 +63,6 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        /* 浮层容器只承担定位与开合动画(只动缩放,opacity 会打断 backdrop 采样),
-           淡入淡出交给内部玻璃面板的 ui-fade-popover */
         'relative z-50 max-h-(--radix-select-content-available-height) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
         position === 'popper' && 'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
         className
@@ -73,17 +70,7 @@ const SelectContent = React.forwardRef<
       position={position}
       {...props}
     >
-      {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃。radix 靠 Content 的 flex-col
-          + viewport 的 flex:1 约束滚动区,插入玻璃内容层后这条链要自己接上:
-          宿主与内容层均为 flex-col,viewport 的 flex:1 才有界(否则掉回
-          h-[trigger-height] 只剩一项高);max-h/overflow 与容器同值,保证玻璃几何
-          与可见裁剪区域一致 */}
-      <LiquidGlass
-        area="overlays"
-        className="ui-fade-popover flex max-h-(--radix-select-content-available-height) min-w-[8rem] flex-col overflow-hidden rounded-xl text-popover-foreground shadow-card"
-        contentClassName="flex min-h-0 flex-1 flex-col"
-        fallbackClassName="glass-dialog frosted"
-      >
+      <div className="solid-popover p-4 flex max-h-(--radix-select-content-available-height) min-w-[8rem] flex-col overflow-hidden rounded-xl text-popover-foreground shadow-card">
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
           className={cn(
@@ -95,7 +82,7 @@ const SelectContent = React.forwardRef<
           {children}
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />
-      </LiquidGlass>
+      </div>
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ))

@@ -2,11 +2,7 @@ import { Toaster as Sonner } from 'sonner'
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
-/**
- * toast 的定位/生命周期容器。视觉全部由 toast.custom 渲染的液态玻璃卡片承担
- * (components/toast-card.tsx + index.css 的 data-styled='false' 覆盖),
- * 内置 toast 样式已不再使用,这里不再配置 classNames。
- */
+/** 通知定位与生命周期容器，通知卡片由应用绘制。 */
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner

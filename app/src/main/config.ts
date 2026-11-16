@@ -4,12 +4,11 @@ import { dirname, join } from 'node:path'
 import { describeError, logger } from './logger'
 import { ntemmConfigFile } from './ntemm-paths'
 import { parseIni, serializeIni, splitList, unquote } from './ini'
-import type { AppConfigData, AppConfigPatch, LiquidGlassConfig } from '../shared/types'
+import type { AppConfigData, AppConfigPatch } from '../shared/types'
 import {
   BACKGROUND_MASK_OPACITY_DEFAULT,
   BACKGROUND_MASK_OPACITY_MAX,
   BACKGROUND_MASK_OPACITY_MIN,
-  LIQUID_GLASS_DEFAULTS,
   SortOrder,
   UI_CORNER_RADIUS_DEFAULT,
   UI_CORNER_RADIUS_MAX,
@@ -72,64 +71,6 @@ export const DEFAULT_CATEGORY_ORDER = [
 ]
 
 let cachedConfigPath: string | null = null
-
-/** LiquidGlassConfig 字段与 [LiquidGlass] 配置节键名的对应关系 */
-const LIQUID_GLASS_INI_KEYS: Record<keyof LiquidGlassConfig, string> = {
-  enabled: 'enabled',
-  refraction: 'refraction',
-  dispersion: 'dispersion',
-  blur: 'blur',
-  // 历史键名:这一项是「边缘高光」强度,沿用旧版写下的 specular 键,避免升级后用户配置被重置
-  edgeHighlight: 'specular',
-  brightness: 'brightness',
-  saturation: 'saturation',
-  tint: 'tint',
-  opacity: 'opacity',
-  bevel: 'bevel',
-  bevelMode: 'bevel_mode',
-  gloss: 'gloss',
-  fresnel: 'fresnel',
-  distortion: 'distortion',
-  shadow: 'shadow',
-  shadowSpread: 'shadow_spread',
-  shadowOffsetY: 'shadow_offset_y',
-  buttonFeedback: 'button_feedback',
-  sidebar: 'sidebar',
-  modCards: 'mod_cards',
-  toolbar: 'toolbar',
-  logPanel: 'log_panel',
-  buttons: 'buttons',
-  inputs: 'inputs',
-  overlays: 'overlays'
-}
-
-/** 旧配置里这几项是开关写法:'1'/'true' → 100%,'0'/'false' → 0%(其余数值项按原值解析) */
-const LIQUID_GLASS_PERCENT_KEYS = new Set<keyof LiquidGlassConfig>([
-  'refraction',
-  'dispersion',
-  'blur',
-  'edgeHighlight'
-])
-
-/** 数值项取值范围(未列出的按 0-200 收口) */
-const LIQUID_GLASS_NUMBER_RANGES: Partial<Record<keyof LiquidGlassConfig, [number, number]>> = {
-  refraction: [0, 100],
-  dispersion: [0, 100],
-  blur: [0, 100],
-  edgeHighlight: [0, 200],
-  brightness: [-50, 50],
-  saturation: [-100, 100],
-  tint: [0, 100],
-  opacity: [0, 100],
-  bevel: [0, 200],
-  bevelMode: [0, 1],
-  gloss: [0, 100],
-  fresnel: [0, 200],
-  distortion: [0, 100],
-  shadow: [0, 100],
-  shadowSpread: [0, 40],
-  shadowOffsetY: [-20, 20]
-}
 
 /**
  * 配置统一保存到 ~/.ntemm/NteModManager.ini(主程序与背景服务共享);
@@ -247,12 +188,6 @@ function createDefaultConfig(filePath: string): void {
     test_images: '0',
     fps_counter: '0'
   }
-  const liquidGlassEntries: Record<string, string> = {}
-  for (const [key, iniKey] of Object.entries(LIQUID_GLASS_INI_KEYS)) {
-    const value = LIQUID_GLASS_DEFAULTS[key as keyof LiquidGlassConfig]
-    liquidGlassEntries[iniKey] = typeof value === 'boolean' ? (value ? '1' : '0') : String(value)
-  }
-  ini.LiquidGlass = liquidGlassEntries
   writeFileSync(filePath, serializeIni(ini), 'utf-8')
   logger.info(`配置文件不存在，已创建默认配置：${filePath}`)
 }
@@ -277,7 +212,6 @@ function deriveGameDirectory(modsDirectory: string, gameLauncher: string): strin
 }
 
 export function getAppConfig(): AppConfigData {
-  const ini = readIni()
   const modsDirectory = getPath('mods_directory', `${DEFAULT_GAME_DIRECTORY}/${GAME_MODS_SUBPATH}`)
   const gameLauncher = getPath('game_launcher', `${DEFAULT_GAME_DIRECTORY}/${GAME_LAUNCHER_FILENAME}`)
 
@@ -304,47 +238,8 @@ export function getAppConfig(): AppConfigData {
     ),
     backgroundMaskOpacity: clampBackgroundMaskOpacity(
       getInt('Preferences', 'background_mask_opacity', BACKGROUND_MASK_OPACITY_DEFAULT)
-    ),
-    liquidGlass: getLiquidGlassConfig(ini)
+    )
   }
-}
-
-/** 解析 [LiquidGlass] 配置节;键缺失时逐项回退到默认值。
- *  效果强度项兼容布尔写法:'1'/'true' 视为 100,'0'/'false' 视为 0。 */
-function getLiquidGlassConfig(ini: ReturnType<typeof parseIni>): LiquidGlassConfig {
-  const section = ini.LiquidGlass
-  const result = { ...LIQUID_GLASS_DEFAULTS }
-  if (!section) {
-    return result
-  }
-  for (const [key, iniKey] of Object.entries(LIQUID_GLASS_INI_KEYS)) {
-    const configKey = key as keyof LiquidGlassConfig
-    const raw = section[iniKey]?.trim().toLowerCase()
-    if (raw === undefined || raw === '') {
-      continue
-    }
-    if (typeof LIQUID_GLASS_DEFAULTS[configKey] === 'boolean') {
-      ;(result[configKey] as boolean) = raw === '1' || raw === 'true'
-      continue
-    }
-    // 旧版本的强度项是开关写法,迁移时按 0 / 100 处理
-    if (LIQUID_GLASS_PERCENT_KEYS.has(configKey)) {
-      if (raw === '1' || raw === 'true') {
-        ;(result[configKey] as number) = 100
-        continue
-      }
-      if (raw === '0' || raw === 'false') {
-        ;(result[configKey] as number) = 0
-        continue
-      }
-    }
-    const [min, max] = LIQUID_GLASS_NUMBER_RANGES[configKey] ?? [0, 200]
-    const parsed = Number.parseFloat(raw)
-    ;(result[configKey] as number) = Number.isFinite(parsed)
-      ? Math.min(max, Math.max(min, parsed))
-      : LIQUID_GLASS_DEFAULTS[configKey]
-  }
-  return result
 }
 
 function clampSortOrder(value: number): SortOrder {
@@ -525,24 +420,8 @@ export function updateAppConfig(patch: AppConfigPatch): void {
     ini.Debug = { ...ini.Debug, fps_counter: patch.fpsCounterEnabled ? '1' : '0' }
   }
 
-  if (patch.liquidGlass) {
-    const entries: Record<string, string> = { ...ini.LiquidGlass }
-    for (const [key, value] of Object.entries(patch.liquidGlass)) {
-      const iniKey = LIQUID_GLASS_INI_KEYS[key as keyof LiquidGlassConfig]
-      if (!iniKey) {
-        continue
-      }
-      if (typeof value === 'boolean') {
-        entries[iniKey] = value ? '1' : '0'
-        continue
-      }
-      // 取值范围与解析端同表:亮度/饱和度/投影偏移可为负,倒角厚度/菲涅耳可到 200
-      const [min, max] =
-        LIQUID_GLASS_NUMBER_RANGES[key as keyof LiquidGlassConfig] ?? [0, 200]
-      entries[iniKey] = String(Math.min(max, Math.max(min, Math.round(value))))
-    }
-    ini.LiquidGlass = entries
-  }
+  // 保存时清理旧版材质参数，其他配置保持原值。
+  delete ini.LiquidGlass
 
   try {
     writeFileSync(configFilePath(), serializeIni(ini), 'utf-8')

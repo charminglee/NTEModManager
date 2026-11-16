@@ -2,7 +2,6 @@ import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { LiquidGlass } from '@/components/liquid-glass'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 const Dialog = DialogPrimitive.Root
@@ -17,8 +16,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      // dialog-overlay 是稳定钩子类:设置滑块拖动隔离(index.css)按它定位遮罩
-      'dialog-overlay fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      'dialog-overlay bg-black/55 fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
       className
     )}
     {...props}
@@ -32,33 +30,21 @@ const DialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
-    {/*
-      Content 本身作为全屏 flex 容器做布局居中(而非 transform),避免 Windows
-      缩放下文字渲染在非整数像素上发虚;Portal 的 Presence 跟踪的直接子元素就是
-      Content,关闭动画的播放与检测依赖这一点,不能再往里包一层容器。
-    */}
     <DialogPrimitive.Content
       ref={ref}
       className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out"
       {...props}
     >
-      {/* 面板后垫全屏透明关闭层:点击面板外的空白区域即可关闭对话框 */}
       <DialogPrimitive.Close
         tabIndex={-1}
         aria-label="关闭"
         className="pointer-events-auto absolute inset-0 cursor-default rounded-none bg-transparent opacity-0 outline-none"
       />
-      {/* 液态玻璃面板,关闭效果时回退对话框同款毛玻璃;overlay-panel 是滑块拖动
-          隔离(index.css)按它定位面板的稳定钩子类。ui-fade-popover 让面板随开合
-          淡入淡出且不打断 backdrop 采样;网格布局与内边距放在 relative 内容层 */}
-      <LiquidGlass
-        area="overlays"
+      <div
         className={cn(
-          'overlay-panel ui-fade-popover pointer-events-auto w-full max-w-lg rounded-xl shadow-card',
+          'relative overlay-panel solid-popover p-4 pointer-events-auto w-full max-w-lg rounded-xl shadow-card',
           className
         )}
-        fallbackClassName="glass-dialog frosted"
-        contentClassName="grid gap-4 p-6"
       >
         {children}
         <Tooltip>
@@ -70,7 +56,7 @@ const DialogContent = React.forwardRef<
           </TooltipTrigger>
           <TooltipContent>关闭</TooltipContent>
         </Tooltip>
-      </LiquidGlass>
+      </div>
     </DialogPrimitive.Content>
   </DialogPortal>
 ))

@@ -1,168 +1,127 @@
 import { memo } from 'react'
-import { ArrowUpDown, Import, Package, PackageOpen, RefreshCw, Search, Wrench } from 'lucide-react'
+import { Import, MoreHorizontal, Package, RefreshCw, Search } from 'lucide-react'
 import { SORT_OPTIONS, type SortOrder } from '@shared/types'
-import { cn } from '@/lib/utils'
-import { LiquidGlass } from '@/components/liquid-glass'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
+  DropdownMenuItem,
   DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-
-interface ModListHeaderProps {
+} from './ui/dropdown-menu'
+import ticket from '@/assets/ticket-stamp.svg'
+export type StatusFilter = 'all' | 'installed' | 'uninstalled' | 'invalid'
+interface Props {
   category: string
-  count: number
-  /** 已安装的模组数量,显示在总数右侧 */
-  installedCount: number
+  counts: Record<StatusFilter, number>
   search: string
   sortOrder: SortOrder
+  status: StatusFilter
   busy: boolean
+  selectionMode: boolean
   onSearchChange: (value: string) => void
   onSortOrderChange: (order: SortOrder) => void
-  onInstallAll: () => void
-  onUninstallAll: () => void
+  onStatusChange: (status: StatusFilter) => void
+  onSelectionModeChange: (enabled: boolean) => void
   onRefresh: () => void
   onImport: () => void
   onPackageMod: () => void
-  /** F9 隐藏 UI 时为 true:玻璃面板自身淡出(不能用祖先 opacity,会破坏 backdrop 采样) */
-  uiHidden?: boolean
+  onInstallAll: () => void
+  onUninstallAll: () => void
 }
-
-/** memo:日志推送等无关状态变化时不重渲染工具栏(含玻璃元素);搜索输入仍正常更新 */
-function ModListHeader({
-  category,
-  count,
-  installedCount,
-  search,
-  sortOrder,
-  busy,
-  uiHidden,
-  onSearchChange,
-  onSortOrderChange,
-  onInstallAll,
-  onUninstallAll,
-  onRefresh,
-  onImport,
-  onPackageMod
-}: ModListHeaderProps) {
+function ModListHeader(p: Props) {
   return (
-    <header className="flex shrink-0 flex-wrap items-center gap-3 px-4 pb-4 pt-6">
-      <div
-        className={cn(
-          'min-w-0 transition-opacity duration-300',
-          uiHidden && 'opacity-0'
-        )}
-      >
-        <h1 className="truncate text-2xl font-bold tracking-wide text-foreground text-shadow-soft">
-          {category}
-        </h1>
-        <div className="mt-0.5 text-xs text-muted-foreground">
-          {count} 个模组 · {installedCount} 个已安装
+    <div className="mod-library-header">
+      <div className="library-title-row">
+        <div>
+          <div className="library-title">
+            <h1>{p.category === '全部' ? '全部模组' : p.category}</h1>
+            <span className="title-accent" aria-hidden />
+          </div>
+          <p>
+            {p.counts.all} 个模组 · {p.counts.installed} 个已安装
+          </p>
+        </div>
+        <img className="ticket-stamp" src={ticket} alt="" />
+        <div className="library-actions">
+          <Button onClick={p.onImport} disabled={p.busy}>
+            <Import />
+            导入模组
+          </Button>
+          <Button variant="outline" onClick={p.onPackageMod} disabled={p.busy}>
+            <Package />
+            打包模组
+          </Button>
         </div>
       </div>
-
-      <LiquidGlass
-        area="toolbar"
-        className={cn('ui-fade ml-auto rounded-2xl', uiHidden && 'ui-fade-hidden')}
-        contentClassName="flex flex-wrap items-center gap-2 px-2.5 py-2"
-      >
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+      <div className="library-search-row">
+        <label className="library-search">
+          <Search size={17} />
           <Input
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="搜索模组..."
-            className="h-9 w-44 border-transparent pl-8 hover:bg-foreground/[0.06]"
+            value={p.search}
+            aria-label="搜索模组"
+            placeholder="搜索当前分类的模组"
+            onChange={(e) => p.onSearchChange(e.target.value)}
           />
-        </div>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="glass" size="icon" disabled={busy} onClick={onRefresh}>
-              <RefreshCw />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>重新扫描模组目录</TooltipContent>
-        </Tooltip>
-
+        </label>
+        <select
+          aria-label="排序方式"
+          value={p.sortOrder}
+          onChange={(e) => p.onSortOrderChange(Number(e.target.value) as SortOrder)}
+        >
+          {SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <Button variant="outline" onClick={p.onRefresh} disabled={p.busy} title="重新扫描模组目录">
+          <RefreshCw />
+          <span className="rescan-label">重新扫描</span>
+        </Button>
         <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button variant="glass" size="icon" disabled={busy}>
-                  <ArrowUpDown />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>更改排序方式</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="end" className="w-52">
-            <DropdownMenuLabel>排序方式</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {SORT_OPTIONS.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.value}
-                checked={option.value === sortOrder}
-                onCheckedChange={() => onSortOrderChange(option.value)}
-              >
-                {option.label}
-              </DropdownMenuCheckboxItem>
-            ))}
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" aria-label="当前分类操作" disabled={p.busy}>
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={p.onInstallAll}>当前分类全部安装</DropdownMenuItem>
+            <DropdownMenuItem onSelect={p.onUninstallAll}>当前分类全部卸载</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="glass" disabled={busy} onClick={onInstallAll}>
-              <Wrench />
-              全部安装
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>安装当前分类中的所有未安装模组</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="glass" disabled={busy} onClick={onUninstallAll}>
-              <PackageOpen />
-              全部卸载
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>卸载当前分类中的所有已安装模组</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="glass" disabled={busy} onClick={onPackageMod}>
-              <Package />
-              打包
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>打包模组</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              disabled={busy}
-              onClick={onImport}
-              className="rounded-lg bg-linear-to-r from-violet-600/80 to-fuchsia-600/80 font-semibold text-white shadow-glow hover:from-violet-500/85 hover:to-fuchsia-500/85"
+      </div>
+      <div className="library-filter-row">
+        <div role="group" aria-label="按安装状态筛选">
+          {(
+            [
+              { id: 'all', label: '全部' },
+              { id: 'installed', label: '已安装' },
+              { id: 'uninstalled', label: '未安装' },
+              { id: 'invalid', label: '失效' }
+            ] as const
+          ).map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={p.status === id}
+              onClick={() => p.onStatusChange(id)}
             >
-              <Import />
-              导入
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>从压缩包导入模组</TooltipContent>
-        </Tooltip>
-      </LiquidGlass>
-    </header>
+              {label}
+              <span>{p.counts[id]}</span>
+            </button>
+          ))}
+        </div>
+        <label className="batch-mode-toggle">
+          <input
+            type="checkbox"
+            checked={p.selectionMode}
+            onChange={(e) => p.onSelectionModeChange(e.target.checked)}
+          />
+          批量选择
+        </label>
+      </div>
+    </div>
   )
 }
-
 export default memo(ModListHeader)

@@ -1,158 +1,144 @@
-import { memo, useEffect, useRef, useState } from 'react'
-import { ArrowDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { LiquidGlass } from '@/components/liquid-glass'
-import { cn } from '@/lib/utils'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDown, RefreshCw, Search } from 'lucide-react'
 import type { LogEntry } from '@shared/types'
-
-const LEVEL_COLORS: Record<LogEntry['level'], string> = {
-  debug: 'text-muted-foreground/70',
-  info: 'text-foreground/85',
-  warning: 'text-amber-600 dark:text-amber-300/90',
-  error: 'text-[hsl(0,72%,44%)] dark:text-[hsl(0,85%,72%)]'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+const labels: Record<LogEntry['level'], string> = {
+  debug: '调试',
+  info: '信息',
+  warning: '警告',
+  error: '错误'
 }
-
-const LEVEL_LABELS: Record<LogEntry['level'], string> = {
-  debug: 'DEBUG',
-  info: 'INFO',
-  warning: 'WARN',
-  error: 'ERROR'
-}
-
-interface LogViewProps {
-  /** F9 隐藏 UI 时为 true:面板自身淡出(不能用祖先 opacity,会破坏玻璃的 backdrop 采样) */
-  uiHidden?: boolean
-}
-
-/** 界面最多渲染的日志条数;完整日志在 INI 同目录的日志文件里 */
-const MAX_VISIBLE_LOGS = 500
-
-/** 日志状态上限,与旧版 App 层一致:滚动窗口丢弃最老的条目 */
-const MAX_KEPT_LOGS = 4000
-
-/**
- * 日志视图:日志数据完全自管理(挂载时拉取 + 常驻订阅推送),
- * 不经 App 的 state 中转——安装/扫描期间日志可能每秒推送数十条,
- * 若存进 App 会让整个界面跟着每条重渲染,现在只有本组件自身更新。
- */
-function LogView({ uiHidden }: LogViewProps) {
+function LogView() {
   const [logs, setLogs] = useState<LogEntry[]>([])
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [followTail, setFollowTail] = useState(true)
-  const [showJumpButton, setShowJumpButton] = useState(false)
-  const visibleLogs = logs.length > MAX_VISIBLE_LOGS ? logs.slice(-MAX_VISIBLE_LOGS) : logs
-
+  const [query, setQuery] = useState('')
+  const [level, setLevel] = useState('all')
+  const [follow, setFollow] = useState(true)
+  const container = useRef<HTMLDivElement>(null)
+  const filtered = useMemo(
+    () =>
+      logs
+        .filter(
+          (entry) =>
+            (level === 'all' || entry.level === level) &&
+            entry.message.toLowerCase().includes(query.toLowerCase())
+        )
+        .slice(-500),
+    [logs, query, level]
+  )
   useEffect(() => {
-    // 先订阅再拉取,避免错过挂载与拉取之间推送的条目;推送侧幂等由拉取结果覆盖
+    let live = true
+    const pending: LogEntry[] = []
+    let loaded = false
     const unsubscribe = window.api.onLogEntry((entry) => {
-      setLogs((prev) => [...prev.slice(-MAX_KEPT_LOGS), entry])
+      if (!loaded) pending.push(entry)
+      else setLogs((previous) => [...previous.slice(-3999), entry])
     })
-    void window.api.getLogEntries().then(setLogs)
-    return unsubscribe
+    void window.api.getLogEntries().then((entries) => {
+      if (!live) return
+      loaded = true
+      const keys = new Set(
+        entries.map((entry) => `${entry.timestamp}\0${entry.level}\0${entry.message}`)
+      )
+      setLogs(
+        [
+          ...entries,
+          ...pending.filter(
+            (entry) => !keys.has(`${entry.timestamp}\0${entry.level}\0${entry.message}`)
+          )
+        ].slice(-4000)
+      )
+    })
+    return () => {
+      live = false
+      unsubscribe()
+    }
   }, [])
-
   useEffect(() => {
-    const container = containerRef.current
-    if (container && followTail) {
-      container.scrollTop = container.scrollHeight
-    }
-  }, [logs, followTail])
-
-  const handleScroll = () => {
-    const container = containerRef.current
-    if (!container) {
-      return
-    }
-    const atBottom = container.scrollTop >= container.scrollHeight - container.clientHeight - 4
-    setFollowTail(atBottom)
-    setShowJumpButton(!atBottom)
-  }
-
-  const jumpToBottom = () => {
-    const container = containerRef.current
-    if (container) {
-      container.scrollTop = container.scrollHeight
-      setFollowTail(true)
-      setShowJumpButton(false)
-    }
-  }
-
+    if (follow && container.current) container.current.scrollTop = container.current.scrollHeight
+  }, [filtered, follow])
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div
-        className={cn(
-          'flex items-center gap-3 px-4 pb-4 transition-opacity duration-300',
-          uiHidden && 'opacity-0'
-        )}
-      >
-        <h1 className="text-2xl font-bold tracking-wide text-foreground text-shadow-soft">
-          运行日志
-        </h1>
-        <span className="text-xs text-muted-foreground">{logs.length} 条</span>
+    <section className="logs-workspace">
+      <div className="workspace-page-heading">
+        <h1>运行日志</h1>
+        <p>查看导入、安装与打包结果。</p>
+        <span className="hazard-mark" aria-hidden />
+      </div>
+      <div className="logs-toolbar">
+        <label className="library-search">
+          <Search size={17} />
+          <Input
+            aria-label="查找日志"
+            placeholder="查找日志"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <select aria-label="日志级别" value={level} onChange={(e) => setLevel(e.target.value)}>
+          <option value="all">全部级别</option>
+          {Object.entries(labels).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <label className="follow-toggle">
+          <input type="checkbox" checked={follow} onChange={(e) => setFollow(e.target.checked)} />
+          跟随滚动
+        </label>
         <Button
-          variant="glass"
-          size="sm"
-          className="ml-auto"
-          onClick={() => {
-            void window.api.getLogEntries().then(setLogs)
-          }}
+          variant="outline"
+          size="icon"
+          aria-label="刷新日志"
+          onClick={() => void window.api.getLogEntries().then(setLogs)}
         >
-          刷新
+          <RefreshCw />
         </Button>
       </div>
-      <div className="relative min-h-0 flex-1">
-        {/* 关闭液态玻璃时回退为对话框同款毛玻璃,保证日志仍浮在背景图上可读 */}
-        <LiquidGlass
-          area="logPanel"
-          className={cn('ui-fade h-full rounded-xl', uiHidden && 'ui-fade-hidden')}
-          fallbackClassName="glass-dialog frosted"
-          contentClassName="h-full"
-        >
-        <div
-          ref={containerRef}
-          onScroll={handleScroll}
-          className="h-full overflow-y-auto p-4"
-        >
-          {logs.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              暂无日志
-            </div>
-          ) : (
-            <div className="select-text space-y-0.5 font-mono text-xs leading-relaxed">
-              {visibleLogs.map((entry, index) => (
-                <div key={index} className="flex gap-2">
-                  <span className="shrink-0 text-muted-foreground/60">{entry.timestamp}</span>
-                  <span className={`shrink-0 font-semibold ${LEVEL_COLORS[entry.level]}`}>
-                    {LEVEL_LABELS[entry.level]}
-                  </span>
-                  <span className={`${LEVEL_COLORS[entry.level]} break-all`}>{entry.message}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </LiquidGlass>
       <div
-        className={cn(
-          'pointer-events-none absolute bottom-4 right-8 transition-opacity duration-300',
-          uiHidden && 'opacity-0'
-        )}
+        className="logs-table ink-panel"
+        ref={container}
+        onScroll={() => {
+          const el = container.current
+          if (el && el.scrollHeight - el.scrollTop - el.clientHeight > 24) setFollow(false)
+        }}
       >
-        {showJumpButton && (
-          <Button
-            variant="glass"
-            size="icon"
-            className="pointer-events-auto h-8 w-8 rounded-full"
-            onClick={jumpToBottom}
-            title="滚动到底部"
-          >
-            <ArrowDown />
-          </Button>
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th>
+              <th>级别</th>
+              <th>内容</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((entry, index) => (
+              <tr key={index}>
+                <td>{entry.timestamp}</td>
+                <td className={`log-level-${entry.level}`}>{labels[entry.level]}</td>
+                <td>{entry.message}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!filtered.length && (
+          <p className="log-empty">{query || level !== 'all' ? '没有匹配的日志' : '暂无日志'}</p>
         )}
       </div>
-      </div>
-    </div>
+      {!follow && (
+        <Button
+          className="jump-to-log"
+          variant="outline"
+          onClick={() => {
+            setFollow(true)
+            if (container.current) container.current.scrollTop = container.current.scrollHeight
+          }}
+        >
+          <ArrowDown />
+          查看最新日志
+        </Button>
+      )}
+    </section>
   )
 }
-
 export default memo(LogView)
