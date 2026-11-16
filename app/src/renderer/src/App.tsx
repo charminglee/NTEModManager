@@ -22,6 +22,7 @@ import { basenameWithoutExtension, joinPath } from '@/lib/format'
 import BackgroundLayer from '@/components/background-layer'
 import MotionPresence from '@/components/motion-presence'
 import { useModListMotion } from '@/hooks/use-mod-list-motion'
+import { useAutoHideScrollbars } from '@/hooks/use-auto-hide-scrollbars'
 import Sidebar from '@/components/sidebar'
 import ModListHeader, { type StatusFilter } from '@/components/mod-list-header'
 import AppHeader, { type AppView } from '@/components/app-header'
@@ -113,6 +114,8 @@ export default function App() {
   const busyRef = useRef(false)
   const modListRef = useRef<HTMLDivElement>(null)
   const dragDepthRef = useRef(0)
+
+  useAutoHideScrollbars()
 
   const refreshMods = useCallback(async (): Promise<ModInfo[]> => {
     const scanned = await window.api.scanMods()

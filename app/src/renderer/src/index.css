@@ -116,10 +116,15 @@ input[type='checkbox'] {
   height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #8b8376;
+  background-color: transparent;
   border-radius: 1px;
+  transition: background-color var(--motion-fast) ease-out;
 }
-::-webkit-scrollbar-track {
+[data-scrollbar-visible='true']::-webkit-scrollbar-thumb {
+  background-color: #8b8376;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
   background: transparent;
 }
 .ink-panel {
