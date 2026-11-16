@@ -159,23 +159,6 @@ function BatchActionBar({
             </TooltipTrigger>
             <TooltipContent>删除选中的模组(不可撤销)</TooltipContent>
           </Tooltip>
-
-          <div className="h-5 w-px bg-foreground/10" />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-                disabled={busy}
-                onClick={onClear}
-                aria-label="清除选择"
-              >
-                <X />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>清除选择(Esc)</TooltipContent>
-          </Tooltip>
         </div>
       </div>
     </div>
