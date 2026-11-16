@@ -3,7 +3,6 @@ import { ArrowDown, RefreshCw, Search } from 'lucide-react'
 import type { LogEntry } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import Switch from './ui/switch'
 const labels: Record<LogEntry['level'], string> = {
   debug: 'DEBUG',
   info: 'INFO',
@@ -81,15 +80,16 @@ function LogView() {
             </option>
           ))}
         </select>
-        <label className="follow-toggle">
-          <Switch
-            aria-label="跟随滚动"
-            checked={follow}
-            onCheckedChange={setFollow}
-            className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          />
-          跟随滚动
-        </label>
+        <Button
+          type="button"
+          className="follow-toggle"
+          variant={follow ? 'default' : 'outline'}
+          aria-label="跟随滚动"
+          aria-pressed={follow}
+          onClick={() => setFollow((previous) => !previous)}
+        >
+          跟随滚动：{follow ? '开' : '关'}
+        </Button>
         <Button
           variant="outline"
           size="icon"
