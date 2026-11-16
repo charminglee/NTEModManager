@@ -940,16 +940,6 @@ export default function App() {
               onSelectCategory={handleSelectCategory}
             />
             <main className="mod-library">
-              {categoryImages.get(currentCategory) && (
-                <img
-                  key={currentCategory}
-                  className="library-portrait"
-                  src={categoryImages.get(currentCategory)!}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                />
-              )}
               <ModListHeader
                 category={currentCategory}
                 counts={statusCounts}
