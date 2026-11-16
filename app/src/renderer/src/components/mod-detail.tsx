@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { FolderOpen, Info, Package, PackageOpen, RefreshCw, X } from 'lucide-react'
+import { FolderOpen, Package, PackageOpen, RefreshCw, X } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import type { ModCardActions } from './mod-card'
 import { ModStatus } from './mod-card'
@@ -98,12 +98,6 @@ export default function ModDetail({
             信息
           </button>
         </div>
-        {group && !exempt && (
-          <div className="exclusive-notice">
-            <strong>同组互斥</strong>
-            <span>安装其他「{group}」模组时，将自动卸载本项。</span>
-          </div>
-        )}
         {tab === 'files' ? (
           <div
             id="detail-files-panel"
@@ -122,10 +116,6 @@ export default function ModDetail({
             ) : (
               <p className="p-4 text-sm text-muted-foreground">此模组暂无文件</p>
             )}
-            <p className="file-rename-hint">
-              <Info size={14} />
-              双击文件名可重命名
-            </p>
           </div>
         ) : (
           <dl

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/components/toast-card'
-import { Blocks, Info, LoaderCircle, Package } from 'lucide-react'
+import { Blocks, LoaderCircle, Package } from 'lucide-react'
 import {
   ALL_CATEGORY,
   OTHER_CATEGORY,
@@ -975,14 +975,6 @@ export default function App() {
                     <section className="mod-group" key={group.secondary}>
                       <div className="mod-group-heading">
                         <h2>{group.secondary || '其他模组'}</h2>
-                        {group.secondary &&
-                          group.secondary !== '模组' &&
-                          !config.exclusiveInstallExemptGroups.includes(group.secondary) && (
-                            <span className="group-exclusive">
-                              <Info size={13} />
-                              同组互斥
-                            </span>
-                          )}
                         <span className="hazard-mark" aria-hidden />
                       </div>
                       <div className="mod-group-rows">
