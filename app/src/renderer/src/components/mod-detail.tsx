@@ -165,7 +165,7 @@ export default function ModDetail({
           onClick={() => actions.onToggleInstall(mod)}
         >
           <PackageOpen />
-          {mod.installed ? '卸载此模组' : mod.invalid ? '确认后安装此模组' : '安装此模组'}
+          {mod.installed ? '卸载' : '安装'}
         </Button>
       </div>
     </aside>

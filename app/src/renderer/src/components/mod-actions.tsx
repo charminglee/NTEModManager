@@ -58,7 +58,7 @@ export default function ModActions({
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.onReplaceArchive(mod)}>
           <CircleArrowUp />
-          更新／替换压缩包
+          更新／替换
         </DropdownMenuItem>
         {mod.installed && (
           <DropdownMenuItem onSelect={() => actions.onReinstall(mod)}>
@@ -73,12 +73,12 @@ export default function ModActions({
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.onOpenSource(mod)}>
           <FolderOpen />
-          打开源文件位置
+          打开源目录
         </DropdownMenuItem>
         {mod.installed && (
           <DropdownMenuItem onSelect={() => actions.onOpenInstall(mod)}>
             <FolderOpen />
-            打开安装位置
+            打开安装目录
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
