@@ -129,6 +129,7 @@ export default function App() {
   const [mods, setMods] = useState<ModInfo[]>([])
   const [currentCategory, setCurrentCategory] = useState<string>(ALL_CATEGORY)
   const [view, setView] = useState<AppView>('mods')
+  const [mountedCommunityViews, setMountedCommunityViews] = useState<Set<'gamebanana' | 'ayakamods'>>(new Set())
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
   const [chromeHidden, setChromeHidden] = useState(false)
@@ -327,7 +328,18 @@ export default function App() {
     setFocusedName(name)
     setDetailsOpen(true)
   }, [])
+  useEffect(() => {
+    if (view === 'gamebanana' || view === 'ayakamods') {
+      setMountedCommunityViews((current) => {
+        if (current.has(view)) return current
+        return new Set(current).add(view)
+      })
+    }
+  }, [view])
   const requestView = useCallback((next: AppView) => setView(next), [])
+  const handleGameBananaModsChanged = useCallback(() => {
+    void refreshMods()
+  }, [refreshMods])
   useEffect(() => window.api.onProgress(setActivity), [])
 
   const groupedMods = useMemo(
@@ -804,6 +816,7 @@ export default function App() {
   }, [view, importSession, prompt, pendingConfirm, renameQueue])
 
   const ayakaPageVisible =
+    view === 'ayakamods' &&
     !chromeHidden &&
     currentRename === null &&
     importSession === null &&
@@ -1182,6 +1195,23 @@ export default function App() {
             }}
           />
         ) : null}
+        <div className="community-view-stack" hidden={view !== 'gamebanana' && view !== 'ayakamods'}>
+          {(view === 'gamebanana' || mountedCommunityViews.has('gamebanana')) && (
+            <div className="community-view-panel" hidden={view !== 'gamebanana'}>
+              <GameBananaPage
+                active={view === 'gamebanana'}
+                config={config}
+                onConfigChange={setConfig}
+                onModsChanged={handleGameBananaModsChanged}
+              />
+            </div>
+          )}
+          {(view === 'ayakamods' || mountedCommunityViews.has('ayakamods')) && (
+            <div className="community-view-panel" hidden={view !== 'ayakamods'}>
+              <AyakaModsPage visible={ayakaPageVisible} />
+            </div>
+          )}
+        </div>
       </div>
       {config.fpsCounterEnabled && (
         <div className="fps-counter">

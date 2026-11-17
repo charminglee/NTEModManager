@@ -156,7 +156,7 @@ export default function GameBananaDetail({
       </AppDialog>
       <AppDialog
         kind="dialog"
-        open={imageIndex !== null}
+        open={open && imageIndex !== null}
         onOpenChange={(open) => { if (!open) setImageIndex(null) }}
         title="截图预览"
         headerAction={imageIndex === null ? undefined : (

@@ -14,6 +14,7 @@ import GameBananaDetail from './gamebanana-detail'
 import { toast } from './toast-card'
 
 interface Props {
+  active: boolean
   config: AppConfigData
   onConfigChange: (config: AppConfigData) => void
   onModsChanged: () => void
@@ -39,7 +40,7 @@ function shortNumber(value: number): string {
   return new Intl.NumberFormat('zh-CN', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 }
 
-export default function GameBananaPage({ config, onConfigChange, onModsChanged }: Props) {
+export default function GameBananaPage({ active, config, onConfigChange, onModsChanged }: Props) {
   const [mods, setMods] = useState<GameBananaMod[]>([])
   const [selected, setSelected] = useState<GameBananaMod | null>(null)
   const lastSelectedRef = useRef<GameBananaMod | null>(null)
@@ -81,7 +82,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
   }
 
   const loadNextPage = async () => {
-    if (loadingMoreRef.current || !hasMore) return
+    if (!active || loading || loadingMoreRef.current || !hasMore) return
     const page = nextPageRef.current
     loadingMoreRef.current = true
     setLoadingMore(true)
@@ -111,12 +112,12 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
   }, [])
 
   useEffect(() => {
-    if (loading || loadingMore || !hasMore) return
+    if (!active || loading || loadingMore || !hasMore) return
     const grid = modGridRef.current
     if (grid && grid.scrollHeight <= grid.clientHeight + 80) {
       void loadNextPage()
     }
-  }, [hasMore, loading, loadingMore, mods.length])
+  }, [active, hasMore, loading, loadingMore, mods.length])
 
   useEffect(() => {
     let active = true
@@ -276,16 +277,16 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
         <GameBananaDetail
           key={lastSelectedRef.current.id}
           initial={lastSelectedRef.current}
-          open={selected !== null}
+          open={active && selected !== null}
           onOpenChange={(open) => {
             if (!open) setSelected(null)
           }}
           onDownload={openDownload}
         />
       )}
-      <GameBananaDownloadDrawer open={drawerOpen} tasks={tasks} onClose={() => setDrawerOpen(false)} />
+      <GameBananaDownloadDrawer open={active && drawerOpen} tasks={tasks} onClose={() => setDrawerOpen(false)} />
       <PromptDialog
-        open={downloadTarget !== null}
+        open={active && downloadTarget !== null}
         title="下载 GameBanana 模组"
         description={downloadTarget ? `即将下载 ${downloadTarget.file.name} ，请输入保存到模组库的名称：` : undefined}
         initialValue={downloadTarget?.mod.name ?? ''}
