@@ -1,4 +1,4 @@
-import { BrowserWindow, Menu, app, nativeTheme, protocol } from 'electron'
+import { BrowserWindow, Menu, app, nativeTheme, protocol, session, shell } from 'electron'
 import { existsSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
@@ -41,11 +41,55 @@ if (!app.isPackaged) {
   app.commandLine.appendSwitch('remote-debugging-port', process.env.NTEMM_CDP_PORT ?? '9222')
 }
 
-// 加固:拦截 window.open 与页面发起的导航(渲染层只应加载本地 dev server / 打包文件),
-// 防止未来引入的远程内容或被污染的数据把窗口导向任意 URL
+const AYAKA_MODS_COMMUNITY_PATH = '/games/neverness-to-everness.417/'
+const AYAKA_MODS_HOSTS = new Set(['ayakamods.com', 'www.ayakamods.com'])
+
+function isHttpsUrl(url: string): boolean {
+  try {
+    return new URL(url).protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function isAyakaModsUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'https:' && AYAKA_MODS_HOSTS.has(parsed.hostname)
+  } catch {
+    return false
+  }
+}
+
+function isAyakaModsCommunityPage(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return isAyakaModsUrl(url) && parsed.pathname === AYAKA_MODS_COMMUNITY_PATH
+  } catch {
+    return false
+  }
+}
+
+// 加固：主界面只允许本地页面；AyakaMods 内嵌页只允许站点自身导航，外部 HTTPS 链接交给系统浏览器。
 app.on('web-contents-created', (_event, contents) => {
-  contents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  contents.on('will-navigate', (event, url) => {
+  const isAyakaModsWebview = contents.getType() === 'webview'
+  contents.setWindowOpenHandler(({ url }) => {
+    if (isAyakaModsWebview && isHttpsUrl(url)) {
+      void shell.openExternal(url)
+    }
+    return { action: 'deny' }
+  })
+  const guardNavigation = (event: Electron.Event, url: string) => {
+    if (isAyakaModsWebview) {
+      if (isAyakaModsUrl(url)) return
+      event.preventDefault()
+      if (isHttpsUrl(url)) {
+        void shell.openExternal(url)
+      } else {
+        logger.warning(`已拦截 AyakaMods 内嵌页导航：${url}`)
+      }
+      return
+    }
     const devUrl = process.env.ELECTRON_RENDERER_URL
     const allowed =
       (devUrl !== undefined && url.startsWith(devUrl)) ||
@@ -56,9 +100,12 @@ app.on('web-contents-created', (_event, contents) => {
       event.preventDefault()
       logger.warning(`已拦截渲染层导航：${url}`)
     }
-  })
-  // 渲染层的报错(JS 异常、未处理的 Promise 拒绝、资源加载失败)统一落进运行日志,
-  // 否则渲染层出问题只在 devtools 里可见,日志文件里毫无痕迹
+  }
+  contents.on('will-navigate', guardNavigation)
+  contents.on('will-redirect', guardNavigation)
+  if (isAyakaModsWebview) return
+  // 渲染层的报错（JS 异常、未处理的 Promise 拒绝、资源加载失败）统一落进运行日志，
+  // 否则渲染层出问题只在 devtools 里可见，日志文件里毫无痕迹。
   contents.on('console-message', (details) => {
     if (details.level === 'error') {
       const source = details.sourceId ? `（${details.sourceId}:${details.lineNumber}）` : ''
@@ -111,8 +158,20 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webviewTag: true,
       spellcheck: false
     }
+  })
+  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    if (!isAyakaModsCommunityPage(params.src)) {
+      event.preventDefault()
+      logger.warning(`已拦截未知内嵌页：${params.src}`)
+      return
+    }
+    delete webPreferences.preload
+    webPreferences.nodeIntegration = false
+    webPreferences.contextIsolation = true
+    webPreferences.sandbox = true
   })
   setMainWindowProvider(() => mainWindow)
   registerWindowLifecycle(mainWindow)
@@ -318,6 +377,10 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
+    session.fromPartition('persist:ayakamods').on('will-download', (event) => {
+      event.preventDefault()
+      logger.info('AyakaMods 内嵌页仅供浏览，请在浏览器中下载文件。')
+    })
     registerMediaProtocol()
     logger.addBroadcaster(() => mainWindow)
     registerIpcHandlers(categoryImageBase(), windowIcon())

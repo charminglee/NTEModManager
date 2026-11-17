@@ -1,4 +1,4 @@
-import { FileText, LoaderCircle, Package, Play, Settings } from 'lucide-react'
+import { FileText, Globe, LoaderCircle, Package, Play, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HeaderModActions } from './header-mod-actions'
 import gamebananaIcon from '@/assets/gamebanana.png'
@@ -15,7 +15,7 @@ function GameBananaLogo({ size = 19 }: { size?: number }) {
     />
   )
 }
-export type AppView = 'mods' | 'gamebanana' | 'logs' | 'settings'
+export type AppView = 'mods' | 'gamebanana' | 'ayakamods' | 'logs' | 'settings'
 interface Props {
   view: AppView
   busy: boolean
@@ -54,6 +54,7 @@ export default function AppHeader({
             [
               { id: 'mods', label: '模组库', Icon: Package },
               { id: 'gamebanana', label: 'GameBanana', Icon: GameBananaLogo },
+              { id: 'ayakamods', label: 'AyakaMods', Icon: Globe },
               { id: 'logs', label: '运行日志', Icon: FileText },
               { id: 'settings', label: '设置', Icon: Settings }
             ] as const

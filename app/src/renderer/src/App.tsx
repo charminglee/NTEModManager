@@ -35,6 +35,7 @@ import PromptDialog from '@/components/prompt-dialog'
 import ImportDialog, { type ImportSession } from '@/components/import-dialog'
 import SettingsView from '@/components/settings-view'
 import GameBananaPage from '@/components/gamebanana-page'
+import AyakaModsPage from '@/components/ayakamods-page'
 import { AppDialog } from '@/components/ui/dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
@@ -811,6 +812,14 @@ export default function App() {
       renameQueue.length > 0
   }, [view, importSession, pendingView, prompt, pendingConfirm, renameQueue])
 
+  const ayakaPageVisible =
+    !chromeHidden &&
+    currentRename === null &&
+    importSession === null &&
+    pendingView === null &&
+    prompt === null &&
+    pendingConfirm === null
+
   // ============ 多选快捷键 ============
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1178,6 +1187,8 @@ export default function App() {
             onConfigChange={setConfig}
             onModsChanged={() => void refreshMods()}
           />
+        ) : view === 'ayakamods' ? (
+          <AyakaModsPage visible={ayakaPageVisible} />
         ) : view === 'logs' ? (
           <LogView />
         ) : (
