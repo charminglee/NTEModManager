@@ -18,6 +18,8 @@ const NTE_GAME_ID = 23012
 const MOD_FIELDS = [
   'name',
   'authors',
+  'Credits().aAuthors()',
+  'Credits().ssvAuthorNames()',
   'Game().name',
   'downloads',
   'likes',
@@ -76,17 +78,43 @@ async function requestJson<T>(path: string, params: Record<string, string>): Pro
   }
 }
 
-function parseAuthors(value: unknown): string {
-  if (typeof value !== 'string' || value.length === 0) {
-    return '未知作者'
+function parseAuthorEntries(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
   }
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>
-    const first = Object.keys(parsed)[0]
-    return first || '未知作者'
-  } catch {
-    return value
+  return value
+    .map((entry) => Array.isArray(entry) ? entry[0] : null)
+    .filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
+    .map((name) => name.trim())
+}
+
+function parseAuthors(
+  authorEntries: unknown,
+  authorNames: unknown,
+  legacyAuthors: unknown
+): string {
+  const names = parseAuthorEntries(authorEntries)
+  if (names.length > 0) {
+    return names.join('、')
   }
+
+  if (typeof authorNames === 'string' && authorNames.trim().length > 0) {
+    return authorNames.trim()
+  }
+
+  if (typeof legacyAuthors === 'string' && legacyAuthors.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(legacyAuthors) as Record<string, unknown>
+      const legacyNames = Object.values(parsed).flatMap(parseAuthorEntries)
+      if (legacyNames.length > 0) {
+        return legacyNames.join('、')
+      }
+    } catch {
+      return legacyAuthors.trim()
+    }
+  }
+
+  return '未知作者'
 }
 
 function parseFiles(value: unknown): GameBananaFile[] {
@@ -107,7 +135,11 @@ function parseMod(id: number, value: Record<string, unknown>): GameBananaMod {
   return {
     id,
     name: String(value.name ?? `Mod ${id}`),
-    authors: parseAuthors(value.authors),
+    authors: parseAuthors(
+      value['Credits().aAuthors()'],
+      value['Credits().ssvAuthorNames()'],
+      value.authors
+    ),
     gameName: String(value['Game().name'] ?? 'Neverness To Everness'),
     downloads: Number(value.downloads ?? 0),
     likes: Number(value.likes ?? 0),
