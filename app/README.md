@@ -11,7 +11,7 @@
 - **安装 / 卸载**:安装 = 将模组文件夹复制到游戏 `~mods` 目录;同一角色同一二级名称分组互斥(自动卸载同组模组,`exclusive_install_exempt_groups` 名单豁免)。
 - **批量操作**:当前分类「全部安装 / 全部卸载」,含失效模组确认。
 - **模组卡片**:展开查看文件树(文件夹折叠、双击文件名内联重命名,`pak/ucas/utoc` 三件套按 `_P` 规则组重命名);更多菜单:重命名、重新打包、添加压缩包、更新/替换压缩包、标记失效、打开源/安装位置、删除。
-- **打包模组 / 重新打包**:运行 `傻瓜打包器.bat`(退出码 2 视为取消);重新打包自动复用该模组上次选择的源文件夹(`auto_use_last_packaging_path`)。
+- **打包模组 / 重新打包**:运行随应用构建的 `傻瓜打包器.bat`(退出码 2 视为取消);重新打包自动复用该模组上次选择的源文件夹(`auto_use_last_packaging_path`)。
 - **失效标记**:标记时自动卸载,安装失效模组前要求确认。
 - **排序**:默认(已安装优先)/ 名称 A-Z / Z-A / 导入时间 / 文件大小;默认与名称排序按二级名称分组显示。
 - **日志页**:运行日志实时推送、跟随滚动、按级别着色;日志文件在 `~/.ntemm/logs/NteModManager.log`。
@@ -67,7 +67,6 @@ npm run dist       # electron-builder 打包(dist/ 目录,绿色版)
 | `Paths/backups_directory` | 模组备份目录(含 `.nte-mod-manager.json` 状态清单) |
 | `Paths/background_images_directory` | 背景图片目录(数值命名的子目录),留空禁用 |
 | `Paths/game_launcher` | 「启动游戏」按钮启动的启动器 |
-| `Paths/packager_directory` | 包含 `傻瓜打包器.bat` 与打包产物的目录 |
 | `Categories/names` | 角色分类名(逗号分隔) |
 | `Preferences/mod_category_order` | 分类拖拽排序结果 |
 | `Preferences/mod_list_sort_order` | 排序方式(0-6) |
@@ -92,7 +91,7 @@ src/main/         Electron 主进程
   repository.ts     模组仓库:扫描/导入/安装/卸载/重命名/删除/清单
   operations.ts     互斥安装、批量安装/卸载
   archive.ts        7z 查找与解压(GBK 输出解码)
-  packager.ts       傻瓜打包器 bat 调用
+  packager.ts       内置傻瓜打包器路径解析与 bat 调用
   background.ts     背景图目录扫描
   visual-region-detector.ts  视觉识别:Python 桥、fallback 检测、视口裁剪
   background-carousel.ts     背景轮播状态机:10s 轮换/检测队列/状态推送
@@ -120,5 +119,7 @@ src/renderer/     React 界面
 背景轮播与视觉识别服务保持独立；管理界面使用半透明蒙层呈现背景轮播，不再执行面板材质画布或折射渲染。
 
 Python 资源(解释器、识别脚本、模型)**不打包进应用**:运行时优先解析程序所在目录旁的 `python/`,找不到则从 exe 目录向上逐级找含 `visual_region_detector.py` 的 `python/`(开发模式即仓库根的 `python/`)。部署打包版时把仓库 `python/` 目录整个复制到 exe 旁边即可;该目录需可用 `python/requirements.txt` 装好依赖(torch/ultralytics/torchvision/Pillow),即 `python/.venv`。设置界面不再提供 Python 路径项,上述 `Paths/*` INI 键保留作手动兜底。
+
+傻瓜打包器随应用构建到 `resources/packager`，开发模式直接使用仓库根目录的 `傻瓜打包器/`。设置界面不再提供打包器目录，旧版 `Paths/packager_directory` 键会在下次保存设置时清理。
 
 安全:modelContextIsolation 开启、nodeIntegration 关闭;图片通过自定义 `media://` 协议按扩展名白名单提供。
