@@ -125,9 +125,6 @@
     background-color var(--motion-fast) ease-out,
     box-shadow var(--motion-fast) ease-out;
 }
-.library-search:focus-within {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--vermilion) 18%, transparent);
-}
 .app-shell [role='switch'] > span {
   transition: transform var(--motion-normal) var(--motion-settle);
 }
