@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import { FileText, Globe, LoaderCircle, Package, Play, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HeaderModActions } from './header-mod-actions'
@@ -59,16 +60,20 @@ export default function AppHeader({
               { id: 'settings', label: '设置', Icon: Settings }
             ] as const
           ).map(({ id, label, Icon }) => (
-            <button
-              type="button"
-              key={id}
-              className={cn('global-nav-item', view === id && 'is-active')}
-              aria-current={view === id ? 'page' : undefined}
-              onClick={() => onNavigate(id)}
-            >
-              <Icon size={19} />
-              {label}
-            </button>
+            <Fragment key={id}>
+              {(id === 'gamebanana' || id === 'logs') && (
+                <span className="header-action-divider" aria-hidden="true" />
+              )}
+              <button
+                type="button"
+                className={cn('global-nav-item', view === id && 'is-active')}
+                aria-current={view === id ? 'page' : undefined}
+                onClick={() => onNavigate(id)}
+              >
+                <Icon size={19} />
+                {label}
+              </button>
+            </Fragment>
           ))}
         </nav>
         <HeaderModActions busy={busy} onImport={onImport} onPackageMod={onPackageMod} />
