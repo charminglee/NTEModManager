@@ -29,21 +29,14 @@ const DialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4 data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out"
-      {...props}
-    >
-      <DialogPrimitive.Close
-        tabIndex={-1}
-        aria-label="关闭"
-        className="pointer-events-auto absolute inset-0 cursor-default rounded-none bg-transparent opacity-0 outline-none"
-      />
-      <div
+    <div className="dialog-stage pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+      <DialogPrimitive.Content
+        ref={ref}
         className={cn(
-          'dialog-panel pointer-events-auto w-full max-w-lg',
+          'dialog-panel relative pointer-events-auto w-full max-w-lg data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out',
           className
         )}
+        {...props}
       >
         {children}
         <DialogPrimitive.Close
@@ -53,8 +46,8 @@ const DialogContent = React.forwardRef<
           <X className="h-4 w-4" />
           <span className="sr-only">关闭</span>
         </DialogPrimitive.Close>
-      </div>
-    </DialogPrimitive.Content>
+      </DialogPrimitive.Content>
+    </div>
   </DialogPortal>
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName
