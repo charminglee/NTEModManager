@@ -316,6 +316,10 @@ const gameBananaFiles: GameBananaFile[] = [
     name: 'nte_demo_mod.zip',
     sizeBytes: 18_874_368,
     downloadCount: 128,
+    uploadedAt: 1794672000,
+    version: '1.2',
+    description: '完整安装包，包含模型、贴图和安装说明。',
+    archived: false,
     downloadUrl: 'https://gamebanana.com/dl/mock-file-1'
   }
 ]
@@ -325,6 +329,22 @@ const gameBananaMods: GameBananaMod[] = [
     id: 727079,
     name: 'Zero Collection Upscale',
     authors: 'yuriko',
+    author: { name: 'yuriko333', avatarUrl: '/黑羽.png', profileUrl: 'https://gamebanana.com/members/2297405' },
+    modifiedAt: 1794672000,
+    version: '1.2',
+    archivedFiles: [{ ...gameBananaFiles[0], id: 'mock-archive', name: 'nte_demo_mod_v1.zip', version: '1.0', archived: true, description: '旧版本归档。' }],
+    screenshots: [
+      { url: '/test-images/0b75ec85-cad5-4d7e-af49-fc6bc3dac554.jpg', thumbnailUrl: '', width: 0, height: 0 },
+      { url: '/test-images/photo_6269019679716215625_w.jpg', thumbnailUrl: '', width: 0, height: 0 }
+    ],
+    updates: [
+      { id: 'update-2', name: '画质与模型更新', version: '1.2', uploadedAt: 1794672000, modifiedAt: 1794758400, description: '<p>优化了<strong>模型细节</strong>和贴图质量。</p>', changes: [{ category: 'Improvement', text: '<p>改善膝盖模型，<em>保留原有比例</em>。</p>' }] },
+      { id: 'update-1', name: '首次发布', version: '1.0', uploadedAt: 1794412800, modifiedAt: 0, description: '<p>首个公开版本。</p>', changes: [] }
+    ],
+    commentItems: [
+      { id: 'comment-1', author: { name: 'NTE 玩家', avatarUrl: '/娜娜莉.png', profileUrl: 'https://gamebanana.com/members/1' }, uploadedAt: 1794758400, editedAt: 1794844800, content: '<p>感谢作者，<strong>效果很好</strong>！</p><blockquote>支持完整的 HTML 评论排版。</blockquote>', replies: [{ id: 'reply-1', author: { name: 'yuriko333', avatarUrl: '/黑羽.png', profileUrl: 'https://gamebanana.com/members/2297405' }, uploadedAt: 1794844800, editedAt: 0, content: '<p>感谢支持！</p>', replies: [] }] },
+      { id: 'comment-2', author: { name: 'Mod 用户', avatarUrl: '', profileUrl: '' }, uploadedAt: 1794844800, editedAt: 0, content: '<p>表格、列表和链接也应正常显示。</p><ul><li>安装成功</li><li>贴图清晰</li></ul>', replies: [] }
+    ],
     gameName: 'Neverness To Everness',
     downloads: 1212,
     likes: 53,
@@ -332,7 +352,7 @@ const gameBananaMods: GameBananaMod[] = [
     comments: 18,
     uploadedAt: Math.floor(Date.now() / 1000) - 86400 * 12,
     updatedAt: Math.floor(Date.now() / 1000),
-    description: '浏览器测试模式中的 GameBanana 模组详情。',
+    description: `<h2>模组介绍</h2><p>浏览器测试模式中的 <strong>GameBanana</strong> 完整模组页面。</p><p style="color: #edc19c">保留内联样式、图片、表格和详细排版。</p><img src="${window.location.origin}/test-images/0b75ec85-cad5-4d7e-af49-fc6bc3dac554.jpg" alt="模组介绍图片" width="360"><table><thead><tr><th>内容</th><th>说明</th></tr></thead><tbody><tr><td>模型</td><td>完整安装包</td></tr></tbody></table><details><summary>安装步骤</summary><ol><li>下载模组</li><li>导入管理器</li></ol></details><p><a href="https://gamebanana.com/mods/727079">原始发布页面</a></p>`,
     previewUrl: '/test-images/0b75ec85-cad5-4d7e-af49-fc6bc3dac554.jpg',
     profileUrl: 'https://gamebanana.com/mods/727079',
     downloadUrl: 'https://gamebanana.com/mods/download/727079',
@@ -343,6 +363,13 @@ const gameBananaMods: GameBananaMod[] = [
     id: 727080,
     name: 'NTE Character Wardrobe',
     authors: 'mock_author',
+    author: { name: 'mock_author', avatarUrl: '', profileUrl: '' },
+    modifiedAt: 0,
+    version: '',
+    archivedFiles: [],
+    screenshots: [],
+    updates: [],
+    commentItems: [],
     gameName: 'Neverness To Everness',
     downloads: 684,
     likes: 27,
@@ -495,7 +522,7 @@ const api: Api = {
 
   async startGameBananaDownload(modId, fileId, customName, installAfterDownload) {
     const mod = gameBananaMods.find((item) => item.id === modId)
-    const file = mod?.files.find((item) => item.id === fileId)
+    const file = mod && [...mod.files, ...mod.archivedFiles].find((item) => item.id === fileId)
     if (!mod || !file) throw new Error('未找到测试下载文件')
     const task: GameBananaDownloadTask = {
       id: `mock-download-${Date.now()}`,

@@ -4,8 +4,12 @@ import { extname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type {
   GameBananaDownloadTask,
+  GameBananaComment,
+  GameBananaAuthor,
   GameBananaFile,
   GameBananaMod,
+  GameBananaScreenshot,
+  GameBananaUpdate,
   OperationResult
 } from '../shared/types'
 import * as repository from './repository'
@@ -64,7 +68,9 @@ function updateTask(id: string, patch: Partial<GameBananaDownloadTask>): GameBan
 }
 
 async function requestJson<T>(path: string, params: Record<string, string>): Promise<T> {
-  const url = new URL(path, API_BASE)
+  const url = path.startsWith('/Core/')
+    ? new URL(path, API_BASE)
+    : new URL(`https://gamebanana.com/apiv11${path}`)
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value)
   }
@@ -128,9 +134,83 @@ function parseFiles(value: unknown): GameBananaFile[] {
     name: String(file._sFile ?? '未知文件'),
     sizeBytes: Number(file._nFilesize ?? 0),
     downloadCount: Number(file._nDownloadCount ?? 0),
+    uploadedAt: Number(file._tsDateAdded ?? 0),
+    version: String(file._sVersion ?? ''),
+    description: String(file._sDescription ?? ''),
+    archived: Boolean(file._bIsArchived),
     downloadUrl: String(file._sDownloadUrl ?? ''),
     md5: typeof file._sMd5Checksum === 'string' ? file._sMd5Checksum : undefined
   })).filter((file) => file.id.length > 0 && /^https?:\/\//i.test(file.downloadUrl))
+}
+
+function parseAuthor(value: unknown): GameBananaAuthor {
+  const author = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    name: String(author._sName ?? '未知作者'),
+    avatarUrl: String(author._sAvatarUrl ?? ''),
+    profileUrl: String(author._sProfileUrl ?? '')
+  }
+}
+
+function parseScreenshots(value: unknown): GameBananaScreenshot[] {
+  if (!value || typeof value !== 'object') return []
+  const media = value as Record<string, unknown>
+  const images = Array.isArray(media._aImages) ? media._aImages : []
+  return images.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const image = entry as Record<string, unknown>
+    const baseUrl = String(image._sBaseUrl ?? '').replace(/\/$/, '')
+    const file = String(image._sFile ?? '')
+    if (!baseUrl || !file) return []
+    return [{
+      url: `${baseUrl}/${file}`,
+      thumbnailUrl: `${baseUrl}/${String(image._sFile220 ?? file)}`,
+      width: Number(image._wFile530 ?? 0),
+      height: Number(image._hFile530 ?? 0)
+    }]
+  })
+}
+
+async function getAllRecords<T>(path: string): Promise<T[]> {
+  const records: T[] = []
+  for (let page = 1; ; page += 1) {
+    const result = await requestJson<{ _aRecords: T[]; _aMetadata: { _bIsComplete: boolean } }>(path, {
+      _nPage: String(page),
+      _nPerpage: '50'
+    })
+    records.push(...result._aRecords)
+    if (result._aRecords.length === 0 || result._aMetadata._bIsComplete) return records
+  }
+}
+
+function parseUpdates(records: Record<string, unknown>[]): GameBananaUpdate[] {
+  return records.map((record) => ({
+    id: String(record._idRow ?? ''),
+    name: String(record._sName ?? ''),
+    version: String(record._sVersion ?? ''),
+    uploadedAt: Number(record._tsDateAdded ?? 0),
+    modifiedAt: Number(record._tsDateModified ?? 0),
+    description: String(record._sText ?? ''),
+    changes: Array.isArray(record._aChangeLog)
+      ? record._aChangeLog.map((change) => {
+        const item = change as Record<string, unknown>
+        return { category: String(item.cat ?? ''), text: String(item.text ?? '') }
+      })
+      : []
+  }))
+}
+
+async function parseComments(records: Record<string, unknown>[]): Promise<GameBananaComment[]> {
+  return Promise.all(records.map(async (record) => ({
+    id: String(record._idRow ?? ''),
+    author: parseAuthor(record._aPoster),
+    uploadedAt: Number(record._tsDateAdded ?? 0),
+    editedAt: Number(record._tsDateModified ?? 0),
+    content: String(record._sText ?? ''),
+    replies: Number(record._nReplyCount ?? 0) > 0
+      ? await parseComments(await getAllRecords<Record<string, unknown>>(`/Post/${record._idRow}/Posts`))
+      : []
+  })))
 }
 
 function parseMod(id: number, value: Record<string, unknown>): GameBananaMod {
@@ -158,7 +238,14 @@ function parseMod(id: number, value: Record<string, unknown>): GameBananaMod {
       ? value['Url().sDownloadUrl()']
       : null,
     installInstructions: String(value.install_instructions ?? ''),
-    files: parseFiles(value['Files().aFiles()'])
+    files: parseFiles(value['Files().aFiles()']).filter((file) => !file.archived),
+    author: { name: '', avatarUrl: '', profileUrl: '' },
+    modifiedAt: 0,
+    version: '',
+    archivedFiles: [],
+    screenshots: [],
+    updates: [],
+    commentItems: []
   }
 }
 
@@ -172,10 +259,10 @@ export async function listMods(page: number): Promise<GameBananaMod[]> {
   const ids = rows
     .filter((row) => row[0] === 'Mod' && Number.isInteger(Number(row[1])))
     .map((row) => Number(row[1]))
-  return Promise.all(ids.map((id) => getMod(id)))
+  return Promise.all(ids.map((id) => getModSummary(id)))
 }
 
-export async function getMod(id: number): Promise<GameBananaMod> {
+export async function getModSummary(id: number): Promise<GameBananaMod> {
   const value = await requestJson<Record<string, unknown>>('/Core/Item/Data', {
     itemtype: 'Mod',
     itemid: String(id),
@@ -184,7 +271,65 @@ export async function getMod(id: number): Promise<GameBananaMod> {
     format: 'json_min',
     flags: 'JSON_UNESCAPED_SLASHES'
   })
-  return parseMod(id, value)
+  const mod = parseMod(id, value)
+  return {
+    ...mod,
+    author: { name: mod.authors, avatarUrl: '', profileUrl: '' },
+    modifiedAt: mod.updatedAt,
+    version: '',
+    archivedFiles: parseFiles(value['Files().aFiles()']).filter((file) => file.archived),
+    screenshots: mod.previewUrl ? [{ url: mod.previewUrl, thumbnailUrl: mod.previewUrl, width: 0, height: 0 }] : [],
+    updates: [],
+    commentItems: []
+  }
+}
+
+export async function getMod(id: number): Promise<GameBananaMod> {
+  const [value, updateRecords, commentRecords] = await Promise.all([
+    requestJson<Record<string, unknown>>(`/Mod/${id}/ProfilePage`, {}),
+    getAllRecords<Record<string, unknown>>(`/Mod/${id}/Updates`),
+    getAllRecords<Record<string, unknown>>(`/Mod/${id}/Posts`)
+  ])
+  const files = Array.isArray(value._aFiles) ? value._aFiles : []
+  const archivedFiles = Array.isArray(value._aArchivedFiles) ? value._aArchivedFiles : []
+  const screenshots = parseScreenshots(value._aPreviewMedia)
+  const credits = Array.isArray(value._aCredits)
+    ? value._aCredits.flatMap((entry) => {
+      const group = entry as Record<string, unknown>
+      return Array.isArray(group._aAuthors)
+        ? (group._aAuthors as Record<string, unknown>[]).map((author) => String(author._sName ?? ''))
+        : []
+    }).filter(Boolean)
+    : []
+  const author = parseAuthor(value._aSubmitter)
+  return {
+    id,
+    name: String(value._sName ?? `Mod ${id}`),
+    authors: credits.join('、') || author.name,
+    author,
+    gameName: 'Neverness To Everness',
+    downloads: Number(value._nDownloadCount ?? 0),
+    likes: Number(value._nLikeCount ?? 0),
+    views: Number(value._nViewCount ?? 0),
+    comments: Number(value._nPostCount ?? 0),
+    uploadedAt: Number(value._tsDateAdded ?? 0),
+    modifiedAt: Number(value._tsDateModified ?? 0),
+    updatedAt: Number(value._tsDateUpdated ?? 0),
+    version: String(value._sVersion ?? ''),
+    description: String(value._sText ?? ''),
+    previewUrl: screenshots[0]?.thumbnailUrl ?? null,
+    profileUrl: String(value._sProfileUrl ?? `https://gamebanana.com/mods/${id}`),
+    downloadUrl: typeof value._sDownloadUrl === 'string' ? value._sDownloadUrl : null,
+    installInstructions: '',
+    files: parseFiles(files.filter((file) => !(file as Record<string, unknown>)._bIsArchived)),
+    archivedFiles: parseFiles([
+      ...archivedFiles,
+      ...files.filter((file) => (file as Record<string, unknown>)._bIsArchived)
+    ]),
+    screenshots,
+    updates: parseUpdates(updateRecords).sort((a, b) => b.uploadedAt - a.uploadedAt),
+    commentItems: await parseComments(commentRecords)
+  }
 }
 
 function validCustomName(name: string): boolean {

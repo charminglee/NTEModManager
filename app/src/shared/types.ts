@@ -127,14 +127,51 @@ export interface GameBananaFile {
   name: string
   sizeBytes: number
   downloadCount: number
+  uploadedAt: number
+  version: string
+  description: string
+  archived: boolean
   downloadUrl: string
   md5?: string
+}
+
+export interface GameBananaAuthor {
+  name: string
+  avatarUrl: string
+  profileUrl: string
+}
+
+export interface GameBananaScreenshot {
+  url: string
+  thumbnailUrl: string
+  width: number
+  height: number
+}
+
+export interface GameBananaUpdate {
+  id: string
+  name: string
+  version: string
+  uploadedAt: number
+  modifiedAt: number
+  description: string
+  changes: { category: string; text: string }[]
+}
+
+export interface GameBananaComment {
+  id: string
+  author: GameBananaAuthor
+  uploadedAt: number
+  editedAt: number
+  content: string
+  replies: GameBananaComment[]
 }
 
 export interface GameBananaMod {
   id: number
   name: string
   authors: string
+  author: GameBananaAuthor
   gameName: string
   downloads: number
   likes: number
@@ -142,12 +179,18 @@ export interface GameBananaMod {
   comments: number
   uploadedAt: number
   updatedAt: number
+  modifiedAt: number
+  version: string
   description: string
   previewUrl: string | null
   profileUrl: string
   downloadUrl: string | null
   installInstructions: string
   files: GameBananaFile[]
+  archivedFiles: GameBananaFile[]
+  screenshots: GameBananaScreenshot[]
+  updates: GameBananaUpdate[]
+  commentItems: GameBananaComment[]
 }
 
 export type GameBananaDownloadStatus =

@@ -12,6 +12,7 @@ import {
   createDownloadTask,
   executeDownloadTask,
   getMod as getGameBananaMod,
+  getModSummary as getGameBananaModSummary,
   getTasks as getGameBananaTasks,
   listMods as listGameBananaMods,
   setTaskBroadcaster
@@ -247,8 +248,8 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   ipcMain.handle(
     'gamebanana:startDownload',
     async (_event, modId: number, fileId: string, customName: string, installAfterDownload: boolean) => {
-      const mod = await getGameBananaMod(modId)
-      const file = mod.files.find((item) => item.id === fileId)
+      const mod = await getGameBananaModSummary(modId)
+      const file = [...mod.files, ...mod.archivedFiles].find((item) => item.id === fileId)
       if (!file) {
         throw new Error(`找不到 GameBanana 文件：${fileId}`)
       }
@@ -267,11 +268,11 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     }
   )
   ipcMain.handle('gamebanana:openExternal', async (_event, url: string) => {
-    if (!/^https:\/\/(?:www\.)?gamebanana\.com\//i.test(url)) {
-      return failure('只允许打开 GameBanana 网页地址。')
+    if (typeof url !== 'string' || !/^https:\/\//i.test(url)) {
+      return failure('只允许打开 HTTPS 网页地址。')
     }
     await shell.openExternal(url)
-    return { success: true, message: '已打开 GameBanana 网页' }
+    return { success: true, message: '已打开网页' }
   })
 
   ipcMain.handle('mods:import', (_event, archivePaths: string[]) =>
