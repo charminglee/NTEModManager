@@ -395,6 +395,9 @@ input[type='checkbox'] {
   align-items: center;
   justify-content: center;
 }
+.category-row img {
+  border-radius: 50%;
+}
 .category-name {
   flex: 1;
   overflow: hidden;
