@@ -35,16 +35,7 @@ import PromptDialog from '@/components/prompt-dialog'
 import ImportDialog, { type ImportSession } from '@/components/import-dialog'
 import SettingsView from '@/components/settings-view'
 import GameBananaPage from '@/components/gamebanana-page'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from '@/components/ui/alert-dialog'
+import { AppDialog } from '@/components/ui/dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
@@ -67,6 +58,66 @@ type PendingConfirm =
     }
   | null
 
+interface PendingConfirmCopy {
+  title: string
+  description: string
+  confirmLabel: string
+  destructive: boolean
+}
+
+function pendingConfirmCopy(confirm: NonNullable<PendingConfirm>): PendingConfirmCopy {
+  switch (confirm.kind) {
+    case 'delete':
+      return {
+        title: '删除模组',
+        description: `将永久删除“${confirm.modName}”的备份文件及已安装的模组文件。此操作无法撤销。`,
+        confirmLabel: '删除',
+        destructive: true
+      }
+    case 'install-invalid':
+      return {
+        title: '安装失效模组',
+        description: `“${confirm.modName}”已标记为失效，可能无法正常工作。是否仍要安装？`,
+        confirmLabel: '仍要安装',
+        destructive: false
+      }
+    case 'reinstall-invalid':
+      return {
+        title: '重装失效模组',
+        description: `“${confirm.modName}”已标记为失效，可能无法正常工作。是否仍要重装？`,
+        confirmLabel: '仍要重装',
+        destructive: false
+      }
+    case 'install-all':
+      return {
+        title: '全部安装模组',
+        description: `将安装当前分类“${confirm.category}”中的全部未安装模组，是否继续？${confirm.invalidNames.length > 0 ? `\n\n其中 ${confirm.invalidNames.length} 个模组已标记为失效：\n${confirm.invalidNames.join('\n')}\n这些模组可能无法正常工作。` : ''}`,
+        confirmLabel: '仍要继续',
+        destructive: false
+      }
+    case 'uninstall-all':
+      return {
+        title: '全部卸载模组',
+        description: `将卸载当前分类“${confirm.category}”中的全部已安装模组，是否继续？`,
+        confirmLabel: '继续卸载',
+        destructive: true
+      }
+    case 'batch-delete':
+      return {
+        title: '删除模组',
+        description: `将永久删除选中的 ${confirm.modNames.length} 个模组的备份文件及已安装的模组文件：\n${confirm.modNames.join('\n')}\n此操作无法撤销。`,
+        confirmLabel: '删除',
+        destructive: true
+      }
+    case 'batch-invalid':
+      return {
+        title: confirm.action === 'reinstall' ? '重装失效模组' : '安装失效模组',
+        description: `当前操作包含 ${confirm.invalidNames.length} 个已标记为失效的模组：\n${confirm.invalidNames.join('\n')}\n可能无法正常工作，是否仍要继续？`,
+        confirmLabel: '仍要继续',
+        destructive: false
+      }
+  }
+}
 interface RenameQueueItem {
   modName: string
   defaultName: string
@@ -904,6 +955,74 @@ export default function App() {
     )
   }
 
+  const activeConfirm = pendingConfirm ? pendingConfirmCopy(pendingConfirm) : null
+  const confirmPendingAction = () => {
+    const confirm = pendingConfirm
+    if (!confirm) return
+    setPendingConfirm(null)
+    switch (confirm.kind) {
+      case 'delete': {
+        const modName = confirm.modName
+        void runOperation(`正在删除 ${modName}...`, () => window.api.removeMod(modName)).then(
+          (result) => {
+            if (result) {
+              void refreshMods()
+            }
+          }
+        )
+        break
+      }
+      case 'install-invalid':
+      case 'reinstall-invalid': {
+        const modName = confirm.modName
+        const reinstall = confirm.kind === 'reinstall-invalid'
+        void (
+          reinstall
+            ? reinstallByName(modName)
+            : runOperation(`正在安装 ${modName}...`, () => window.api.installMod(modName))
+        ).then((result) => {
+          if (result) {
+            void refreshMods()
+          }
+        })
+        break
+      }
+      case 'install-all': {
+        const category = confirm.category
+        void runOperation('正在批量安装模组...', () => window.api.installAll(category)).then(
+          (result) => {
+            if (result) {
+              void refreshMods()
+            }
+          }
+        )
+        break
+      }
+      case 'uninstall-all': {
+        const category = confirm.category
+        void runOperation('正在批量卸载模组...', () => window.api.uninstallAll(category)).then(
+          (result) => {
+            if (result) {
+              void refreshMods()
+            }
+          }
+        )
+        break
+      }
+      case 'batch-delete': {
+        const modNames = confirm.modNames
+        void runBatch(`正在批量删除 ${modNames.length} 个模组...`, 'remove', modNames)
+        break
+      }
+      case 'batch-invalid': {
+        const { action, modNames } = confirm
+        const verb = action === 'reinstall' ? '重新安装' : '安装'
+        void runBatch(`正在批量${verb} ${modNames.length} 个模组...`, action, modNames)
+        break
+      }
+    }
+  }
+
   return (
     <TooltipProvider delayDuration={350}>
       <WindowControls onFullScreenChange={setIsFullScreen} />
@@ -1103,31 +1222,24 @@ export default function App() {
         onClose={closeImport}
         onRetry={(path) => void retryImport(path)}
       />
-      <AlertDialog
+      <AppDialog
+        kind="alert"
         open={pendingView !== null}
         onOpenChange={(open) => {
           if (!open) setPendingView(null)
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>放弃尚未保存的设置？</AlertDialogTitle>
-            <AlertDialogDescription>离开此页面会丢弃尚未保存的更改。</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>继续编辑</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingView) setView(pendingView)
-                setPendingView(null)
-                setSettingsDirty(false)
-              }}
-            >
-              放弃更改
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="放弃尚未保存的设置？"
+        description="离开此页面会丢弃尚未保存的更改。"
+        cancelAction={{ label: '继续编辑' }}
+        confirmAction={{
+          label: '放弃更改',
+          onSelect: () => {
+            if (pendingView) setView(pendingView)
+            setPendingView(null)
+            setSettingsDirty(false)
+          }
+        }}
+      />
       {/* 通用输入对话框(重命名/打包命名) */}
       <PromptDialog
         open={prompt !== null}
@@ -1167,172 +1279,25 @@ export default function App() {
       />
 
       {/* 确认对话框 */}
-      <AlertDialog
+      <AppDialog
+        kind="alert"
         open={pendingConfirm !== null}
-        onOpenChange={(open) => !open && setPendingConfirm(null)}
-      >
-        <AlertDialogContent>
-          {pendingConfirm?.kind === 'delete' && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>删除模组</AlertDialogTitle>
-                <AlertDialogDescription>{`将永久删除“${pendingConfirm.modName}”的备份文件及已安装的模组文件。此操作无法撤销。`}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  onClick={() => {
-                    const modName = pendingConfirm.modName
-                    setPendingConfirm(null)
-                    void runOperation(`正在删除 ${modName}...`, () =>
-                      window.api.removeMod(modName)
-                    ).then((result) => {
-                      if (result) {
-                        void refreshMods()
-                      }
-                    })
-                  }}
-                >
-                  删除
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-          {(pendingConfirm?.kind === 'install-invalid' ||
-            pendingConfirm?.kind === 'reinstall-invalid') && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {pendingConfirm.kind === 'reinstall-invalid' ? '重装失效模组' : '安装失效模组'}
-                </AlertDialogTitle>
-                <AlertDialogDescription>{`“${pendingConfirm.modName}”已标记为失效，可能无法正常工作。是否仍要${pendingConfirm.kind === 'reinstall-invalid' ? '重装' : '安装'}？`}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    const modName = pendingConfirm.modName
-                    const reinstall = pendingConfirm.kind === 'reinstall-invalid'
-                    setPendingConfirm(null)
-                    void (
-                      reinstall
-                        ? reinstallByName(modName)
-                        : runOperation(`正在安装 ${modName}...`, () =>
-                            window.api.installMod(modName)
-                          )
-                    ).then((result) => {
-                      if (result) {
-                        void refreshMods()
-                      }
-                    })
-                  }}
-                >
-                  {pendingConfirm.kind === 'reinstall-invalid' ? '仍要重装' : '仍要安装'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-          {pendingConfirm?.kind === 'install-all' && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>全部安装模组</AlertDialogTitle>
-                <AlertDialogDescription>{`将安装当前分类“${pendingConfirm.category}”中的全部未安装模组，是否继续？${pendingConfirm.invalidNames.length > 0 ? `\n\n其中 ${pendingConfirm.invalidNames.length} 个模组已标记为失效：\n${pendingConfirm.invalidNames.join('\n')}\n这些模组可能无法正常工作。` : ''}`}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    const category = pendingConfirm.category
-                    setPendingConfirm(null)
-                    void runOperation('正在批量安装模组...', () =>
-                      window.api.installAll(category)
-                    ).then((result) => {
-                      if (result) {
-                        void refreshMods()
-                      }
-                    })
-                  }}
-                >
-                  仍要继续
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-          {pendingConfirm?.kind === 'uninstall-all' && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>全部卸载模组</AlertDialogTitle>
-                <AlertDialogDescription>{`将卸载当前分类“${pendingConfirm.category}”中的全部已安装模组，是否继续？`}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  onClick={() => {
-                    const category = pendingConfirm.category
-                    setPendingConfirm(null)
-                    void runOperation('正在批量卸载模组...', () =>
-                      window.api.uninstallAll(category)
-                    ).then((result) => {
-                      if (result) {
-                        void refreshMods()
-                      }
-                    })
-                  }}
-                >
-                  继续卸载
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-          {pendingConfirm?.kind === 'batch-delete' && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>删除模组</AlertDialogTitle>
-                <AlertDialogDescription>{`将永久删除选中的 ${pendingConfirm.modNames.length} 个模组的备份文件及已安装的模组文件：\n${pendingConfirm.modNames.join('\n')}\n此操作无法撤销。`}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  onClick={() => {
-                    const modNames = pendingConfirm.modNames
-                    setPendingConfirm(null)
-                    void runBatch(`正在批量删除 ${modNames.length} 个模组...`, 'remove', modNames)
-                  }}
-                >
-                  删除
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-          {pendingConfirm?.kind === 'batch-invalid' && (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {pendingConfirm.action === 'reinstall' ? '重装失效模组' : '安装失效模组'}
-                </AlertDialogTitle>
-                <AlertDialogDescription>{`当前操作包含 ${pendingConfirm.invalidNames.length} 个已标记为失效的模组：\n${pendingConfirm.invalidNames.join('\n')}\n可能无法正常工作，是否仍要继续？`}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    const { action, modNames } = pendingConfirm
-                    setPendingConfirm(null)
-                    const verb = action === 'reinstall' ? '重新安装' : '安装'
-                    void runBatch(`正在批量${verb} ${modNames.length} 个模组...`, action, modNames)
-                  }}
-                >
-                  仍要继续
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
-
+        onOpenChange={(open) => {
+          if (!open) setPendingConfirm(null)
+        }}
+        title={activeConfirm?.title ?? ''}
+        description={activeConfirm?.description}
+        cancelAction={activeConfirm ? { label: '取消' } : undefined}
+        confirmAction={
+          activeConfirm
+            ? {
+                label: activeConfirm.confirmLabel,
+                destructive: activeConfirm.destructive,
+                onSelect: confirmPendingAction
+              }
+            : undefined
+        }
+      />
       <Toaster />
     </TooltipProvider>
   )

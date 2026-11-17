@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { AppDialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Switch from './ui/switch'
@@ -16,7 +8,6 @@ interface PromptDialogProps {
   open: boolean
   title: string
   description?: string
-  label: string
   initialValue?: string
   confirmText?: string
   installAfterDownload?: boolean
@@ -30,7 +21,6 @@ export default function PromptDialog({
   open,
   title,
   description,
-  label,
   initialValue = '',
   confirmText = '确定',
   installAfterDownload,
@@ -46,13 +36,13 @@ export default function PromptDialog({
    * 文字会先于面板消失(关闭瞬间标题闪没)。打开期间把文本快照进 ref,关闭
    * 期间沿用最后一次的值,让文字与面板一起渐隐。
    */
-  const lastTextRef = useRef({ title, description, label, confirmText })
+  const lastTextRef = useRef({ title, description, confirmText })
   useEffect(() => {
     if (open) {
-      lastTextRef.current = { title, description, label, confirmText }
+      lastTextRef.current = { title, description, confirmText }
     }
-  }, [open, title, description, label, confirmText])
-  const shown = open ? { title, description, label, confirmText } : lastTextRef.current
+  }, [open, title, description, confirmText])
+  const shown = open ? { title, description, confirmText } : lastTextRef.current
 
   useEffect(() => {
     if (open) {
@@ -69,49 +59,41 @@ export default function PromptDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (!next ? onCancel() : undefined)}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{shown.title}</DialogTitle>
-          {shown.description && <DialogDescription>{shown.description}</DialogDescription>}
-        </DialogHeader>
-        <div className="dialog-body">
-          <div className="grid gap-2">
-            <Label htmlFor="prompt-input">{shown.label}</Label>
-            <Input
-              id="prompt-input"
-              ref={inputRef}
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  submit()
-                }
-              }}
-            />
+    <AppDialog
+      open={open}
+      onOpenChange={(next) => (!next ? onCancel() : undefined)}
+      title={shown.title}
+      description={shown.description}
+      cancelAction={{ label: '取消' }}
+      confirmAction={{ label: shown.confirmText, onSelect: submit }}
+    >
+      <div className="grid gap-2">
+        <Input
+          id="prompt-input"
+          ref={inputRef}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              submit()
+            }
+          }}
+        />
+      </div>
+      {installAfterDownload !== undefined && onInstallAfterDownloadChange && (
+        <div className="prompt-switch-row">
+          <div>
+            <strong>下载完成后安装</strong>
+            <span>按现有同组互斥规则安装到游戏目录。</span>
           </div>
-          {installAfterDownload !== undefined && onInstallAfterDownloadChange && (
-            <div className="prompt-switch-row">
-              <div>
-                <strong>下载完成后安装</strong>
-                <span>按现有同组互斥规则安装到游戏目录。</span>
-              </div>
-              <Switch
-                checked={installAfterDownload}
-                onCheckedChange={onInstallAfterDownloadChange}
-                aria-label="下载完成后安装"
-              />
-            </div>
-          )}
+          <Switch
+            checked={installAfterDownload}
+            onCheckedChange={onInstallAfterDownloadChange}
+            aria-label="下载完成后安装"
+          />
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            取消
-          </Button>
-          <Button onClick={submit}>{shown.confirmText}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </AppDialog>
   )
 }

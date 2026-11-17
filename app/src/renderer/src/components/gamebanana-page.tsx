@@ -7,7 +7,6 @@ import type {
   GameBananaMod
 } from '@shared/types'
 import { Button } from './ui/button'
-import { Dialog, DialogContent } from './ui/dialog'
 import { Input } from './ui/input'
 import PromptDialog from './prompt-dialog'
 import GameBananaDownloadDrawer from './gamebanana-download-drawer'
@@ -43,6 +42,7 @@ function shortNumber(value: number): string {
 export default function GameBananaPage({ config, onConfigChange, onModsChanged }: Props) {
   const [mods, setMods] = useState<GameBananaMod[]>([])
   const [selected, setSelected] = useState<GameBananaMod | null>(null)
+  const lastSelectedRef = useRef<GameBananaMod | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [loadMoreError, setLoadMoreError] = useState('')
@@ -229,7 +229,10 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   type="button"
                   className={`gamebanana-mod-card ${selected?.id === mod.id ? 'is-selected' : ''}`}
                   key={mod.id}
-                  onClick={() => setSelected(mod)}
+                  onClick={() => {
+                    lastSelectedRef.current = mod
+                    setSelected(mod)
+                  }}
                 >
                   {mod.previewUrl ? <img src={mod.previewUrl} alt="" draggable={false} /> : <div className="gamebanana-card-placeholder"><Download /></div>}
                   <div className="gamebanana-card-copy">
@@ -269,17 +272,22 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
         </div>
       </div>
 
-      <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null) }}>
-        <DialogContent className="gamebanana-detail-dialog">
-          {selected && <GameBananaDetail key={selected.id} initial={selected} onDownload={openDownload} />}
-        </DialogContent>
-      </Dialog>
+      {lastSelectedRef.current && (
+        <GameBananaDetail
+          key={lastSelectedRef.current.id}
+          initial={lastSelectedRef.current}
+          open={selected !== null}
+          onOpenChange={(open) => {
+            if (!open) setSelected(null)
+          }}
+          onDownload={openDownload}
+        />
+      )}
       <GameBananaDownloadDrawer open={drawerOpen} tasks={tasks} onClose={() => setDrawerOpen(false)} />
       <PromptDialog
         open={downloadTarget !== null}
         title="下载 GameBanana 模组"
-        description={downloadTarget ? `文件：${downloadTarget.file.name}。请输入保存到模组库的名称。` : undefined}
-        label="模组名称："
+        description={downloadTarget ? `即将下载 ${downloadTarget.file.name} ，请输入保存到模组库的名称：` : undefined}
         initialValue={downloadTarget?.mod.name ?? ''}
         confirmText="开始下载"
         installAfterDownload={config.gameBananaInstallAfterDownload}

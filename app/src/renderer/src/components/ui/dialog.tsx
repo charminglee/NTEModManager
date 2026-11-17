@@ -1,92 +1,126 @@
 import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-const Dialog = DialogPrimitive.Root
-const DialogTrigger = DialogPrimitive.Trigger
-const DialogPortal = DialogPrimitive.Portal
-const DialogClose = DialogPrimitive.Close
+export interface AppDialogAction {
+  label: React.ReactNode
+  onSelect?: () => void
+  destructive?: boolean
+  disabled?: boolean
+}
 
-const DialogOverlay = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay
-    ref={ref}
-    className={cn(
-      'dialog-overlay fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-      className
-    )}
-    {...props}
-  />
-))
-DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
+export interface AppDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  kind?: 'dialog' | 'alert'
+  title: React.ReactNode
+  eyebrow?: React.ReactNode
+  description?: React.ReactNode
+  headerAction?: React.ReactNode
+  children?: React.ReactNode
+  panelClassName?: string
+  headerClassName?: string
+  bodyClassName?: string
+  footerClassName?: string
+  footerStart?: React.ReactNode
+  footer?: React.ReactNode
+  cancelAction?: AppDialogAction
+  confirmAction?: AppDialogAction
+  onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>
+}
 
-const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <div className="dialog-stage pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
-      <DialogPrimitive.Content
-        ref={ref}
-        className={cn(
-          'dialog-panel relative pointer-events-auto w-full max-w-lg data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out',
-          className
-        )}
-        {...props}
-      >
-        {children}
-      </DialogPrimitive.Content>
-    </div>
-  </DialogPortal>
-))
-DialogContent.displayName = DialogPrimitive.Content.displayName
+export function AppDialog({
+  open,
+  onOpenChange,
+  kind = 'dialog',
+  title,
+  eyebrow,
+  description,
+  headerAction,
+  children,
+  panelClassName,
+  headerClassName,
+  bodyClassName,
+  footerClassName,
+  footerStart,
+  footer,
+  cancelAction,
+  confirmAction,
+  onKeyDown
+}: AppDialogProps) {
+  const isAlert = kind === 'alert'
+  const Root = DialogPrimitive.Root
+  const Portal = DialogPrimitive.Portal
+  const Overlay = DialogPrimitive.Overlay
+  const Content = DialogPrimitive.Content
+  const Title = DialogPrimitive.Title
+  const Description = DialogPrimitive.Description
+  const hasFooter =
+    footer !== undefined ||
+    footerStart !== undefined ||
+    cancelAction !== undefined ||
+    confirmAction !== undefined
 
-const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('dialog-header', className)} {...props} />
-)
-DialogHeader.displayName = 'DialogHeader'
-
-const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('dialog-footer', className)} {...props} />
-)
-DialogFooter.displayName = 'DialogFooter'
-
-const DialogTitle = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title
-    ref={ref}
-    className={cn('dialog-title', className)}
-    {...props}
-  />
-))
-DialogTitle.displayName = DialogPrimitive.Title.displayName
-
-const DialogDescription = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
-    ref={ref}
-    className={cn('dialog-description', className)}
-    {...props}
-  />
-))
-DialogDescription.displayName = DialogPrimitive.Description.displayName
-
-export {
-  Dialog,
-  DialogPortal,
-  DialogOverlay,
-  DialogTrigger,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription
+  return (
+    <Root open={open} onOpenChange={onOpenChange}>
+      <Portal>
+        <Overlay className="dialog-overlay fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <div className="dialog-stage pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
+          <Content
+            className={cn(
+              'dialog-panel relative pointer-events-auto w-full max-w-md data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out',
+              panelClassName
+            )}
+            role={isAlert ? 'alertdialog' : 'dialog'}
+            onKeyDown={onKeyDown}
+          >
+            <div className={cn('dialog-header', headerClassName)}>
+              {eyebrow}
+              <div className="dialog-heading-row">
+                <Title className="dialog-title">{title}</Title>
+                {headerAction}
+              </div>
+            </div>
+            <div className={cn('dialog-body', bodyClassName)}>
+              {description !== undefined && (
+                <Description className="dialog-description">{description}</Description>
+              )}
+              {children}
+            </div>
+            {hasFooter && (
+              <div className={cn('dialog-footer', footerClassName)}>
+                {footer ?? (
+                  <>
+                    {footerStart}
+                    {cancelAction && (
+                      <Button
+                        variant="outline"
+                        disabled={cancelAction.disabled}
+                        onClick={() => {
+                          cancelAction.onSelect?.()
+                          onOpenChange(false)
+                        }}
+                      >
+                        {cancelAction.label}
+                      </Button>
+                    )}
+                    {confirmAction && (
+                      <Button
+                        variant={confirmAction.destructive ? 'destructive' : 'default'}
+                        disabled={confirmAction.disabled}
+                        onClick={confirmAction.onSelect}
+                      >
+                        {confirmAction.label}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </Content>
+        </div>
+      </Portal>
+    </Root>
+  )
 }
