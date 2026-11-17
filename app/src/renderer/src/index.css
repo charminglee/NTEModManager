@@ -357,6 +357,22 @@ input[type='checkbox'] {
   overflow: auto;
   padding: 1px 2px 18px 1px;
 }
+.gamebanana-load-more {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 8px 0 2px;
+  color: #655c50;
+  font-size: 11px;
+  text-align: center;
+}
+.gamebanana-load-more .gamebanana-error {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .gamebanana-mod-card {
   display: flex;
   min-width: 0;

@@ -474,8 +474,9 @@ const api: Api = {
     return cloneMods()
   },
 
-  async listGameBananaMods() {
-    return gameBananaMods.map((mod) => ({ ...mod, files: mod.files.map((file) => ({ ...file })) }))
+  async listGameBananaMods(page = 1) {
+    const mod = gameBananaMods[page - 1]
+    return mod ? [{ ...mod, files: mod.files.map((file) => ({ ...file })) }] : []
   },
 
   async getGameBananaMod(modId) {

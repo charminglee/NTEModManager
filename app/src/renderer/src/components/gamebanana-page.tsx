@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, ExternalLink, LoaderCircle, RefreshCw, Search, TriangleAlert } from 'lucide-react'
 import type {
   AppConfigData,
@@ -38,21 +38,35 @@ function shortNumber(value: number): string {
 export default function GameBananaPage({ config, onConfigChange, onModsChanged }: Props) {
   const [mods, setMods] = useState<GameBananaMod[]>([])
   const [selected, setSelected] = useState<GameBananaMod | null>(null)
-  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState('')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [tasks, setTasks] = useState<GameBananaDownloadTask[]>([])
   const [downloadTarget, setDownloadTarget] = useState<DownloadTarget | null>(null)
+  const modGridRef = useRef<HTMLElement>(null)
+  const nextPageRef = useRef(1)
+  const loadingMoreRef = useRef(false)
 
-  const loadMods = async (nextPage = page) => {
+  const loadFirstPage = async () => {
+    if (loadingMoreRef.current) return
     setLoading(true)
     setError('')
+    setLoadMoreError('')
+    setHasMore(true)
+    nextPageRef.current = 1
+    if (modGridRef.current) {
+      modGridRef.current.scrollTop = 0
+    }
     try {
-      const next = await window.api.listGameBananaMods(nextPage)
+      const next = await window.api.listGameBananaMods(1)
       setMods(next)
       setSelected((current) => (current && next.some((mod) => mod.id === current.id) ? current : next[0] ?? null))
+      nextPageRef.current = 2
+      setHasMore(next.length > 0)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
@@ -60,9 +74,39 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
     }
   }
 
+  const loadNextPage = async () => {
+    if (loadingMoreRef.current || !hasMore) return
+    const page = nextPageRef.current
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+    setLoadMoreError('')
+    try {
+      const next = await window.api.listGameBananaMods(page)
+      const existingIds = new Set(mods.map((mod) => mod.id))
+      const newMods = next.filter((mod) => !existingIds.has(mod.id))
+      setMods((current) => [...current, ...newMods])
+      setSelected((current) => current ?? newMods[0] ?? null)
+      nextPageRef.current = page + 1
+      setHasMore(next.length > 0 && newMods.length > 0)
+    } catch (loadError) {
+      setLoadMoreError(loadError instanceof Error ? loadError.message : String(loadError))
+    } finally {
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+    }
+  }
+
   useEffect(() => {
-    void loadMods(1)
+    void loadFirstPage()
   }, [])
+
+  useEffect(() => {
+    if (loading || loadingMore || !hasMore) return
+    const grid = modGridRef.current
+    if (grid && grid.scrollHeight <= grid.clientHeight + 80) {
+      void loadNextPage()
+    }
+  }, [hasMore, loading, loadingMore, mods.length])
 
   useEffect(() => {
     let active = true
@@ -137,7 +181,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
             <p>浏览 Neverness To Everness 社区模组，下载后自动进入 NTEMM 模组库。</p>
           </div>
           <div className="gamebanana-heading-actions">
-            <Button variant="outline" onClick={() => void loadMods(page)} disabled={loading}>
+            <Button variant="outline" onClick={() => void loadFirstPage()} disabled={loading || loadingMore}>
               <RefreshCw className={loading ? 'animate-spin' : ''} />
               刷新
             </Button>
@@ -147,9 +191,9 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
         <div className="gamebanana-toolbar">
           <div className="library-search gamebanana-search">
             <Search size={17} />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索当前页模组或作者" />
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索已加载模组或作者" />
           </div>
-          <span className="gamebanana-page-label">第 {page} 页 · {mods.length} 个模组</span>
+          <span className="gamebanana-page-label">已加载 {mods.length} 个模组</span>
         </div>
 
         {error ? (
@@ -157,7 +201,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
             <TriangleAlert size={36} />
             <strong>GameBanana 加载失败</strong>
             <span>{error}</span>
-            <Button onClick={() => void loadMods(page)}>重试</Button>
+            <Button onClick={() => void loadFirstPage()}>重试</Button>
           </div>
         ) : loading ? (
           <div className="gamebanana-state"><LoaderCircle className="animate-spin" size={38} /><span>正在读取 GameBanana 模组……</span></div>
@@ -165,7 +209,17 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
           <div className="gamebanana-state"><Search size={36} /><strong>没有匹配的模组</strong><span>换一个关键词试试。</span></div>
         ) : (
           <div className="gamebanana-layout">
-            <section className="gamebanana-mod-grid" aria-label="GameBanana 模组列表">
+            <section
+              ref={modGridRef}
+              className="gamebanana-mod-grid"
+              aria-label="GameBanana 模组列表"
+              onScroll={(event) => {
+                const element = event.currentTarget
+                if (element.scrollHeight - element.scrollTop - element.clientHeight < 240) {
+                  void loadNextPage()
+                }
+              }}
+            >
               {filteredMods.map((mod) => (
                 <button
                   type="button"
@@ -181,6 +235,20 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   </div>
                 </button>
               ))}
+              <div className="gamebanana-load-more" role="status" aria-live="polite">
+                {loadMoreError ? (
+                  <>
+                    <span className="gamebanana-error">加载更多模组失败：{loadMoreError}</span>
+                    <Button size="sm" variant="outline" onClick={() => void loadNextPage()}>重试</Button>
+                  </>
+                ) : loadingMore ? (
+                  <><LoaderCircle className="animate-spin" size={15} />正在加载更多模组……</>
+                ) : hasMore ? (
+                  '继续下滑加载更多'
+                ) : (
+                  '已加载全部模组'
+                )}
+              </div>
             </section>
 
             {selected && (
@@ -215,8 +283,6 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
         )}
 
         <div className="gamebanana-page-footer">
-          <Button variant="outline" onClick={() => { setPage((value) => Math.max(1, value - 1)); void loadMods(Math.max(1, page - 1)) }} disabled={page <= 1 || loading}>上一页</Button>
-          <Button variant="outline" onClick={() => { setPage((value) => value + 1); void loadMods(page + 1) }} disabled={loading}>下一页</Button>
           <Button className="gamebanana-queue-button" onClick={() => setDrawerOpen(true)}>
             <Download />下载列表{activeTaskCount > 0 ? ` · ${activeTaskCount}` : ''}
           </Button>
