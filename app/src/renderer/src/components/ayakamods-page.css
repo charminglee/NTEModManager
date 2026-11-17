@@ -12,40 +12,13 @@
   overflow: hidden;
   background: var(--surface-paper);
 }
-.ayakamods-heading {
-  align-items: flex-end;
-  padding-top: 20px;
-  padding-bottom: 16px;
-}
-.ayakamods-heading-copy {
-  min-width: 0;
-}
-.ayakamods-heading h1 {
-  margin-top: 5px;
-}
-.ayakamods-heading-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.ayakamods-heading-status {
-  min-height: 18px;
-  max-width: 640px;
-  overflow: hidden;
-  color: #514a42;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ayakamods-heading-status.is-error {
+.workspace-page-heading p.ayakamods-heading-error {
   color: var(--vermilion);
 }
 .ayakamods-browser {
   display: flex;
   flex: 1;
   min-height: 0;
-  padding: 0 22px 18px;
 }
 .ayakamods-browser-frame {
   position: relative;
@@ -115,15 +88,6 @@
   user-select: text;
 }
 @media (max-width: 760px) {
-  .ayakamods-heading {
-    align-items: stretch;
-  }
-  .ayakamods-heading-actions {
-    width: 100%;
-  }
-  .ayakamods-browser {
-    padding: 0 12px 12px;
-  }
   .ayakamods-preview {
     padding: 22px 16px;
   }

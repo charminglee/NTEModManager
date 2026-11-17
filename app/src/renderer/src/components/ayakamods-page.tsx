@@ -64,31 +64,28 @@ export default function AyakaModsPage({ visible }: Props) {
   }
 
   return (
-    <main className="ayakamods-page">
-      <header className="workspace-page-heading ayakamods-heading">
-        <div className="ayakamods-heading-copy">
-          <span className="eyebrow">AYAKAMODS COMMUNITY</span>
+    <main className="ayakamods-page gamebanana-main-column">
+      <header className="workspace-page-heading gamebanana-heading">
+        <div>
           <h1>AyakaMods</h1>
           <p
-            className={`ayakamods-heading-status ${error ? 'is-error' : ''}`}
+            className={error ? 'ayakamods-heading-error' : undefined}
             role={error ? 'alert' : 'status'}
             aria-live="polite"
             title={error || undefined}
           >
-            {error || (loading ? '正在载入 Neverness To Everness 模组社区……' : '浏览 Neverness To Everness 社区模组，页面内容由 AyakaMods 提供。')}
+            浏览 Neverness To Everness 社区模组。
           </p>
         </div>
-        <div className="ayakamods-heading-actions">
+        <div className="gamebanana-heading-actions">
+          <Button variant="outline" size="icon" onClick={openExternal} aria-label="在浏览器打开" title="在浏览器打开">
+            <ExternalLink />
+          </Button>
           {RUNS_IN_ELECTRON && (
-            <Button variant="outline" onClick={reload}>
+            <Button variant="outline" size="icon" onClick={reload} aria-label="刷新" title="刷新">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
-              刷新
             </Button>
           )}
-          <Button variant="outline" onClick={openExternal}>
-            <ExternalLink />
-            在浏览器打开
-          </Button>
         </div>
       </header>
       <div className="ayakamods-browser">
