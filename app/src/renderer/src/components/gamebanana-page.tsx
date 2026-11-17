@@ -71,7 +71,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
     try {
       const next = await window.api.listGameBananaMods(1)
       setMods(next)
-      setSelected((current) => (current && next.some((mod) => mod.id === current.id) ? current : next[0] ?? null))
+      setSelected((current) => (current && next.some((mod) => mod.id === current.id) ? current : null))
       nextPageRef.current = 2
       setHasMore(next.length > 0)
     } catch (loadError) {
@@ -92,7 +92,6 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
       const existingIds = new Set(mods.map((mod) => mod.id))
       const newMods = next.filter((mod) => !existingIds.has(mod.id))
       setMods((current) => [...current, ...newMods])
-      setSelected((current) => current ?? newMods[0] ?? null)
       nextPageRef.current = page + 1
       setHasMore(next.length > 0 && newMods.length > 0)
     } catch (loadError) {
