@@ -499,7 +499,6 @@ input[type='checkbox'] {
 .gamebanana-file-row > div { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
 .gamebanana-file-row strong { color: #f1e0c8; font-size: 14px; overflow-wrap: anywhere; }
 .gamebanana-file-row span { color: #bcad96; font-size: 11px; }
-.gamebanana-file-row b { padding: 0 8px; font-weight: 400; }
 .gamebanana-file-row p { margin: 3px 0 0; color: #d6cabb; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .gamebanana-file-row button { flex-shrink: 0; }
 .gamebanana-archives { margin-top: 22px; border: 1px solid #61574a; }

@@ -35,7 +35,7 @@ function ModListHeader(p: Props) {
             <span className="title-accent" aria-hidden />
           </div>
           <p>
-            {p.counts.all} 个模组 · {p.counts.installed} 个已安装
+            {p.counts.all} 个模组　{p.counts.installed} 个已安装
           </p>
         </div>
         <img className="ticket-stamp" src={ticket} alt="" />
