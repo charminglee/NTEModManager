@@ -1,6 +1,5 @@
 import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const Dialog = DialogPrimitive.Root
@@ -39,13 +38,6 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close
-          aria-label="关闭"
-          className="dialog-close absolute right-4 top-4"
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">关闭</span>
-        </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </div>
   </DialogPortal>

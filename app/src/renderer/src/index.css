@@ -351,7 +351,7 @@ input[type='checkbox'] {
   flex-direction: column;
   align-items: stretch;
   gap: 7px;
-  padding: 23px 58px 20px 30px;
+  padding: 23px 30px 20px;
   border-bottom: 1px solid #59544c;
   background: #302d28;
   text-align: left;
@@ -390,21 +390,6 @@ input[type='checkbox'] {
   padding: 16px 30px;
   border-top: 1px solid #514b42;
   background: #24231f;
-}
-.dialog-close {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  padding: 0;
-  color: #e3d8c7;
-  border: 0;
-  background: transparent;
-  transition: background-color 140ms ease, color 140ms ease;
-}
-.dialog-close:hover {
-  color: #fff5e8;
-  background: #3a3731;
 }
 .dialog-panel-alert .dialog-header {
   flex: 1 1 auto;
@@ -455,7 +440,7 @@ input[type='checkbox'] {
     max-height: calc(100dvh - 24px);
   }
   .dialog-header {
-    padding: 20px 52px 17px 20px;
+    padding: 20px;
   }
   .dialog-title {
     font-size: 22px;
@@ -596,7 +581,7 @@ input[type='checkbox'] {
 }
 .gamebanana-detail-dialog-header {
   flex-shrink: 0;
-  padding: 25px 58px 22px 30px;
+  padding: 25px 30px 22px;
   border-bottom: 1px solid #59544c;
   background: #302d28;
 }
@@ -667,7 +652,6 @@ input[type='checkbox'] {
 .gamebanana-detail-state { flex: 1; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 25px; color: #d5c8b4; }
 .gamebanana-detail-state p { max-width: 600px; overflow-wrap: anywhere; }
 .gamebanana-lightbox.dialog-panel { max-width: min(1800px, calc(100vw - 64px)); height: min(1040px, calc(100dvh - 120px)); margin-top: 35px; display: flex; flex-direction: column; gap: 14px; background: #1d1c19; color: #eee5d8; border: 1px solid #7b6b55; }
-.gamebanana-lightbox > .dialog-header { padding-right: 58px; }
 .gamebanana-lightbox > div:first-child p { color: #c3b49e; }
 .gamebanana-lightbox-canvas { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; background: #121210; }
 .gamebanana-lightbox-canvas button { width: 100%; height: 100%; min-height: 0; cursor: zoom-in; }
@@ -681,7 +665,7 @@ input[type='checkbox'] {
 .gamebanana-detail-dialog :is(button, summary):focus-visible, .gamebanana-lightbox button:focus-visible { outline: 2px solid #e5b091; outline-offset: 3px; }
 @media (max-width: 720px) {
   .gamebanana-detail-dialog.dialog-panel { max-width: calc(100vw - 32px); height: calc(100dvh - 32px); }
-  .gamebanana-detail-dialog-header { padding: 20px 52px 18px 18px; }
+  .gamebanana-detail-dialog-header { padding: 20px 18px 18px; }
   .gamebanana-title-row { align-items: flex-start; gap: 8px; }
   .gamebanana-title-row h2 { font-size: 22px; }
   .gamebanana-source-button { padding-inline: 8px; }
