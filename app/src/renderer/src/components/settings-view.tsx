@@ -22,8 +22,7 @@ const pathFields = [
     key: 'backgroundImagesDirectory',
     label: '背景图片目录',
     help: '图片按数字子文件夹组织，留空不加载本地背景。'
-  },
-  { key: 'packagerDirectory', label: '打包器目录', help: '选择包含「傻瓜打包器.bat」的文件夹。' }
+  }
 ] as const
 const normalizePath = (path: string) => path.trim().replace(/\\/g, '/').replace(/\/+$/, '')
 export default function SettingsView({ config, onSaved, onDirtyChange, onCancel }: Props) {
