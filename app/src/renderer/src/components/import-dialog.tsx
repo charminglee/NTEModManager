@@ -30,13 +30,8 @@ export default function ImportDialog({ session, busy, activity, onClose, onRetry
           : `已完成：成功 ${successes} 个，失败 ${failures} 个。`
       }
       panelClassName="max-w-xl"
-      footerStart={
-        <span className="dialog-footer-note">
-          {successes ? '完成后可逐个重命名。' : '详细过程可在运行日志中查看。'}
-        </span>
-      }
       confirmAction={{
-        label: successes ? '完成并重命名' : '关闭',
+        label: '继续',
         disabled: busy,
         onSelect: onClose
       }}
