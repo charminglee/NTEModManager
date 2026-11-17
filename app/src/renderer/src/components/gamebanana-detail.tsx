@@ -25,7 +25,7 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
   return <div className="gamebanana-file-list">{files.map((file) => <article className="gamebanana-file-row" key={file.id}>
     <div>
       <strong>{file.name}</strong>
-      <span>版本：{file.version || '未提供'}　{formatFileSize(file.sizeBytes)}　{file.downloadCount.toLocaleString('zh-CN')} 次下载</span>
+      <span>版本：{file.version || '未提供'} · {formatFileSize(file.sizeBytes)} · {file.downloadCount.toLocaleString('zh-CN')} 次下载</span>
       <span>上传时间：{date(file.uploadedAt)}</span>
       {file.description ? <p>{file.description}</p> : <span>暂无文件描述。</span>}
     </div>
@@ -129,7 +129,7 @@ export default function GameBananaDetail({ initial, onDownload }: { initial: Gam
           setImageIndex((imageIndex + (event.key === 'ArrowRight' ? 1 : -1) + mod.screenshots.length) % mod.screenshots.length)
         }
       }}>
-        <DialogHeader><DialogTitle>截图预览</DialogTitle><DialogDescription>{imageIndex === null ? '' : `${imageIndex + 1} ／ ${mod?.screenshots.length}`}　点击图片切换原始尺寸</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>截图预览</DialogTitle><DialogDescription>{imageIndex === null ? '' : `${imageIndex + 1} ／ ${mod?.screenshots.length}`} · 点击图片切换原始尺寸</DialogDescription></DialogHeader>
         {mod && imageIndex !== null && <>
           <div className={`gamebanana-lightbox-canvas ${originalSize ? 'is-original' : ''}`}><button type="button" onClick={() => setOriginalSize(!originalSize)} aria-label={originalSize ? '适应窗口' : '原始尺寸'}><img src={mod.screenshots[imageIndex].url} alt={`${mod.name} 截图 ${imageIndex + 1}`} /></button></div>
           <div className="gamebanana-lightbox-actions"><Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex - 1 + mod.screenshots.length) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>上一张</Button><span>{originalSize ? '原始尺寸' : '适应窗口'}</span><Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex + 1) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>下一张</Button></div>

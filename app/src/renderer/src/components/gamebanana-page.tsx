@@ -235,10 +235,10 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   <div className="gamebanana-card-copy">
                     <strong>{mod.name}</strong>
                     <span>{mod.authors}</span>
-                    <small>{shortNumber(mod.downloads)} 下载　{shortNumber(mod.likes)} 喜欢　{shortNumber(mod.views)} 浏览　{shortNumber(mod.comments)} 评论</small>
+                    <small>{shortNumber(mod.downloads)} 下载 · {shortNumber(mod.likes)} 喜欢 · {shortNumber(mod.views)} 浏览 · {shortNumber(mod.comments)} 评论</small>
                     <small>
                       上传 {formatModDate(mod.uploadedAt, now)}
-                      {mod.updatedAt !== mod.uploadedAt && `　更新 ${formatModDate(mod.updatedAt, now)}`}
+                      {mod.updatedAt !== mod.uploadedAt && ` · 更新 ${formatModDate(mod.updatedAt, now)}`}
                     </small>
                   </div>
                 </button>
@@ -264,7 +264,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
 
         <div className="gamebanana-page-footer">
           <Button className="gamebanana-queue-button" onClick={() => setDrawerOpen(true)}>
-            <Download />下载列表{activeTaskCount > 0 ? `　${activeTaskCount}` : ''}
+            <Download />下载列表{activeTaskCount > 0 ? ` · ${activeTaskCount}` : ''}
           </Button>
         </div>
       </div>
