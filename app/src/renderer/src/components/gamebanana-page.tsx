@@ -192,7 +192,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
           <div className="gamebanana-heading-actions">
             <div className="library-search gamebanana-search">
               <Search size={17} />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索已加载模组或作者" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索模组或作者" />
             </div>
             <Button variant="outline" onClick={() => void loadFirstPage()} disabled={loading || loadingMore} size="icon">
               <RefreshCw className={loading ? 'animate-spin' : ''} />

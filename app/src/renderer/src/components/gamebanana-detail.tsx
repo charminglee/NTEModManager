@@ -25,9 +25,9 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
   return <div className="gamebanana-file-list">{files.map((file) => <article className="gamebanana-file-row" key={file.id}>
     <div>
       <strong>{file.name}</strong>
-      <span>版本：{file.version || '未提供'} · {formatFileSize(file.sizeBytes)} · {file.downloadCount.toLocaleString('zh-CN')} 次下载</span>
+      <span>{file.version && <>{file.version} · </>}{formatFileSize(file.sizeBytes)} · {file.downloadCount.toLocaleString('zh-CN')} 次下载</span>
       <span>上传时间：{date(file.uploadedAt)}</span>
-      {file.description ? <p>{file.description}</p> : <span>暂无文件描述。</span>}
+      {file.description && <p>{file.description}</p>}
     </div>
     <Button size="sm" onClick={() => onDownload(file)} aria-label={`下载 ${file.name}`}><Download />下载</Button>
   </article>)}</div>
