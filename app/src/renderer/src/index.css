@@ -1381,11 +1381,11 @@ select {
   background: var(--vermilion);
   clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
 }
-.detail-file-panel {
+.detail-file-panel,
+.detail-metadata {
   border: 1px solid #726c61;
   padding: 6px;
   border-radius: 2px;
-  min-height: 140px;
 }
 .detail-actions {
   margin-top: 16px;
@@ -1410,7 +1410,7 @@ select {
   grid-template-columns: 64px 1fr;
   gap: 12px 10px;
   font-size: 12px;
-  padding: 10px 0;
+  padding: 10px;
 }
 .detail-metadata dt {
   color: #c2b9aa;
