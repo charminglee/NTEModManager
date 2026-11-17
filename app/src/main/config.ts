@@ -182,6 +182,7 @@ function createDefaultConfig(filePath: string): void {
     mod_category_order: DEFAULT_CATEGORY_ORDER.join(','),
     auto_use_last_packaging_path: '1',
     exclusive_install_exempt_groups: 'UI',
+    gamebanana_install_after_download: '0',
     ui_corner_radius: String(UI_CORNER_RADIUS_DEFAULT),
     restore_last_category: '0'
   }
@@ -238,6 +239,11 @@ export function getAppConfig(): AppConfigData {
     ),
     backgroundMaskOpacity: clampBackgroundMaskOpacity(
       getInt('Preferences', 'background_mask_opacity', BACKGROUND_MASK_OPACITY_DEFAULT)
+    ),
+    gameBananaInstallAfterDownload: getBool(
+      'Preferences',
+      'gamebanana_install_after_download',
+      false
     )
   }
 }
@@ -408,6 +414,9 @@ export function updateAppConfig(patch: AppConfigPatch): void {
     preferenceEntries.background_mask_opacity = String(
       clampBackgroundMaskOpacity(patch.backgroundMaskOpacity)
     )
+  }
+  if (patch.gameBananaInstallAfterDownload !== undefined) {
+    preferenceEntries.gamebanana_install_after_download = patch.gameBananaInstallAfterDownload ? '1' : '0'
   }
   if (patch.restoreLastCategory !== undefined) {
     preferenceEntries.restore_last_category = patch.restoreLastCategory ? '1' : '0'

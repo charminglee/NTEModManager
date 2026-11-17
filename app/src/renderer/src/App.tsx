@@ -36,6 +36,7 @@ import FpsCounter from '@/components/fps-counter'
 import PromptDialog from '@/components/prompt-dialog'
 import ImportDialog, { type ImportSession } from '@/components/import-dialog'
 import SettingsView from '@/components/settings-view'
+import GameBananaPage from '@/components/gamebanana-page'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1074,6 +1075,12 @@ export default function App() {
               ) : null}
             </MotionPresence>
           </div>
+        ) : view === 'gamebanana' ? (
+          <GameBananaPage
+            config={config}
+            onConfigChange={setConfig}
+            onModsChanged={() => void refreshMods()}
+          />
         ) : view === 'logs' ? (
           <LogView />
         ) : (

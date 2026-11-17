@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import Switch from './ui/switch'
 
 interface PromptDialogProps {
   open: boolean
@@ -18,6 +19,8 @@ interface PromptDialogProps {
   label: string
   initialValue?: string
   confirmText?: string
+  installAfterDownload?: boolean
+  onInstallAfterDownloadChange?: (checked: boolean) => void
   onConfirm: (value: string) => void
   onCancel: () => void
 }
@@ -30,6 +33,8 @@ export default function PromptDialog({
   label,
   initialValue = '',
   confirmText = '确定',
+  installAfterDownload,
+  onInstallAfterDownloadChange,
   onConfirm,
   onCancel
 }: PromptDialogProps) {
@@ -85,6 +90,19 @@ export default function PromptDialog({
             }}
           />
         </div>
+        {installAfterDownload !== undefined && onInstallAfterDownloadChange && (
+          <div className="prompt-switch-row">
+            <div>
+              <strong>下载完成后安装</strong>
+              <span>按现有同组互斥规则安装到游戏目录。</span>
+            </div>
+            <Switch
+              checked={installAfterDownload}
+              onCheckedChange={onInstallAfterDownloadChange}
+              aria-label="下载完成后安装"
+            />
+          </div>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             取消

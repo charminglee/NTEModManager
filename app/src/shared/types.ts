@@ -100,6 +100,8 @@ export interface AppConfigData {
   uiCornerRadius: number
   /** 背景颜色遮罩不透明度(%):衬托 UI 的颜色遮罩相对完整强度的比例 */
   backgroundMaskOpacity: number
+  /** GameBanana 下载完成后是否自动安装 */
+  gameBananaInstallAfterDownload: boolean
 }
 
 /** 设置界面可修改的配置子集;未指定的字段保持不变。 */
@@ -117,6 +119,54 @@ export interface AppConfigPatch {
   fpsCounterEnabled?: boolean
   uiCornerRadius?: number
   backgroundMaskOpacity?: number
+  gameBananaInstallAfterDownload?: boolean
+}
+
+export interface GameBananaFile {
+  id: string
+  name: string
+  sizeBytes: number
+  downloadCount: number
+  downloadUrl: string
+  md5?: string
+}
+
+export interface GameBananaMod {
+  id: number
+  name: string
+  authors: string
+  gameName: string
+  downloads: number
+  likes: number
+  views: number
+  updatedAt: number
+  description: string
+  previewUrl: string | null
+  profileUrl: string
+  downloadUrl: string | null
+  installInstructions: string
+  files: GameBananaFile[]
+}
+
+export type GameBananaDownloadStatus =
+  | 'queued'
+  | 'downloading'
+  | 'extracting'
+  | 'installing'
+  | 'completed'
+  | 'failed'
+
+export interface GameBananaDownloadTask {
+  id: string
+  modId: number
+  modName: string
+  fileName: string
+  customName: string
+  status: GameBananaDownloadStatus
+  downloadedBytes: number
+  totalBytes: number | null
+  message: string
+  createdAt: string
 }
 
 /** 持久化到 INI 的 Preferences/mod_list_sort_order 取值 */
