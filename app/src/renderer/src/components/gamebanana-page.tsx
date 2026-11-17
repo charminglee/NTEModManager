@@ -9,7 +9,6 @@ import type {
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import PromptDialog from './prompt-dialog'
-import Switch from './ui/switch'
 import GameBananaDownloadDrawer from './gamebanana-download-drawer'
 import { formatFileSize } from '@/lib/format'
 import { toast } from './toast-card'
@@ -138,14 +137,6 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
             <p>浏览 Neverness To Everness 社区模组，下载后自动进入 NTEMM 模组库。</p>
           </div>
           <div className="gamebanana-heading-actions">
-            <label className="gamebanana-install-preference">
-              <span>下载完成后安装</span>
-              <Switch
-                checked={config.gameBananaInstallAfterDownload}
-                onCheckedChange={updateInstallPreference}
-                aria-label="下载完成后安装"
-              />
-            </label>
             <Button variant="outline" onClick={() => void loadMods(page)} disabled={loading}>
               <RefreshCw className={loading ? 'animate-spin' : ''} />
               刷新

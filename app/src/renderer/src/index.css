@@ -324,15 +324,6 @@ input[type='checkbox'] {
   align-items: center;
   gap: 12px;
 }
-.gamebanana-install-preference {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 750;
-  white-space: nowrap;
-}
 .gamebanana-toolbar {
   display: flex;
   align-items: center;
