@@ -129,7 +129,9 @@ export default function App() {
   const [mods, setMods] = useState<ModInfo[]>([])
   const [currentCategory, setCurrentCategory] = useState<string>(ALL_CATEGORY)
   const [view, setView] = useState<AppView>('mods')
-  const [mountedCommunityViews, setMountedCommunityViews] = useState<Set<'gamebanana' | 'ayakamods'>>(new Set())
+  const [mountedCommunityViews] = useState<Set<'gamebanana' | 'ayakamods'>>(
+    () => new Set(['gamebanana', 'ayakamods'])
+  )
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
   const [chromeHidden, setChromeHidden] = useState(false)
@@ -328,14 +330,6 @@ export default function App() {
     setFocusedName(name)
     setDetailsOpen(true)
   }, [])
-  useEffect(() => {
-    if (view === 'gamebanana' || view === 'ayakamods') {
-      setMountedCommunityViews((current) => {
-        if (current.has(view)) return current
-        return new Set(current).add(view)
-      })
-    }
-  }, [view])
   const requestView = useCallback((next: AppView) => setView(next), [])
   const handleGameBananaModsChanged = useCallback(() => {
     void refreshMods()
@@ -1195,9 +1189,9 @@ export default function App() {
             }}
           />
         ) : null}
-        <div className="community-view-stack" hidden={view !== 'gamebanana' && view !== 'ayakamods'}>
+        <div className={cn('community-view-stack', (view === 'gamebanana' || view === 'ayakamods') ? 'is-active' : 'is-background')}>
           {(view === 'gamebanana' || mountedCommunityViews.has('gamebanana')) && (
-            <div className="community-view-panel" hidden={view !== 'gamebanana'}>
+            <div className={cn('community-view-panel', view === 'gamebanana' && 'is-active')}>
               <GameBananaPage
                 active={view === 'gamebanana'}
                 config={config}
@@ -1207,7 +1201,7 @@ export default function App() {
             </div>
           )}
           {(view === 'ayakamods' || mountedCommunityViews.has('ayakamods')) && (
-            <div className="community-view-panel" hidden={view !== 'ayakamods'}>
+            <div className={cn('community-view-panel', view === 'ayakamods' && 'is-active')}>
               <AyakaModsPage
                 active={view === 'ayakamods'}
                 visible={ayakaPageVisible}

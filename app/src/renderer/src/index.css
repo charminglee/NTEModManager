@@ -143,20 +143,33 @@ input[type='checkbox'] {
   pointer-events: none;
 }
 .community-view-stack {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
+.community-view-stack.is-background {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  visibility: hidden;
+  pointer-events: none;
+}
 .community-view-panel {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex: 1;
   min-width: 0;
   min-height: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
-.community-view-stack[hidden],
-.community-view-panel[hidden] {
-  display: none;
+.community-view-panel.is-active {
+  visibility: visible;
+  pointer-events: auto;
 }
 .app-header {
   flex-shrink: 0;
