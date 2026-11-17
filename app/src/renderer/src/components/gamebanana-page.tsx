@@ -186,19 +186,15 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
             <p>浏览 Neverness To Everness 社区模组，下载后自动进入 NTEMM 模组库。</p>
           </div>
           <div className="gamebanana-heading-actions">
+            <div className="library-search gamebanana-search">
+              <Search size={17} />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索已加载模组或作者" />
+            </div>
             <Button variant="outline" onClick={() => void loadFirstPage()} disabled={loading || loadingMore} size="icon">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
             </Button>
           </div>
         </header>
-
-        <div className="gamebanana-toolbar">
-          <div className="library-search gamebanana-search">
-            <Search size={17} />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索已加载模组或作者" />
-          </div>
-          <span className="gamebanana-page-label">已加载 {mods.length} 个模组</span>
-        </div>
 
         {error ? (
           <div className="gamebanana-state gamebanana-error">
@@ -235,8 +231,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   <div className="gamebanana-card-copy">
                     <strong>{mod.name}</strong>
                     <span>{mod.authors}</span>
-                    <small>{shortNumber(mod.views)} 浏览 · {shortNumber(mod.comments)} 评论</small>
-                    <small>{shortNumber(mod.downloads)} 下载 · {shortNumber(mod.likes)} 喜欢</small>
+                    <small>{shortNumber(mod.downloads)} 下载 · {shortNumber(mod.likes)} 喜欢 · {shortNumber(mod.views)} 浏览 · {shortNumber(mod.comments)} 评论</small>
                     <small>上传 {formatModDate(mod.uploadedAt, '未知')} · 更新 {formatModDate(mod.updatedAt, '未知')}</small>
                   </div>
                 </button>

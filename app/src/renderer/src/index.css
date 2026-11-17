@@ -324,21 +324,9 @@ input[type='checkbox'] {
   align-items: center;
   gap: 12px;
 }
-.gamebanana-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-  padding: 14px 0 11px;
-  border-bottom: 1px solid var(--rule);
-}
 .gamebanana-search {
-  max-width: 520px;
-}
-.gamebanana-page-label {
-  color: #655c50;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  width: min(360px, 32vw);
+  max-width: 360px;
 }
 .gamebanana-layout {
   display: grid;
@@ -499,13 +487,17 @@ input[type='checkbox'] {
 }
 .gamebanana-stats {
   display: flex;
-  gap: 18px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 12px;
   padding: 12px 0;
   border-top: 1px solid #5a5850;
   border-bottom: 1px solid #5a5850;
 }
 .gamebanana-stats span {
   display: flex;
+  min-width: 0;
+  flex: 1;
   flex-direction: column;
   gap: 3px;
   color: #c2b9aa;
@@ -1911,6 +1903,18 @@ select {
   }
 }
 @media (max-width: 760px) {
+  .gamebanana-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .gamebanana-heading-actions {
+    width: 100%;
+  }
+  .gamebanana-search {
+    width: auto;
+    max-width: none;
+    flex: 1;
+  }
   .gamebanana-mod-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
