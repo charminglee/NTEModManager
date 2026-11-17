@@ -1,5 +1,8 @@
 appId: com.nuoyan.nte-mod-manager
 productName: NteModManager
+# Electron 内置界面仅保留简体中文，移除其余语言包。
+electronLanguages:
+  - zh-CN
 directories:
   output: dist
 files:

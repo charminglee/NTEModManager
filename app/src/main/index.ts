@@ -31,6 +31,9 @@ protocol.registerSchemesAsPrivileged([
   }
 ])
 
+// 无论系统语言为何，Electron 与 Chromium 的界面统一使用简体中文。
+app.commandLine.appendSwitch('lang', 'zh-CN')
+
 // 仅 dev:开放 CDP 调试端口(自动化验证走 127.0.0.1:9222),打包版不开放。
 // 9222 被其他并行实例占用时可用 NTEMM_CDP_PORT 改口,互不干扰。
 if (!app.isPackaged) {
