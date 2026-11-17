@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ExternalLink, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import ayakamodsIcon from '@/assets/ayakamods.png'
 import { Button } from './ui/button'
 import './ayakamods-page.css'
@@ -53,12 +53,6 @@ export default function AyakaModsPage({ visible }: Props) {
     }
   }, [])
 
-  const openExternal = () => {
-    void window.api.openExternal(COMMUNITY_URL).then((result) => {
-      if (!result.success) setError(result.message)
-    })
-  }
-
   const reload = () => {
     webviewRef.current?.reload()
   }
@@ -77,16 +71,13 @@ export default function AyakaModsPage({ visible }: Props) {
             浏览 Neverness To Everness 社区模组。
           </p>
         </div>
-        <div className="gamebanana-heading-actions">
-          <Button variant="outline" size="icon" onClick={openExternal} aria-label="在浏览器打开" title="在浏览器打开">
-            <ExternalLink />
-          </Button>
-          {RUNS_IN_ELECTRON && (
+        {RUNS_IN_ELECTRON && (
+          <div className="gamebanana-heading-actions">
             <Button variant="outline" size="icon" onClick={reload} aria-label="刷新" title="刷新">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </header>
       <div className="ayakamods-browser">
         <div className="ayakamods-browser-frame">
@@ -107,10 +98,6 @@ export default function AyakaModsPage({ visible }: Props) {
                 <h2>AyakaMods 社区浏览</h2>
                 <p>AyakaMods 禁止其他站点通过普通网页框架嵌入。桌面版会在此区域内嵌浏览，浏览器开发模式仅展示入口。</p>
                 <span className="ayakamods-preview-url">{COMMUNITY_URL}</span>
-                <Button onClick={openExternal}>
-                  <ExternalLink />
-                  在浏览器打开
-                </Button>
               </div>
             </div>
           )}
