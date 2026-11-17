@@ -145,13 +145,13 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
           </div>
         )}
       </header>
-      <div className="ayakamods-browser">
+      <div className="ayakamods-browser" {...(target || drawerOpen ? { inert: '' } : {})}>
         <div className="ayakamods-browser-frame">
           {RUNS_IN_ELECTRON ? (
             <webview
               ref={webviewRef}
               title="AyakaMods 模组社区"
-              className={`ayakamods-webview ${visible && !target && !drawerOpen ? '' : 'is-hidden'}`}
+              className={`ayakamods-webview ${visible ? '' : 'is-hidden'}`}
               src={COMMUNITY_URL}
               partition="persist:ayakamods"
               allowpopups=""
