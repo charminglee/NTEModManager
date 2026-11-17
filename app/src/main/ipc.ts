@@ -8,6 +8,14 @@ import { runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { describeError, logger } from './logger'
+import {
+  createDownloadTask,
+  executeDownloadTask,
+  getMod as getGameBananaMod,
+  getTasks as getGameBananaTasks,
+  listMods as listGameBananaMods,
+  setTaskBroadcaster
+} from './gamebanana'
 import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult, SortOrder } from '../shared/types'
 
 type ProgressReporter = (message: string) => void
@@ -195,6 +203,14 @@ async function pickFileWithDialog(options: Electron.OpenDialogOptions): Promise<
 }
 
 export function registerIpcHandlers(categoryImageBase: string, appIconPath: string | null): void {
+  setTaskBroadcaster((task) => {
+    for (const contents of webContents.getAllWebContents()) {
+      if (!contents.isDestroyed()) {
+        contents.send('gamebanana:download-task', task)
+      }
+    }
+  })
+
   ipcMain.handle('app:icon', () => {
     if (!appIconPath || !existsSync(appIconPath)) {
       return null
@@ -223,6 +239,39 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   })
 
   ipcMain.handle('mods:scan', () => repository.scan())
+
+  ipcMain.handle('gamebanana:list', (_event, page: number) => listGameBananaMods(page))
+  ipcMain.handle('gamebanana:detail', (_event, modId: number) => getGameBananaMod(modId))
+  ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks())
+  ipcMain.handle(
+    'gamebanana:startDownload',
+    async (_event, modId: number, fileId: string, customName: string, installAfterDownload: boolean) => {
+      const mod = await getGameBananaMod(modId)
+      const file = mod.files.find((item) => item.id === fileId)
+      if (!file) {
+        throw new Error(`找不到 GameBanana 文件：${fileId}`)
+      }
+      const taskId = createDownloadTask(mod, file, customName)
+      void runExclusive(`下载 GameBanana 模组 ${mod.name}`, async (report) => {
+        report(`正在下载 ${mod.name}……`)
+        return executeDownloadTask(
+          taskId,
+          mod,
+          file,
+          installAfterDownload,
+          appDir()
+        )
+      })
+      return taskId
+    }
+  )
+  ipcMain.handle('gamebanana:openExternal', async (_event, url: string) => {
+    if (!/^https:\/\/(?:www\.)?gamebanana\.com\//i.test(url)) {
+      return failure('只允许打开 GameBanana 网页地址。')
+    }
+    await shell.openExternal(url)
+    return { success: true, message: '已打开 GameBanana 网页' }
+  })
 
   ipcMain.handle('mods:import', (_event, archivePaths: string[]) =>
     runExclusive(`导入 ${archivePaths.length} 个压缩包`, async (report): Promise<ImportResult[]> => {

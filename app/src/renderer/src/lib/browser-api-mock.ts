@@ -9,6 +9,9 @@ import {
   type AppConfigData,
   type BackgroundRect,
   type BackgroundState,
+  type GameBananaDownloadTask,
+  type GameBananaFile,
+  type GameBananaMod,
   type LogEntry,
   type ModFileEntry,
   type ModInfo,
@@ -307,6 +310,51 @@ const mods: ModInfo[] = [
   }
 ]
 
+const gameBananaFiles: GameBananaFile[] = [
+  {
+    id: 'mock-file-1',
+    name: 'nte_demo_mod.zip',
+    sizeBytes: 18_874_368,
+    downloadCount: 128,
+    downloadUrl: 'https://gamebanana.com/dl/mock-file-1'
+  }
+]
+
+const gameBananaMods: GameBananaMod[] = [
+  {
+    id: 727079,
+    name: 'Zero Collection Upscale',
+    authors: 'yuriko',
+    gameName: 'Neverness To Everness',
+    downloads: 1212,
+    likes: 53,
+    views: 8405,
+    updatedAt: Math.floor(Date.now() / 1000),
+    description: '浏览器测试模式中的 GameBanana 模组详情。',
+    previewUrl: '/test-images/0b75ec85-cad5-4d7e-af49-fc6bc3dac554.jpg',
+    profileUrl: 'https://gamebanana.com/mods/727079',
+    downloadUrl: 'https://gamebanana.com/mods/download/727079',
+    installInstructions: '',
+    files: gameBananaFiles
+  },
+  {
+    id: 727080,
+    name: 'NTE Character Wardrobe',
+    authors: 'mock_author',
+    gameName: 'Neverness To Everness',
+    downloads: 684,
+    likes: 27,
+    views: 4200,
+    updatedAt: Math.floor(Date.now() / 1000) - 86400 * 4,
+    description: '第二个测试条目，用于检查列表和详情切换。',
+    previewUrl: '/test-images/photo_6269019679716215625_w.jpg',
+    profileUrl: 'https://gamebanana.com/mods/727080',
+    downloadUrl: 'https://gamebanana.com/mods/download/727080',
+    installInstructions: '',
+    files: gameBananaFiles.map((file) => ({ ...file, id: 'mock-file-2', name: 'wardrobe.7z' }))
+  }
+]
+
 function cloneMods(): ModInfo[] {
   return mods.map((mod) => ({ ...mod, subMods: bundleChildren(mod.files,
     mod.subMods?.filter((child) => !child.enabled).map((child) => child.name)) }))
@@ -343,7 +391,8 @@ const config: AppConfigData = {
   testImagesEnabled: true,
   fpsCounterEnabled: false,
   uiCornerRadius: UI_CORNER_RADIUS_DEFAULT,
-  backgroundMaskOpacity: BACKGROUND_MASK_OPACITY_DEFAULT
+  backgroundMaskOpacity: BACKGROUND_MASK_OPACITY_DEFAULT,
+  gameBananaInstallAfterDownload: false
 }
 
 const bootstrapLogs: LogEntry[] = [
@@ -379,6 +428,8 @@ function makeBackgroundState(): BackgroundState | null {
 // ============ mock api ============
 /** mock 的「上次打开的分类」:仅内存态,刷新页面即模拟重启 */
 let mockLastCategory = ''
+let mockGameBananaTasks: GameBananaDownloadTask[] = []
+const gameBananaTaskListeners = new Set<(task: GameBananaDownloadTask) => void>()
 
 let previewWindowState: WindowState = { isMaximized: false, isFullScreen: false }
 const windowStateListeners = new Set<(state: WindowState) => void>()
@@ -422,6 +473,50 @@ const api: Api = {
 
   async scanMods() {
     return cloneMods()
+  },
+
+  async listGameBananaMods() {
+    return gameBananaMods.map((mod) => ({ ...mod, files: mod.files.map((file) => ({ ...file })) }))
+  },
+
+  async getGameBananaMod(modId) {
+    const mod = gameBananaMods.find((item) => item.id === modId)
+    if (!mod) throw new Error(`未找到 GameBanana 模组 ${modId}`)
+    return { ...mod, files: mod.files.map((file) => ({ ...file })) }
+  },
+
+  async getGameBananaTasks() {
+    return mockGameBananaTasks.map((task) => ({ ...task }))
+  },
+
+  async startGameBananaDownload(modId, fileId, customName, installAfterDownload) {
+    const mod = gameBananaMods.find((item) => item.id === modId)
+    const file = mod?.files.find((item) => item.id === fileId)
+    if (!mod || !file) throw new Error('未找到测试下载文件')
+    const task: GameBananaDownloadTask = {
+      id: `mock-download-${Date.now()}`,
+      modId,
+      modName: mod.name,
+      fileName: file.name,
+      customName,
+      status: 'queued',
+      downloadedBytes: 0,
+      totalBytes: file.sizeBytes,
+      message: installAfterDownload ? '等待下载，完成后自动安装' : '等待下载',
+      createdAt: new Date().toISOString()
+    }
+    mockGameBananaTasks = [...mockGameBananaTasks, task]
+    for (const listener of gameBananaTaskListeners) listener({ ...task })
+    window.setTimeout(() => {
+      const completed = { ...task, status: 'completed' as const, downloadedBytes: file.sizeBytes, message: '浏览器测试模式：下载完成' }
+      mockGameBananaTasks = mockGameBananaTasks.map((item) => item.id === task.id ? completed : item)
+      for (const listener of gameBananaTaskListeners) listener({ ...completed })
+    }, 900)
+    return task.id
+  },
+
+  async openExternal() {
+    return { success: true, message: '浏览器测试模式：已模拟打开网页' }
   },
 
   async importArchives(archivePaths) {
@@ -757,6 +852,11 @@ const api: Api = {
   onLogEntry(callback) {
     void callback
     return () => {}
+  },
+
+  onGameBananaDownloadTask(callback) {
+    gameBananaTaskListeners.add(callback)
+    return () => gameBananaTaskListeners.delete(callback)
   }
 }
 

@@ -22,6 +22,7 @@ export { default as CircleArrowUp } from 'lucide-react/dist/esm/icons/circle-arr
 export { default as CircleCheck } from 'lucide-react/dist/esm/icons/circle-check.js'
 export { default as CircleX } from 'lucide-react/dist/esm/icons/circle-x.js'
 export { default as Download } from 'lucide-react/dist/esm/icons/download.js'
+export { default as ExternalLink } from 'lucide-react/dist/esm/icons/external-link.js'
 export { default as File } from 'lucide-react/dist/esm/icons/file.js'
 export { default as FileText } from 'lucide-react/dist/esm/icons/file-text.js'
 export { default as Folder } from 'lucide-react/dist/esm/icons/folder.js'

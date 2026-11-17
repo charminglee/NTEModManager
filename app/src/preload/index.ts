@@ -4,6 +4,8 @@ import type {
   AppConfigPatch,
   BackgroundState,
   BatchModAction,
+  GameBananaDownloadTask,
+  GameBananaMod,
   ImportResult,
   LogEntry,
   ModInfo,
@@ -125,6 +127,27 @@ const api = {
     const listener = (_event: unknown, entry: LogEntry) => callback(entry)
     ipcRenderer.on('log:entry', listener)
     return () => ipcRenderer.removeListener('log:entry', listener)
+  },
+
+  listGameBananaMods: (page: number): Promise<GameBananaMod[]> =>
+    ipcRenderer.invoke('gamebanana:list', page),
+  getGameBananaMod: (modId: number): Promise<GameBananaMod> =>
+    ipcRenderer.invoke('gamebanana:detail', modId),
+  getGameBananaTasks: (): Promise<GameBananaDownloadTask[]> =>
+    ipcRenderer.invoke('gamebanana:tasks'),
+  startGameBananaDownload: (
+    modId: number,
+    fileId: string,
+    customName: string,
+    installAfterDownload: boolean
+  ): Promise<string> =>
+    ipcRenderer.invoke('gamebanana:startDownload', modId, fileId, customName, installAfterDownload),
+  openExternal: (url: string): Promise<OperationResult> =>
+    ipcRenderer.invoke('gamebanana:openExternal', url),
+  onGameBananaDownloadTask: (callback: (task: GameBananaDownloadTask) => void): (() => void) => {
+    const listener = (_event: unknown, task: GameBananaDownloadTask) => callback(task)
+    ipcRenderer.on('gamebanana:download-task', listener)
+    return () => ipcRenderer.removeListener('gamebanana:download-task', listener)
   }
 }
 
