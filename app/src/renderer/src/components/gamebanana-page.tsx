@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Download, ExternalLink, LoaderCircle, RefreshCw, Search, TriangleAlert } from 'lucide-react'
+import { Download, LoaderCircle, RefreshCw, Search, TriangleAlert } from 'lucide-react'
 import type {
   AppConfigData,
   GameBananaDownloadTask,
@@ -7,17 +7,11 @@ import type {
   GameBananaMod
 } from '@shared/types'
 import { Button } from './ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from './ui/dialog'
+import { Dialog, DialogContent } from './ui/dialog'
 import { Input } from './ui/input'
 import PromptDialog from './prompt-dialog'
 import GameBananaDownloadDrawer from './gamebanana-download-drawer'
-import { formatFileSize } from '@/lib/format'
+import GameBananaDetail from './gamebanana-detail'
 import { toast } from './toast-card'
 
 interface Props {
@@ -277,41 +271,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
 
       <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null) }}>
         <DialogContent className="gamebanana-detail-dialog">
-          {selected && (
-            <div className="gamebanana-detail" aria-label="GameBanana 模组详情">
-              {selected.previewUrl ? <img className="gamebanana-detail-image" src={selected.previewUrl} alt="" /> : null}
-              <div className="gamebanana-detail-body">
-                <DialogHeader className="gamebanana-detail-dialog-header">
-                  <span className="eyebrow">MOD #{selected.id}</span>
-                  <DialogTitle>{selected.name}</DialogTitle>
-                  <DialogDescription className="gamebanana-detail-byline">
-                    {selected.authors}<br />
-                    上传：{formatModDate(selected.uploadedAt, now)}<br />
-                    更新：{formatModDate(selected.updatedAt, now)}
-                  </DialogDescription>
-                </DialogHeader>
-                <p className="gamebanana-description">{selected.description || '作者没有提供描述。'}</p>
-                <div className="gamebanana-stats">
-                  <span><strong>{shortNumber(selected.downloads)}</strong>下载</span>
-                  <span><strong>{shortNumber(selected.likes)}</strong>喜欢</span>
-                  <span><strong>{shortNumber(selected.views)}</strong>浏览</span>
-                  <span><strong>{shortNumber(selected.comments)}</strong>评论</span>
-                </div>
-                <div className="gamebanana-file-list">
-                  <h3>可下载文件</h3>
-                  {selected.files.length === 0 ? <p>暂无可下载文件。</p> : selected.files.map((file) => (
-                    <div className="gamebanana-file-row" key={file.id}>
-                      <div><strong>{file.name}</strong><span>{formatFileSize(file.sizeBytes)} · {shortNumber(file.downloadCount)} 次下载</span></div>
-                      <Button size="sm" onClick={() => openDownload(selected, file)}><Download />下载</Button>
-                    </div>
-                  ))}
-                </div>
-                <Button variant="outline" className="gamebanana-open-button" onClick={() => void window.api.openExternal(selected.profileUrl)}>
-                  <ExternalLink />打开 GameBanana 页面
-                </Button>
-              </div>
-            </div>
-          )}
+          {selected && <GameBananaDetail key={selected.id} initial={selected} onDownload={openDownload} />}
         </DialogContent>
       </Dialog>
       <GameBananaDownloadDrawer open={drawerOpen} tasks={tasks} onClose={() => setDrawerOpen(false)} />

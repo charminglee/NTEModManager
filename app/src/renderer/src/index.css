@@ -419,136 +419,127 @@ input[type='checkbox'] {
   font-size: 12px;
   white-space: nowrap;
 }
-.gamebanana-detail-dialog {
-  max-width: min(760px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
-  gap: 0;
+.gamebanana-detail-dialog.overlay-panel {
+  max-width: min(1220px, calc(100vw - 40px));
+  height: min(940px, calc(100dvh - 40px));
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   padding: 0;
-  border: 1px solid #7c7569;
-  border-radius: 2px;
-  background: var(--surface-ink);
-}
-.gamebanana-detail-dialog .gamebanana-detail {
-  max-height: calc(100vh - 32px);
-  border: 0;
+  border: 1px solid #82796c;
+  border-radius: 4px;
+  background: #272623;
+  color: var(--paper);
 }
 .gamebanana-detail-dialog-header {
-  gap: 5px;
-}
-.gamebanana-detail-dialog-header h2 {
-  margin: 3px 0 0;
-}
-.gamebanana-detail {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid #7c7569;
-  background: var(--surface-ink);
-  color: var(--paper);
-}
-.gamebanana-detail-image {
-  width: 100%;
-  height: 220px;
   flex-shrink: 0;
-  object-fit: cover;
-  opacity: 0.9;
+  padding: 25px 58px 22px 30px;
+  border-bottom: 1px solid #59544c;
+  background: #302d28;
 }
-.gamebanana-detail-body {
-  min-height: 0;
-  overflow-y: auto;
-  padding: 18px;
+.gamebanana-detail-dialog-header .eyebrow { color: #d6a084; font-size: 10px; letter-spacing: 0.14em; }
+.gamebanana-detail-dialog-header h2 { margin: 5px 0 1px; font-size: 28px; line-height: 1.3; overflow-wrap: anywhere; color: var(--paper); }
+.gamebanana-detail-dialog-header p { color: #bfb5a6; font-size: 12px; }
+.gamebanana-detail-body { flex: 1; min-height: 0; overflow-y: auto; padding: 26px 30px 38px; }
+.gamebanana-overview { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 22px; }
+.gamebanana-author { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.gamebanana-author img, .gamebanana-avatar-placeholder { width: 42px; height: 42px; object-fit: cover; border: 1px solid #736b60; border-radius: 50%; flex-shrink: 0; }
+.gamebanana-avatar-placeholder { display: grid; place-items: center; color: #f3cfb2; background: #554335; }
+.gamebanana-author button, .gamebanana-author strong { color: #f4e9d9; font-size: 14px; overflow-wrap: anywhere; text-align: left; }
+.gamebanana-author button:hover { color: #f1b197; text-decoration: underline; }
+.gamebanana-credits { margin: 9px 0 0 53px; color: #bbb1a2; font-size: 12px; overflow-wrap: anywhere; }
+.gamebanana-source-button { color: #eee5d8; border-color: #7d7160; background: transparent; align-self: start; }
+.gamebanana-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; border: 1px solid #5a544b; background: #ffffff04; }
+.gamebanana-stats > div { padding: 15px 22px; display: flex; flex-direction: column; gap: 4px; }
+.gamebanana-stats > div + div { border-left: 1px solid #5a544b; }
+.gamebanana-stats dt { color: #c3b8a7; font-size: 12px; }
+.gamebanana-stats dd { margin: 0; font-size: 25px; font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.gamebanana-dates { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: -4px 0 0; }
+.gamebanana-dates dt { color: #b5a995; font-size: 11px; margin-bottom: 6px; }
+.gamebanana-dates dd { margin: 0; font-size: 12px; color: #e4dacb; }
+.gamebanana-detail-section { padding-top: 30px; margin-top: 27px; border-top: 1px solid #565047; min-width: 0; }
+.gamebanana-detail-section h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; color: #f3e9dc; font-size: 17px; font-weight: 600; }
+.gamebanana-detail-section h3::before { content: ''; display: block; width: 3px; height: 17px; background: #ce725a; }
+.gamebanana-detail-section h3 small, .gamebanana-archives small { color: #d1b28b; font-size: 11px; border: 1px solid #72624f; padding: 1px 7px; font-weight: 400; }
+.gamebanana-detail-section h4 { margin: 22px 0 12px; }
+.gamebanana-empty { color: #bcb1a1; font-size: 13px; line-height: 1.7; }
+.gamebanana-screenshots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.gamebanana-screenshots button { position: relative; overflow: hidden; background: #1d1c1a; border: 1px solid #665d50; cursor: zoom-in; }
+.gamebanana-screenshots img { width: 100%; height: 190px; object-fit: contain; display: block; transition: transform 180ms ease; }
+.gamebanana-screenshots button:hover { border-color: #dba283; }
+.gamebanana-screenshots button:hover img { transform: scale(1.025); }
+.gamebanana-screenshots button > span { display: flex; justify-content: space-between; padding: 7px 10px; color: #d7c7b2; font-size: 11px; border-top: 1px solid #4b4338; }
+.gamebanana-screenshots small { color: #b5a68f; }
+.gamebanana-update { border: 1px solid #61574a; background: #ffffff03; }
+.gamebanana-update + .gamebanana-update { margin-top: 10px; }
+.gamebanana-update summary, .gamebanana-archives summary { display: flex; align-items: center; gap: 9px; padding: 15px 16px; cursor: pointer; list-style: none; }
+.gamebanana-update summary::-webkit-details-marker, .gamebanana-archives summary::-webkit-details-marker { display: none; }
+.gamebanana-update summary > svg, .gamebanana-archives summary > svg { width: 15px; height: 15px; flex-shrink: 0; color: #c2b39d; transition: transform 160ms ease; }
+.gamebanana-update[open] summary > svg { transform: rotate(90deg); }
+.gamebanana-update summary strong { font-size: 14px; overflow-wrap: anywhere; }
+.gamebanana-update summary time { margin-left: auto; font-size: 11px; color: #c2b29c; }
+.gamebanana-version, .gamebanana-latest { font-size: 10px; padding: 2px 7px; border: 1px solid #76634b; color: #d7c1a3; white-space: nowrap; }
+.gamebanana-latest { color: #f1b59f; border-color: #99664e; background: #a957351a; }
+.gamebanana-update-content { padding: 18px; border-top: 1px solid #5b5042; }
+.gamebanana-change { display: grid; grid-template-columns: 95px minmax(0, 1fr); gap: 14px; align-items: start; }
+.gamebanana-change + .gamebanana-change { margin-top: 12px; }
+.gamebanana-change > span { color: #dcb893; font-size: 11px; padding-top: 3px; overflow-wrap: anywhere; }
+.gamebanana-html { display: block; width: 100%; min-height: 28px; border: 0; color-scheme: dark; }
+.gamebanana-file-row { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 18px 0; border-bottom: 1px solid #554c40; }
+.gamebanana-file-row:first-child { padding-top: 0; }
+.gamebanana-file-row:last-child { padding-bottom: 0; border: 0; }
+.gamebanana-file-row > div { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.gamebanana-file-row strong { color: #f1e0c8; font-size: 14px; overflow-wrap: anywhere; }
+.gamebanana-file-row span { color: #bcad96; font-size: 11px; }
+.gamebanana-file-row b { padding: 0 8px; font-weight: 400; }
+.gamebanana-file-row p { margin: 3px 0 0; color: #d6cabb; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.gamebanana-file-row button { flex-shrink: 0; }
+.gamebanana-archives { margin-top: 22px; border: 1px solid #61574a; }
+.gamebanana-archives summary { font-size: 13px; }
+.gamebanana-archives:not([open]) summary > svg { transform: rotate(-90deg); }
+.gamebanana-archives .gamebanana-file-list { padding: 18px; border-top: 1px solid #61574a; }
+.gamebanana-comment + .gamebanana-comment { margin-top: 24px; padding-top: 24px; border-top: 1px solid #514b42; }
+.gamebanana-comment > header { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 14px; }
+.gamebanana-comment .gamebanana-author img, .gamebanana-comment .gamebanana-avatar-placeholder { width: 34px; height: 34px; }
+.gamebanana-comment-dates { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-left: auto; font-size: 10px; color: #b7a68e; }
+.gamebanana-replies { margin: 18px 0 0 15px; border-left: 2px solid #766148; padding-left: 22px; }
+.gamebanana-detail-state { flex: 1; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 25px; color: #d5c8b4; }
+.gamebanana-detail-state p { max-width: 600px; overflow-wrap: anywhere; }
+.gamebanana-lightbox.overlay-panel { max-width: calc(100vw - 40px); height: calc(100dvh - 40px); display: flex; flex-direction: column; gap: 14px; background: #1d1c19; color: #eee5d8; border: 1px solid #7b6b55; }
+.gamebanana-lightbox > div:first-child { padding-right: 40px; }
+.gamebanana-lightbox > div:first-child p { color: #c3b49e; }
+.gamebanana-lightbox-canvas { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; background: #121210; }
+.gamebanana-lightbox-canvas button { width: 100%; height: 100%; min-height: 0; cursor: zoom-in; }
+.gamebanana-lightbox-canvas img { width: 100%; height: 100%; object-fit: contain; }
+.gamebanana-lightbox-canvas.is-original { display: block; }
+.gamebanana-lightbox-canvas.is-original button { display: block; width: max-content; height: max-content; cursor: zoom-out; }
+.gamebanana-lightbox-canvas.is-original img { width: auto; height: auto; max-width: none; }
+.gamebanana-lightbox-actions { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.gamebanana-lightbox-actions span { color: #c1ad8f; font-size: 12px; }
+.gamebanana-lightbox-actions button { color: #ede1d0; background: transparent; border-color: #8a765b; }
+.gamebanana-detail-dialog :is(button, summary):focus-visible, .gamebanana-lightbox button:focus-visible { outline: 2px solid #e5b091; outline-offset: 3px; }
+@media (max-width: 720px) {
+  .gamebanana-detail-dialog.overlay-panel { max-width: calc(100vw - 32px); height: calc(100dvh - 32px); }
+  .gamebanana-detail-dialog-header { padding: 20px 46px 18px 18px; }
+  .gamebanana-detail-dialog-header h2 { font-size: 22px; }
+  .gamebanana-detail-body { padding: 20px 18px 30px; }
+  .gamebanana-overview { gap: 18px 8px; }
+  .gamebanana-credits { margin-left: 0; }
+  .gamebanana-stats > div { padding: 12px; }
+  .gamebanana-stats dd { font-size: 20px; }
+  .gamebanana-dates { grid-template-columns: 1fr; gap: 10px; }
+  .gamebanana-dates > div { display: flex; justify-content: space-between; gap: 12px; }
+  .gamebanana-screenshots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gamebanana-screenshots img { height: 145px; }
+  .gamebanana-update summary { flex-wrap: wrap; }
+  .gamebanana-update summary time { flex-basis: 100%; margin-left: 24px; }
+  .gamebanana-change { grid-template-columns: 1fr; gap: 3px; }
+  .gamebanana-comment-dates { margin-left: 45px; }
+  .gamebanana-replies { margin-left: 0; padding-left: 12px; }
+  .gamebanana-lightbox-actions span { font-size: 10px; }
 }
-.gamebanana-detail-body h2 {
-  margin: 7px 0 5px;
-  font-size: 24px;
-  line-height: 1.1;
-}
-.gamebanana-detail-byline {
-  margin: 0;
-  color: #c2b9aa;
-  font-size: 11px;
-}
-.gamebanana-description {
-  margin: 18px 0;
-  color: #eee5d8;
-  font-size: 12px;
-  line-height: 1.65;
-}
-.gamebanana-stats {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 0;
-  border-top: 1px solid #5a5850;
-  border-bottom: 1px solid #5a5850;
-}
-.gamebanana-stats span {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 3px;
-  color: #c2b9aa;
-  font-size: 10px;
-}
-.gamebanana-stats strong {
-  color: var(--paper);
-  font-size: 15px;
-}
-.gamebanana-file-list {
-  margin-top: 18px;
-}
-.gamebanana-file-list h3 {
-  margin: 0 0 8px;
-  font-size: 13px;
-}
-.gamebanana-file-list > p {
-  color: #c2b9aa;
-  font-size: 11px;
-}
-.gamebanana-file-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid #5a5850;
-}
-.gamebanana-file-row > div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 3px;
-}
-.gamebanana-file-row strong,
-.gamebanana-file-row span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.gamebanana-file-row strong {
-  font-size: 11px;
-}
-.gamebanana-file-row span {
-  color: #c2b9aa;
-  font-size: 10px;
-}
-.gamebanana-file-row button {
-  flex-shrink: 0;
-}
-.gamebanana-file-row button svg,
-.gamebanana-open-button svg {
-  width: 14px;
-  height: 14px;
-}
-.gamebanana-open-button {
-  width: 100%;
-  margin-top: 17px;
-  color: var(--paper);
-  border-color: #8a8377;
+@media (prefers-reduced-motion: reduce) {
+  .gamebanana-screenshots img, .gamebanana-update summary > svg, .gamebanana-archives summary > svg { transition: none; }
 }
 .gamebanana-state {
   display: flex;
