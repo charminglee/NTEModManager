@@ -48,8 +48,8 @@ function Sidebar({
         {!characterCategories.length && <p className="px-3 py-5 text-sm">暂无角色分类</p>}
       </nav>
       <div className="other-category">
-        {categoryButton(ALL_CATEGORY)}
         {categoryButton(OTHER_CATEGORY)}
+        {categoryButton(ALL_CATEGORY)}
       </div>
     </aside>
   )
