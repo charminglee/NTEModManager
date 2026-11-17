@@ -2,7 +2,6 @@ import { memo } from 'react'
 import { RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import ticket from '@/assets/ticket-stamp.svg'
 export type StatusFilter = 'all' | 'installed' | 'uninstalled' | 'invalid'
 interface Props {
   category: string
@@ -29,7 +28,6 @@ function ModListHeader(p: Props) {
             {p.counts.all} 个模组  ·  {p.counts.installed} 个已安装
           </p>
         </div>
-        <img className="ticket-stamp" src={ticket} alt="" />
       </div>
       <div className="library-search-row">
         <label className="library-search">

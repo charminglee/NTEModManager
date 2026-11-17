@@ -107,7 +107,7 @@ src/renderer/     React 界面
   components/mod-detail.tsx       模组详情与文件树
   components/settings-view.tsx    分组设置工作区
   components/ayakamods-page.tsx   AyakaMods 社区内嵌浏览与开发模式入口
-  assets/                        都市剪影与票据 SVG 图形
+  assets/                        都市剪影 SVG 图形与社区图标
 ```
 
 ## 界面

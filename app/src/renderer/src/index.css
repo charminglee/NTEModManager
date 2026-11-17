@@ -1077,16 +1077,6 @@ input[type='checkbox'] {
   z-index: 1;
   flex-shrink: 0;
 }
-.ticket-stamp {
-  width: 130px;
-  height: 85px;
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0.6;
-  pointer-events: none;
-}
 .library-search-row {
   display: flex;
   gap: 8px;
@@ -1991,9 +1981,6 @@ select {
   }
 }
 @media (max-width: 1350px) {
-  .ticket-stamp {
-    display: none;
-  }
   .global-toolbar {
     gap: 8px;
   }
