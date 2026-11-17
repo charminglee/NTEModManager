@@ -1300,7 +1300,7 @@ select {
   border-radius: 3px;
   min-height: 47px;
   margin: 10px 0 0;
-  background: rgb(255 252 246 / 76%);
+  background: rgb(255 252 246 / 40%);
   font-size: 12px;
   font-weight: 650;
   color: var(--ink);
