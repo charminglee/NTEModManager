@@ -75,34 +75,36 @@ export default function PromptDialog({
           <DialogTitle>{shown.title}</DialogTitle>
           {shown.description && <DialogDescription>{shown.description}</DialogDescription>}
         </DialogHeader>
-        <div className="grid gap-2">
-          <Label htmlFor="prompt-input">{shown.label}</Label>
-          <Input
-            id="prompt-input"
-            ref={inputRef}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                submit()
-              }
-            }}
-          />
-        </div>
-        {installAfterDownload !== undefined && onInstallAfterDownloadChange && (
-          <div className="prompt-switch-row">
-            <div>
-              <strong>下载完成后安装</strong>
-              <span>按现有同组互斥规则安装到游戏目录。</span>
-            </div>
-            <Switch
-              checked={installAfterDownload}
-              onCheckedChange={onInstallAfterDownloadChange}
-              aria-label="下载完成后安装"
+        <div className="dialog-body">
+          <div className="grid gap-2">
+            <Label htmlFor="prompt-input">{shown.label}</Label>
+            <Input
+              id="prompt-input"
+              ref={inputRef}
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  submit()
+                }
+              }}
             />
           </div>
-        )}
+          {installAfterDownload !== undefined && onInstallAfterDownloadChange && (
+            <div className="prompt-switch-row">
+              <div>
+                <strong>下载完成后安装</strong>
+                <span>按现有同组互斥规则安装到游戏目录。</span>
+              </div>
+              <Switch
+                checked={installAfterDownload}
+                onCheckedChange={onInstallAfterDownloadChange}
+                aria-label="下载完成后安装"
+              />
+            </div>
+          )}
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             取消

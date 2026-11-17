@@ -13,7 +13,7 @@ const AlertDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
     className={cn(
-      'bg-black/55 fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      'dialog-overlay fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
       className
     )}
     {...props}
@@ -35,7 +35,7 @@ const AlertDialogContent = React.forwardRef<
     >
       <div
         className={cn(
-          'overlay-panel solid-popover p-4 pointer-events-auto w-full max-w-lg rounded-xl shadow-card',
+          'dialog-panel dialog-panel-alert pointer-events-auto w-full max-w-lg',
           className
         )}
       >
@@ -47,12 +47,12 @@ const AlertDialogContent = React.forwardRef<
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName
 
 const AlertDialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col gap-2 text-left', className)} {...props} />
+  <div className={cn('dialog-header', className)} {...props} />
 )
 AlertDialogHeader.displayName = 'AlertDialogHeader'
 
 const AlertDialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-row justify-end gap-2', className)} {...props} />
+  <div className={cn('dialog-footer', className)} {...props} />
 )
 AlertDialogFooter.displayName = 'AlertDialogFooter'
 
@@ -62,7 +62,7 @@ const AlertDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn('text-lg font-semibold', className)}
+    className={cn('dialog-title', className)}
     {...props}
   />
 ))
@@ -74,7 +74,7 @@ const AlertDialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Description
     ref={ref}
-    className={cn('whitespace-pre-wrap text-sm text-muted-foreground', className)}
+    className={cn('dialog-description whitespace-pre-wrap', className)}
     {...props}
   />
 ))

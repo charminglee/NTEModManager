@@ -73,6 +73,7 @@
 
 /* 控件仅过渡明确的属性，不让布局尺寸跟随 transition-all。 */
 .app-shell button,
+.dialog-panel button,
 .overlay-panel button,
 .solid-popover [role^='menuitem'],
 [role='option'] {
@@ -81,11 +82,13 @@
   transition-timing-function: ease-out;
 }
 .app-shell button:active:not(:disabled),
+.dialog-panel button:active:not(:disabled),
 .overlay-panel button:active:not(:disabled) {
   scale: 0.975;
   transition-duration: 70ms;
 }
 .app-shell button:disabled,
+.dialog-panel button:disabled,
 .overlay-panel button:disabled { scale: 1; }
 .category-row .category-name,
 .category-row img,
@@ -114,6 +117,8 @@
 .toast-surface > svg { animation: motion-popover-in 280ms var(--motion-settle); }
 .app-shell input,
 .app-shell select,
+.dialog-panel input,
+.dialog-panel select,
 .overlay-panel input,
 .library-search {
   transition: border-color var(--motion-fast) ease-out,
@@ -203,6 +208,7 @@
     scroll-behavior: auto !important;
   }
   .app-shell button:active:not(:disabled),
+  .dialog-panel button:active:not(:disabled),
   .overlay-panel button:active:not(:disabled),
   .category-row:hover img,
   .category-row:hover .category-placeholder { scale: 1; }
