@@ -69,6 +69,7 @@
 * {
   box-sizing: border-box;
   border-color: hsl(var(--border));
+  scrollbar-width: none;
 }
 html,
 body,
@@ -112,20 +113,9 @@ input[type='checkbox'] {
   background: #ce3e3540;
 }
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background-color: transparent;
-  border-radius: 1px;
-  transition: background-color var(--motion-fast) ease-out;
-}
-[data-scrollbar-visible='true']::-webkit-scrollbar-thumb {
-  background-color: #8b8376;
-}
-::-webkit-scrollbar-track,
-::-webkit-scrollbar-corner {
-  background: transparent;
+  display: none;
+  width: 0;
+  height: 0;
 }
 .ink-panel {
   --background: 60 3% 12%;
