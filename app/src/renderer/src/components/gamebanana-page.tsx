@@ -31,11 +31,15 @@ interface DownloadTarget {
   file: GameBananaFile
 }
 
-function formatModDate(timestamp: number, fallback: string): string {
-  if (!timestamp) return fallback
-  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(
-    new Date(timestamp * 1000)
-  )
+function formatModDate(timestamp: number, now: number): string {
+  if (!timestamp) return '未知'
+  const difference = now - timestamp * 1000
+  const totalMinutes = Math.floor(Math.abs(difference) / 60_000)
+  if (totalMinutes === 0) return '刚刚'
+  const days = Math.floor(totalMinutes / 1440)
+  const hours = Math.floor(totalMinutes / 60)
+  const duration = days > 0 ? `${days}d` : hours > 0 ? `${hours}h` : `${totalMinutes}m`
+  return `${duration}`
 }
 
 function shortNumber(value: number): string {
@@ -54,6 +58,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [tasks, setTasks] = useState<GameBananaDownloadTask[]>([])
   const [downloadTarget, setDownloadTarget] = useState<DownloadTarget | null>(null)
+  const [now, setNow] = useState(Date.now)
   const modGridRef = useRef<HTMLElement>(null)
   const nextPageRef = useRef(1)
   const loadingMoreRef = useRef(false)
@@ -104,6 +109,11 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
 
   useEffect(() => {
     void loadFirstPage()
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000)
+    return () => window.clearInterval(timer)
   }, [])
 
   useEffect(() => {
@@ -232,7 +242,10 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                     <strong>{mod.name}</strong>
                     <span>{mod.authors}</span>
                     <small>{shortNumber(mod.downloads)} 下载 · {shortNumber(mod.likes)} 喜欢 · {shortNumber(mod.views)} 浏览 · {shortNumber(mod.comments)} 评论</small>
-                    <small>上传 {formatModDate(mod.uploadedAt, '未知')} · 更新 {formatModDate(mod.updatedAt, '未知')}</small>
+                    <small>
+                      上传 {formatModDate(mod.uploadedAt, now)}
+                      {mod.updatedAt !== mod.uploadedAt && ` · 更新 ${formatModDate(mod.updatedAt, now)}`}
+                    </small>
                   </div>
                 </button>
               ))}
@@ -272,7 +285,9 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   <span className="eyebrow">MOD #{selected.id}</span>
                   <DialogTitle>{selected.name}</DialogTitle>
                   <DialogDescription className="gamebanana-detail-byline">
-                    {selected.authors} · 上传于 {formatModDate(selected.uploadedAt, '未知')} · 更新于 {formatModDate(selected.updatedAt, '未知')}
+                    {selected.authors}<br />
+                    上传：{formatModDate(selected.uploadedAt, now)}<br />
+                    更新：{formatModDate(selected.updatedAt, now)}
                   </DialogDescription>
                 </DialogHeader>
                 <p className="gamebanana-description">{selected.description || '作者没有提供描述。'}</p>
