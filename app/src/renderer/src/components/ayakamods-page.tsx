@@ -154,6 +154,7 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
               className={`ayakamods-webview ${visible && !target && !drawerOpen ? '' : 'is-hidden'}`}
               src={COMMUNITY_URL}
               partition="persist:ayakamods"
+              allowpopups=""
             />
           ) : (
             <div className="ayakamods-preview">
