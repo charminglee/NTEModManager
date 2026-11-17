@@ -779,22 +779,6 @@ input[type='checkbox'] {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
-.gamebanana-drawer-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 25px 22px 18px;
-  border-bottom: 1px solid #59544c;
-  background: #302d28;
-}
-.gamebanana-drawer-heading .eyebrow {
-  color: #d6a084;
-  letter-spacing: 0.14em;
-}
-.gamebanana-drawer-heading h2 {
-  margin: 6px 0 0;
-  font-size: 28px;
-}
 .icon-button {
   display: flex;
   align-items: center;

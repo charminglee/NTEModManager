@@ -34,10 +34,10 @@ export default function GameBananaDownloadDrawer({ open, tasks, onClose, source 
         aria-label={`${source} 下载列表`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="gamebanana-drawer-heading">
-          <div>
-            <span className="eyebrow">DOWNLOAD QUEUE</span>
-            <h2>下载列表</h2>
+        <div className="dialog-header gamebanana-detail-dialog-header">
+          <span className="eyebrow">DOWNLOAD QUEUE</span>
+          <div className="dialog-heading-row">
+            <h2 className="dialog-title">下载列表</h2>
           </div>
           <button type="button" className="icon-button" onClick={onClose} aria-label="关闭下载列表">
             <X />
