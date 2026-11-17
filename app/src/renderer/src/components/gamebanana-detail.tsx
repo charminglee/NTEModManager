@@ -98,7 +98,6 @@ export default function GameBananaDetail({ initial, onDownload }: { initial: Gam
           {mod.updates.map((update, index) => <details className="gamebanana-update" key={update.id} open={index === 0}>
             <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time></summary>
             <div className="gamebanana-update-content">
-              {update.modifiedAt > 0 && <p className="gamebanana-empty">修改于 {date(update.modifiedAt)}</p>}
               {update.description && <GameBananaHtml html={update.description} title={`更新 ${update.name}`} />}
               {update.changes.map((change, changeIndex) => <div className="gamebanana-change" key={changeIndex}><span>{change.category || '更新'}</span><GameBananaHtml html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`} /></div>)}
               {!update.description && update.changes.length === 0 && <p className="gamebanana-empty">作者没有填写更新说明。</p>}
