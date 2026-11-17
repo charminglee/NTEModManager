@@ -134,8 +134,6 @@ export default function App() {
   const [chromeHidden, setChromeHidden] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [dragOver, setDragOver] = useState(false)
-  const [settingsDirty, setSettingsDirty] = useState(false)
-  const [pendingView, setPendingView] = useState<AppView | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [focusedName, setFocusedName] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -329,13 +327,7 @@ export default function App() {
     setFocusedName(name)
     setDetailsOpen(true)
   }, [])
-  const requestView = useCallback(
-    (next: AppView) => {
-      if (view === 'settings' && settingsDirty && next !== view) setPendingView(next)
-      else setView(next)
-    },
-    [view, settingsDirty]
-  )
+  const requestView = useCallback((next: AppView) => setView(next), [])
   useEffect(() => window.api.onProgress(setActivity), [])
 
   const groupedMods = useMemo(
@@ -806,17 +798,15 @@ export default function App() {
     modalOpenRef.current =
       view === 'settings' ||
       importSession !== null ||
-      pendingView !== null ||
       prompt !== null ||
       pendingConfirm !== null ||
       renameQueue.length > 0
-  }, [view, importSession, pendingView, prompt, pendingConfirm, renameQueue])
+  }, [view, importSession, prompt, pendingConfirm, renameQueue])
 
   const ayakaPageVisible =
     !chromeHidden &&
     currentRename === null &&
     importSession === null &&
-    pendingView === null &&
     prompt === null &&
     pendingConfirm === null
 
@@ -1181,27 +1171,17 @@ export default function App() {
               ) : null}
             </MotionPresence>
           </div>
-        ) : view === 'gamebanana' ? (
-          <GameBananaPage
-            config={config}
-            onConfigChange={setConfig}
-            onModsChanged={() => void refreshMods()}
-          />
-        ) : view === 'ayakamods' ? (
-          <AyakaModsPage visible={ayakaPageVisible} />
         ) : view === 'logs' ? (
           <LogView />
-        ) : (
+        ) : view === 'settings' ? (
           <SettingsView
             config={config}
-            onDirtyChange={setSettingsDirty}
-            onCancel={() => requestView('mods')}
             onSaved={(next, shouldRefresh) => {
               setConfig(next)
               if (shouldRefresh) void refreshMods()
             }}
           />
-        )}
+        ) : null}
       </div>
       {config.fpsCounterEnabled && (
         <div className="fps-counter">
@@ -1232,24 +1212,6 @@ export default function App() {
         activity={activity}
         onClose={closeImport}
         onRetry={(path) => void retryImport(path)}
-      />
-      <AppDialog
-        kind="alert"
-        open={pendingView !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingView(null)
-        }}
-        title="放弃尚未保存的设置？"
-        description="离开此页面会丢弃尚未保存的更改。"
-        cancelAction={{ label: '继续编辑' }}
-        confirmAction={{
-          label: '放弃更改',
-          onSelect: () => {
-            if (pendingView) setView(pendingView)
-            setPendingView(null)
-            setSettingsDirty(false)
-          }
-        }}
       />
       {/* 通用输入对话框(重命名/打包命名) */}
       <PromptDialog

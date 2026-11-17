@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Folder, FolderOpen, Info, Settings, Wrench } from 'lucide-react'
 import type { AppConfigData, AppConfigPatch } from '@shared/types'
 import { Button } from './ui/button'
@@ -8,9 +8,14 @@ import { toast } from './toast-card'
 interface Props {
   config: AppConfigData
   onSaved: (config: AppConfigData, refresh: boolean) => void
-  onDirtyChange: (dirty: boolean) => void
-  onCancel: () => void
 }
+type SettingsDraft = AppConfigData & { groupsText: string }
+type ToggleKey =
+  | 'autoUseLastPackagingPath'
+  | 'restoreLastCategory'
+  | 'testImagesEnabled'
+  | 'fpsCounterEnabled'
+const SAVE_DEBOUNCE_MS = 500
 const pathFields = [
   { key: 'gameDirectory', label: '游戏安装目录', help: '选择包含 Client 目录的游戏根目录。' },
   {
@@ -25,90 +30,84 @@ const pathFields = [
   }
 ] as const
 const normalizePath = (path: string) => path.trim().replace(/\\/g, '/').replace(/\/+$/, '')
-export default function SettingsView({ config, onSaved, onDirtyChange, onCancel }: Props) {
+const parseGroups = (groupsText: string) =>
+  groupsText
+    .split(/[,，、\n]/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+export default function SettingsView({ config, onSaved }: Props) {
   const [section, setSection] = useState<'paths' | 'preferences' | 'advanced'>('paths')
-  const [draft, setDraft] = useState(() => ({
+  const [draft, setDraft] = useState<SettingsDraft>(() => ({
     ...config,
     groupsText: config.exclusiveInstallExemptGroups.join('，')
   }))
-  const [saving, setSaving] = useState(false)
-  const groups = useMemo(
-    () =>
-      draft.groupsText
-        .split(/[,，、\n]/)
-        .map((v) => v.trim())
-        .filter(Boolean),
-    [draft.groupsText]
-  )
-  const dirty =
-    pathFields.some(({ key }) => normalizePath(draft[key]) !== normalizePath(config[key])) ||
-    [
-      'autoUseLastPackagingPath',
-      'restoreLastCategory',
-      'testImagesEnabled',
-      'fpsCounterEnabled'
-    ].some((key) => draft[key as keyof typeof draft] !== config[key as keyof AppConfigData]) ||
-    groups.join(',') !== config.exclusiveInstallExemptGroups.join(',')
-  useEffect(() => {
-    onDirtyChange(dirty)
-    return () => onDirtyChange(false)
-  }, [dirty, onDirtyChange])
-  const update = <K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) =>
-    setDraft((previous) => ({ ...previous, [key]: value }))
+  const draftRef = useRef(draft)
+  const configRef = useRef(config)
+  const saveTimeoutRef = useRef<number | null>(null)
+  const pendingPatchRef = useRef<AppConfigPatch>({})
+  const saveQueueRef = useRef(Promise.resolve())
+  const update = <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) => {
+    const next = { ...draftRef.current, [key]: value }
+    draftRef.current = next
+    setDraft(next)
+  }
+  const flush = () => {
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    const patch = pendingPatchRef.current
+    if (!Object.keys(patch).length) return
+    pendingPatchRef.current = {}
+    saveQueueRef.current = saveQueueRef.current.then(async () => {
+      const before = configRef.current
+      try {
+        const next = await window.api.updateConfig(patch)
+        configRef.current = next
+        onSaved(
+          next,
+          next.modsDirectory !== before.modsDirectory ||
+            next.backupsDirectory !== before.backupsDirectory
+        )
+      } catch (error) {
+        toast.error('设置保存失败', {
+          description: error instanceof Error ? error.message : String(error)
+        })
+      }
+    })
+  }
+  const flushRef = useRef(flush)
+  flushRef.current = flush
+  useEffect(() => () => flushRef.current(), [])
+  const updateText = (key: (typeof pathFields)[number]['key'] | 'groupsText', value: string) => {
+    update(key, value)
+    if (key === 'groupsText') {
+      pendingPatchRef.current.exclusiveInstallExemptGroups = parseGroups(value)
+    } else {
+      const path = normalizePath(value)
+      if (key !== 'backgroundImagesDirectory' && !path) {
+        delete pendingPatchRef.current[key]
+      } else {
+        pendingPatchRef.current[key] = path
+      }
+    }
+    if (saveTimeoutRef.current !== null) window.clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = window.setTimeout(flush, SAVE_DEBOUNCE_MS)
+  }
   const browse = async (key: (typeof pathFields)[number]['key']) => {
     try {
-      const selected = await window.api.pickDirectory(draft[key] || undefined)
-      if (selected) update(key, selected)
+      const selected = await window.api.pickDirectory(draftRef.current[key] || undefined)
+      if (selected) {
+        updateText(key, selected)
+        flush()
+      }
     } catch (error) {
       toast.error('无法选择目录', {
         description: error instanceof Error ? error.message : String(error)
       })
     }
   }
-  const save = async () => {
-    const missing = pathFields
-      .filter(({ key }) => key !== 'backgroundImagesDirectory' && !normalizePath(draft[key]))
-      .map((field) => field.label)
-    if (missing.length) {
-      toast.warning('以下设置不能为空', { description: missing.join('、') })
-      return
-    }
-    setSaving(true)
-    try {
-      const patch: AppConfigPatch = {
-        ...Object.fromEntries(pathFields.map(({ key }) => [key, normalizePath(draft[key])])),
-        autoUseLastPackagingPath: draft.autoUseLastPackagingPath,
-        exclusiveInstallExemptGroups: groups,
-        restoreLastCategory: draft.restoreLastCategory,
-        testImagesEnabled: draft.testImagesEnabled,
-        fpsCounterEnabled: draft.fpsCounterEnabled
-      }
-      const next = await window.api.updateConfig(patch)
-      setDraft({ ...next, groupsText: next.exclusiveInstallExemptGroups.join('，') })
-      onDirtyChange(false)
-      onSaved(
-        next,
-        next.modsDirectory !== config.modsDirectory ||
-          next.backupsDirectory !== config.backupsDirectory
-      )
-      toast.success('设置已保存')
-    } catch (error) {
-      toast.error('设置保存失败', {
-        description: error instanceof Error ? error.message : String(error)
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-  const toggle = (
-    key:
-      | 'autoUseLastPackagingPath'
-      | 'restoreLastCategory'
-      | 'testImagesEnabled'
-      | 'fpsCounterEnabled',
-    label: string,
-    help: string
-  ) => (
+  const toggle = (key: ToggleKey, label: string, help: string) => (
     <label className="settings-toggle">
       <span>
         <strong>{label}</strong>
@@ -117,8 +116,11 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
       <Switch
         aria-label={label}
         checked={draft[key]}
-        disabled={saving}
-        onCheckedChange={(checked) => update(key, checked)}
+        onCheckedChange={(checked) => {
+          update(key, checked)
+          pendingPatchRef.current[key] = checked
+          flush()
+        }}
       />
     </label>
   )
@@ -148,6 +150,7 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
           <h1>
             {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : '高级设置'}
           </h1>
+          <p>设置修改后自动保存。</p>
         </div>
         <div className="settings-content" key={section}>
           {section === 'paths' && (
@@ -160,10 +163,17 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
                       <Input
                         id={key}
                         value={draft[key]}
-                        disabled={saving}
-                        onChange={(e) => update(key, e.target.value)}
+                        onChange={(event) => {
+                          updateText(key, event.target.value)
+                        }}
+                        onBlur={() => {
+                          if (key !== 'backgroundImagesDirectory' && !normalizePath(draftRef.current[key])) {
+                            toast.warning('以下设置不能为空', { description: label })
+                          }
+                          flush()
+                        }}
                       />
-                      <Button variant="outline" disabled={saving} onClick={() => void browse(key)}>
+                      <Button variant="outline" onClick={() => void browse(key)}>
                         <FolderOpen />
                         浏览
                       </Button>
@@ -174,7 +184,7 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
               ))}
               <div className="settings-note">
                 <Info size={17} />
-                保存后生效。修改备份目录不会搬移原目录中的文件。
+                修改备份目录不会搬移原目录中的文件。
               </div>
             </>
           )}
@@ -203,8 +213,10 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
                   id="exempt-groups"
                   aria-describedby="exempt-groups-help"
                   value={draft.groupsText}
-                  disabled={saving}
-                  onChange={(e) => update('groupsText', e.target.value)}
+                  onChange={(event) => {
+                    updateText('groupsText', event.target.value)
+                  }}
+                  onBlur={flush}
                   placeholder="例如：UI，特效"
                 />
               </div>
@@ -222,14 +234,6 @@ export default function SettingsView({ config, onSaved, onDirtyChange, onCancel 
               </div>
             </>
           )}
-        </div>
-        <div className="settings-footer">
-          <Button variant="outline" disabled={saving} onClick={onCancel}>
-            取消
-          </Button>
-          <Button disabled={saving || !dirty} onClick={() => void save()}>
-            {saving ? '正在保存…' : '保存设置'}
-          </Button>
         </div>
       </div>
     </section>

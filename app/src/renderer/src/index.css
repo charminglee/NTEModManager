@@ -142,6 +142,22 @@ input[type='checkbox'] {
   opacity: 0;
   pointer-events: none;
 }
+.community-view-stack {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.community-view-panel {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.community-view-stack[hidden],
+.community-view-panel[hidden] {
+  display: none;
+}
 .app-header {
   flex-shrink: 0;
   background: var(--surface-ink);
@@ -1669,15 +1685,6 @@ select {
   font-size: 12px;
   max-width: 1000px;
 }
-.settings-footer {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-  padding: 18px 28px;
-  border-top: 1px solid var(--ink);
-  background: rgb(243 239 230 / 74%);
-}
 .settings-toggle {
   display: flex;
   align-items: center;
@@ -2154,9 +2161,6 @@ select {
   .settings-field {
     grid-template-columns: 1fr;
     gap: 8px;
-  }
-  .settings-footer {
-    padding: 14px 16px;
   }
   .batch-surface {
     flex-wrap: wrap;
