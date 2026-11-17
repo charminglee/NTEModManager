@@ -187,7 +187,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
         <header className="workspace-page-heading gamebanana-heading">
           <div>
             <h1>GameBanana</h1>
-            <p>浏览 Neverness To Everness 社区模组，下载后自动进入 NTEMM 模组库。</p>
+            <p>浏览 Neverness To Everness 社区模组。</p>
           </div>
           <div className="gamebanana-heading-actions">
             <div className="library-search gamebanana-search">

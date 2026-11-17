@@ -12,7 +12,9 @@ function date(timestamp: number): string {
 
 function Author({ author }: { author: GameBananaAuthor }) {
   return <div className="gamebanana-author">
-    {author.avatarUrl ? <img src={author.avatarUrl} alt={`${author.name} 的头像`} loading="lazy" /> : <span className="gamebanana-avatar-placeholder">{author.name.slice(0, 1)}</span>}
+    {author.avatarUrl
+      ? <img src={author.avatarUrl} alt="" loading="lazy" />
+      : <span className="gamebanana-avatar-placeholder">{author.name.slice(0, 1)}</span>}
     {author.profileUrl
       ? <button type="button" onClick={() => void window.api.openExternal(author.profileUrl)}>{author.name}</button>
       : <strong>{author.name}</strong>}
@@ -33,7 +35,7 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
 
 function Comments({ comments }: { comments: GameBananaComment[] }) {
   return <div className="gamebanana-comments">{comments.map((comment) => <article className="gamebanana-comment" key={comment.id}>
-    <header><Author author={comment.author} /><div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span><span>{comment.editedAt ? `编辑于 ${date(comment.editedAt)}` : '未编辑'}</span></div></header>
+    <header><Author author={comment.author} /><div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span>{comment.editedAt > 0 && <span>编辑于 {date(comment.editedAt)}</span>}</div></header>
     <GameBananaHtml title={`${comment.author.name} 的评论`} html={comment.content} />
     {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments comments={comment.replies} /></div>}
   </article>)}</div>
@@ -61,23 +63,25 @@ export default function GameBananaDetail({ initial, onDownload }: { initial: Gam
   return <>
     <DialogHeader className="gamebanana-detail-dialog-header">
       <span className="eyebrow">GAMEBANANA ／ MOD #{initial.id}</span>
-      <DialogTitle>{mod?.name ?? initial.name}</DialogTitle>
-      <DialogDescription>{mod?.gameName ?? initial.gameName}{mod?.version ? ` · 版本 ${mod.version}` : ''}</DialogDescription>
+      <div className="gamebanana-title-row">
+        <DialogTitle>{mod?.name ?? initial.name}</DialogTitle>
+        {mod && <Button variant="outline" className="gamebanana-source-button" onClick={() => void window.api.openExternal(mod.profileUrl)}><ExternalLink />查看原页面</Button>}
+      </div>
+      <DialogDescription className="sr-only">GameBanana 模组详情</DialogDescription>
     </DialogHeader>
     {!mod ? <div className="gamebanana-detail-state" role="status">
       {error ? <><TriangleAlert /><strong>详情加载失败</strong><p>{error}</p><Button onClick={() => setAttempt(attempt + 1)}>重试</Button></>
         : <><LoaderCircle className="animate-spin" /><span>正在加载完整模组页面……</span></>}
     </div> : <div className="gamebanana-detail-body">
       <section className="gamebanana-overview" aria-label="模组信息">
-        <div><Author author={mod.author} /><p className="gamebanana-credits">作者：{mod.authors}</p></div>
-        <Button variant="outline" className="gamebanana-source-button" onClick={() => void window.api.openExternal(mod.profileUrl)}><ExternalLink />查看原页面</Button>
+        <div><Author author={mod.author} /></div>
         <dl className="gamebanana-stats">
           {[['下载', mod.downloads], ['喜欢', mod.likes], ['浏览', mod.views], ['评论', mod.comments]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{Number(value).toLocaleString('zh-CN')}</dd></div>)}
         </dl>
         <dl className="gamebanana-dates">
           <div><dt>上传时间</dt><dd>{date(mod.uploadedAt)}</dd></div>
-          <div><dt>修改时间</dt><dd>{date(mod.modifiedAt)}</dd></div>
-          <div><dt>更新时间</dt><dd>{date(mod.updatedAt)}</dd></div>
+          {mod.modifiedAt > 0 && mod.modifiedAt !== mod.uploadedAt && <div><dt>修改时间</dt><dd>{date(mod.modifiedAt)}</dd></div>}
+          {mod.updates.length > 0 && <div><dt>更新时间</dt><dd>{date(mod.updatedAt)}</dd></div>}
         </dl>
       </section>
       <section className="gamebanana-detail-section" aria-label="模组截图">
@@ -85,13 +89,12 @@ export default function GameBananaDetail({ initial, onDownload }: { initial: Gam
         {mod.screenshots.length === 0 ? <p className="gamebanana-empty">作者没有提供截图。</p> : <div className="gamebanana-screenshots">
           {mod.screenshots.map((image, index) => <button type="button" key={image.url} onClick={() => { setOriginalSize(false); setImageIndex(index) }} aria-label={`放大截图 ${index + 1}`}>
             <img src={image.url} alt={`${mod.name} 截图 ${index + 1}`} loading="lazy" />
-            <span>{String(index + 1).padStart(2, '0')}<small>点击放大</small></span>
           </button>)}
         </div>}
       </section>
-      <section className="gamebanana-detail-section" aria-label="更新信息">
+      {mod.updates.length > 0 && <section className="gamebanana-detail-section" aria-label="更新信息">
         <h3>更新信息 <small>{mod.updates.length}</small></h3>
-        {mod.updates.length === 0 ? <p className="gamebanana-empty">暂无更新记录。</p> : <div className="gamebanana-updates">
+        <div className="gamebanana-updates">
           {mod.updates.map((update, index) => <details className="gamebanana-update" key={update.id} open={index === 0}>
             <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time></summary>
             <div className="gamebanana-update-content">
@@ -101,8 +104,8 @@ export default function GameBananaDetail({ initial, onDownload }: { initial: Gam
               {!update.description && update.changes.length === 0 && <p className="gamebanana-empty">作者没有填写更新说明。</p>}
             </div>
           </details>)}
-        </div>}
-      </section>
+        </div>
+      </section>}
       <section className="gamebanana-detail-section" aria-label="模组介绍">
         <h3>模组介绍</h3>
         {mod.description ? <GameBananaHtml html={mod.description} title="模组介绍" /> : <p className="gamebanana-empty">作者没有提供介绍。</p>}
@@ -130,7 +133,7 @@ export default function GameBananaDetail({ initial, onDownload }: { initial: Gam
         <DialogHeader><DialogTitle>截图预览</DialogTitle><DialogDescription>{imageIndex === null ? '' : `${imageIndex + 1} ／ ${mod?.screenshots.length}`} · 点击图片切换原始尺寸</DialogDescription></DialogHeader>
         {mod && imageIndex !== null && <>
           <div className={`gamebanana-lightbox-canvas ${originalSize ? 'is-original' : ''}`}><button type="button" onClick={() => setOriginalSize(!originalSize)} aria-label={originalSize ? '适应窗口' : '原始尺寸'}><img src={mod.screenshots[imageIndex].url} alt={`${mod.name} 截图 ${imageIndex + 1}`} /></button></div>
-          <div className="gamebanana-lightbox-actions"><Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex - 1 + mod.screenshots.length) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>上一张</Button><span>{originalSize ? '原始尺寸' : '适应窗口'} · 支持左右方向键</span><Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex + 1) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>下一张</Button></div>
+          <div className="gamebanana-lightbox-actions"><Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex - 1 + mod.screenshots.length) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>上一张</Button><span>{originalSize ? '原始尺寸' : '适应窗口'}</span><Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex + 1) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>下一张</Button></div>
         </>}
       </DialogContent>
     </Dialog>
