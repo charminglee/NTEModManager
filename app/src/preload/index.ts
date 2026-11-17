@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type {
   AppConfigData,
   AppConfigPatch,
+  AyakaModsDownloadRequest,
   BackgroundState,
   BatchModAction,
   GameBananaDownloadTask,
@@ -132,6 +133,19 @@ const api = {
     ipcRenderer.invoke('gamebanana:detail', modId),
   getGameBananaTasks: (): Promise<GameBananaDownloadTask[]> =>
     ipcRenderer.invoke('gamebanana:tasks'),
+  getAyakaModsTasks: (): Promise<GameBananaDownloadTask[]> =>
+    ipcRenderer.invoke('ayakamods:tasks'),
+  getAyakaModsPendingDownloads: (): Promise<AyakaModsDownloadRequest[]> =>
+    ipcRenderer.invoke('ayakamods:pendingDownloads'),
+  startAyakaModsDownload: (id: string, customName: string, installAfterDownload: boolean): Promise<string> =>
+    ipcRenderer.invoke('ayakamods:startDownload', id, customName, installAfterDownload),
+  cancelAyakaModsDownload: (id: string): Promise<void> =>
+    ipcRenderer.invoke('ayakamods:cancelDownload', id),
+  onAyakaModsDownloadRequest: (callback: (request: AyakaModsDownloadRequest) => void): (() => void) => {
+    const listener = (_event: unknown, request: AyakaModsDownloadRequest) => callback(request)
+    ipcRenderer.on('ayakamods:download-request', listener)
+    return () => ipcRenderer.removeListener('ayakamods:download-request', listener)
+  },
   startGameBananaDownload: (
     modId: number,
     fileId: string,

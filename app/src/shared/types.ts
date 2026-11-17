@@ -202,6 +202,7 @@ export type GameBananaDownloadStatus =
 
 export interface GameBananaDownloadTask {
   id: string
+  source: 'gamebanana' | 'ayakamods'
   modId: number
   modName: string
   fileName: string
@@ -211,6 +212,12 @@ export interface GameBananaDownloadTask {
   totalBytes: number | null
   message: string
   createdAt: string
+}
+
+export interface AyakaModsDownloadRequest {
+  id: string
+  fileName: string
+  sizeBytes: number
 }
 
 export interface BackgroundRect {

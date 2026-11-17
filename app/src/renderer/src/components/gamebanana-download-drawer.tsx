@@ -6,6 +6,7 @@ interface Props {
   open: boolean
   tasks: GameBananaDownloadTask[]
   onClose: () => void
+  source?: string
 }
 
 function statusText(task: GameBananaDownloadTask): string {
@@ -23,14 +24,14 @@ function progress(task: GameBananaDownloadTask): number {
   return Math.min(100, Math.round((task.downloadedBytes / task.totalBytes) * 100))
 }
 
-export default function GameBananaDownloadDrawer({ open, tasks, onClose }: Props) {
+export default function GameBananaDownloadDrawer({ open, tasks, onClose, source = 'GameBanana' }: Props) {
   if (!open) return null
   return (
     <div className="gamebanana-drawer-overlay" role="presentation" onClick={onClose}>
       <aside
         className="gamebanana-download-drawer"
         role="dialog"
-        aria-label="GameBanana 下载列表"
+        aria-label={`${source} 下载列表`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="gamebanana-drawer-heading">

@@ -1208,7 +1208,13 @@ export default function App() {
           )}
           {(view === 'ayakamods' || mountedCommunityViews.has('ayakamods')) && (
             <div className="community-view-panel" hidden={view !== 'ayakamods'}>
-              <AyakaModsPage visible={ayakaPageVisible} />
+              <AyakaModsPage
+                active={view === 'ayakamods'}
+                visible={ayakaPageVisible}
+                config={config}
+                onConfigChange={setConfig}
+                onModsChanged={handleGameBananaModsChanged}
+              />
             </div>
           )}
         </div>

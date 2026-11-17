@@ -56,10 +56,10 @@ function publish(task: GameBananaDownloadTask): void {
   taskBroadcaster?.({ ...task })
 }
 
-function updateTask(id: string, patch: Partial<GameBananaDownloadTask>): GameBananaDownloadTask {
+export function updateTask(id: string, patch: Partial<GameBananaDownloadTask>): GameBananaDownloadTask {
   const current = tasks.get(id)
   if (!current) {
-    throw new Error(`找不到 GameBanana 下载任务：${id}`)
+    throw new Error(`找不到下载任务：${id}`)
   }
   const next = { ...current, ...patch }
   tasks.set(id, next)
@@ -339,7 +339,7 @@ function validCustomName(name: string): boolean {
 function archiveExtension(fileName: string): string {
   const extension = extname(fileName).toLowerCase()
   if (!['.zip', '.rar', '.7z'].includes(extension)) {
-    throw new Error(`GameBanana 文件格式不受支持：${fileName}`)
+    throw new Error(`模组文件格式不受支持：${fileName}`)
   }
   return extension
 }
@@ -400,9 +400,10 @@ async function downloadArchive(
 }
 
 export function createDownloadTask(
-  mod: GameBananaMod,
-  file: GameBananaFile,
-  customName: string
+  mod: Pick<GameBananaMod, 'id' | 'name'>,
+  file: Pick<GameBananaFile, 'name' | 'sizeBytes'>,
+  customName: string,
+  source: GameBananaDownloadTask['source'] = 'gamebanana'
 ): string {
   const normalizedName = customName.trim()
   if (!validCustomName(normalizedName)) {
@@ -410,6 +411,7 @@ export function createDownloadTask(
   }
   const task: GameBananaDownloadTask = {
     id: randomUUID(),
+    source,
     modId: mod.id,
     modName: mod.name,
     fileName: file.name,
@@ -427,25 +429,26 @@ export function createDownloadTask(
 
 export async function executeDownloadTask(
   taskId: string,
-  mod: GameBananaMod,
-  file: GameBananaFile,
+  mod: Pick<GameBananaMod, 'id' | 'name'>,
+  file: Pick<GameBananaFile, 'name' | 'sizeBytes' | 'downloadUrl'>,
   installAfterDownload: boolean,
-  appDirectory: string
+  appDirectory: string,
+  transfer: (taskId: string, url: string, targetPath: string) => Promise<void> = downloadArchive
 ): Promise<OperationResult> {
   const task = tasks.get(taskId)
   if (!task) {
-    return { success: false, message: `找不到 GameBanana 下载任务：${taskId}` }
+    return { success: false, message: `找不到下载任务：${taskId}` }
   }
-  const extension = archiveExtension(file.name)
-  const downloadDirectory = join(getAppConfig().backupsDirectory, '.gamebanana-downloads')
-  const archivePath = join(downloadDirectory, `${task.customName}${extension}`)
   try {
+    const extension = archiveExtension(file.name)
+    const downloadDirectory = join(getAppConfig().backupsDirectory, `.${task.source}-downloads`)
+    const archivePath = join(downloadDirectory, `${task.customName}${extension}`)
     await mkdir(downloadDirectory, { recursive: true })
     if (existsSync(archivePath)) {
       rmSync(archivePath, { force: true })
     }
     updateTask(taskId, { message: '正在下载' })
-    await downloadArchive(taskId, file.downloadUrl, archivePath)
+    await transfer(taskId, file.downloadUrl, archivePath)
     updateTask(taskId, { status: 'extracting', message: '正在解压并保存到备份目录' })
     const imported = await repository.importArchive(archivePath, appDirectory)
     if (!imported.success) {
@@ -473,8 +476,8 @@ export async function executeDownloadTask(
       }
       message = `${imported.message}，${installed.message}`
     }
-    updateTask(taskId, { status: 'completed', message, downloadedBytes: file.sizeBytes || task.downloadedBytes })
-    logger.info(`GameBanana 下载完成：${mod.name} → ${task.customName}`)
+    updateTask(taskId, { status: 'completed', message })
+    logger.info(`${task.source === 'ayakamods' ? 'AyakaMods' : 'GameBanana'} 下载完成：${mod.name} → ${task.customName}`)
     return { success: true, message }
   } catch (error) {
     return updateFailed(taskId, describeError(error))
@@ -483,6 +486,6 @@ export async function executeDownloadTask(
 
 function updateFailed(taskId: string, message: string): OperationResult {
   updateTask(taskId, { status: 'failed', message })
-  logger.error(`GameBanana 下载失败：${message}`)
+  logger.error(`模组下载失败：${message}`)
   return { success: false, message }
 }

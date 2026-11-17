@@ -518,12 +518,27 @@ const api: Api = {
     return mockGameBananaTasks.map((task) => ({ ...task }))
   },
 
+  async getAyakaModsTasks() {
+    return []
+  },
+  async getAyakaModsPendingDownloads() {
+    return []
+  },
+  async startAyakaModsDownload() {
+    throw new Error('浏览器开发模式不支持拦截站内下载，请使用桌面开发模式。')
+  },
+  async cancelAyakaModsDownload() {},
+  onAyakaModsDownloadRequest() {
+    return () => {}
+  },
+
   async startGameBananaDownload(modId, fileId, customName, installAfterDownload) {
     const mod = gameBananaMods.find((item) => item.id === modId)
     const file = mod && [...mod.files, ...mod.archivedFiles].find((item) => item.id === fileId)
     if (!mod || !file) throw new Error('未找到测试下载文件')
     const task: GameBananaDownloadTask = {
       id: `mock-download-${Date.now()}`,
+      source: 'gamebanana',
       modId,
       modName: mod.name,
       fileName: file.name,

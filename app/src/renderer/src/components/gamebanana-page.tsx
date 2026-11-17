@@ -125,6 +125,7 @@ export default function GameBananaPage({ active, config, onConfigChange, onModsC
       if (active) setTasks(initial)
     })
     const unsubscribe = window.api.onGameBananaDownloadTask((task) => {
+      if (task.source !== 'gamebanana') return
       setTasks((current) => {
         const index = current.findIndex((item) => item.id === task.id)
         if (index < 0) return [...current, task]

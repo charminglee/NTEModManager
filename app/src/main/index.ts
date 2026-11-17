@@ -17,6 +17,7 @@ import { registerIpcHandlers, setMainWindowProvider } from './ipc'
 import { builtInPackagerDirectory } from './packager'
 import { registerWindowLifecycle } from './window-lifecycle'
 import { registerWindowControls } from './window-controls'
+import { cancelPendingDownloads, registerAyakaModsDownloads } from './ayakamods'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -74,7 +75,11 @@ function isAyakaModsCommunityPage(url: string): boolean {
 app.on('web-contents-created', (_event, contents) => {
   const isAyakaModsWebview = contents.getType() === 'webview'
   contents.setWindowOpenHandler(({ url }) => {
-    if (isAyakaModsWebview && isHttpsUrl(url)) {
+    if (isAyakaModsWebview && isAyakaModsUrl(url)) {
+      void contents.loadURL(url).catch((error: Error & { code?: string }) => {
+        if (error.code !== 'ERR_ABORTED') logger.warning(`AyakaMods 页面打开失败：${describeError(error)}`)
+      })
+    } else if (isAyakaModsWebview && isHttpsUrl(url)) {
       void shell.openExternal(url)
     }
     return { action: 'deny' }
@@ -377,10 +382,7 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
-    session.fromPartition('persist:ayakamods').on('will-download', (event) => {
-      event.preventDefault()
-      logger.info('AyakaMods 内嵌页仅供浏览，请在浏览器中下载文件。')
-    })
+    registerAyakaModsDownloads(session.fromPartition('persist:ayakamods'), () => mainWindow?.webContents)
     registerMediaProtocol()
     logger.addBroadcaster(() => mainWindow)
     registerIpcHandlers(categoryImageBase(), windowIcon())
@@ -411,6 +413,7 @@ if (!gotSingleInstanceLock) {
     backgroundCarousel.start(() => mainWindow)
 
     app.on('will-quit', () => {
+      cancelPendingDownloads()
       void backgroundCarousel.dispose()
     })
 

@@ -18,6 +18,7 @@ import {
   setTaskBroadcaster
 } from './gamebanana'
 import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult } from '../shared/types'
+import { cancelDownload, getPendingDownloads, prepareDownload } from './ayakamods'
 
 type ProgressReporter = (message: string) => void
 
@@ -244,7 +245,18 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('gamebanana:list', (_event, page: number) => listGameBananaMods(page))
   ipcMain.handle('gamebanana:detail', (_event, modId: number) => getGameBananaMod(modId))
-  ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks())
+  ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))
+  ipcMain.handle('ayakamods:pendingDownloads', () => getPendingDownloads())
+  ipcMain.handle('ayakamods:tasks', () => getGameBananaTasks().filter((task) => task.source === 'ayakamods'))
+  ipcMain.handle('ayakamods:cancelDownload', (_event, id: string) => cancelDownload(id))
+  ipcMain.handle('ayakamods:startDownload', (_event, id: string, customName: string, installAfterDownload: boolean) => {
+    const download = prepareDownload(id, customName, installAfterDownload, appDir())
+    void runExclusive(`下载 AyakaMods 模组 ${customName}`, async (report) => {
+      report(`正在下载 ${customName}……`)
+      return download.execute()
+    })
+    return download.taskId
+  })
   ipcMain.handle(
     'gamebanana:startDownload',
     async (_event, modId: number, fileId: string, customName: string, installAfterDownload: boolean) => {
