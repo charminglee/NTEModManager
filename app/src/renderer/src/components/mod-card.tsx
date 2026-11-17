@@ -90,8 +90,8 @@ function ModCard({
         <span className="mod-row-copy">
           <strong>{displayName}</strong>
           <small>
-            {!!mod.subMods?.length && <span className="bundle-badge">整合包 · {mod.subMods.length} 个子模组</span>}
-            {formatFileSize(mod.sizeBytes)} · {formatImportedAt(mod.importedAt)}
+            {!!mod.subMods?.length && <span className="bundle-badge">整合包  ·  {mod.subMods.length} 个子模组</span>}
+            {formatFileSize(mod.sizeBytes)}  ·  {formatImportedAt(mod.importedAt)}
           </small>
         </span>
       </button>
