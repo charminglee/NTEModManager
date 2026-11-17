@@ -408,9 +408,6 @@ input[type='checkbox'] {
   outline: 2px solid #e5b091;
   outline-offset: 3px;
 }
-.dialog-panel .prompt-switch-row span {
-  color: #bcb1a1;
-}
 .dialog-panel .import-result-list {
   border-color: #59544c;
   background: #1f1e1b;
@@ -867,17 +864,11 @@ input[type='checkbox'] {
   padding: 12px 0 2px;
   border-top: 1px solid var(--rule);
 }
-.prompt-switch-row > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
 .prompt-switch-row strong {
-  font-size: 12px;
-}
-.prompt-switch-row span {
-  color: #655c50;
-  font-size: 10px;
+  color: var(--dialog-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.65;
 }
 .launch-button {
   position: relative;
@@ -1366,7 +1357,13 @@ select {
 }
 .detail-heading button {
   margin-left: auto;
+  border: 0;
+  background: transparent;
   color: var(--paper);
+}
+.detail-heading button:hover {
+  background: #ffffff20;
+  color: var(--cream);
 }
 .detail-scroll {
   min-height: 0;

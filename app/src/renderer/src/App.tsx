@@ -1245,7 +1245,6 @@ export default function App() {
         open={prompt !== null}
         title={prompt?.title ?? ''}
         description={prompt?.description}
-        label={prompt?.label ?? ''}
         initialValue={prompt?.initialValue ?? ''}
         onCancel={() => setPrompt(null)}
         onConfirm={(value) => prompt?.onConfirm(value)}
@@ -1256,7 +1255,6 @@ export default function App() {
         open={currentRename !== null}
         title="重命名模组"
         description="模组名称需符合「角色名-二级名称」格式才能自动归类到对应分类。"
-        label="模组名称："
         initialValue={currentRename?.defaultName ?? ''}
         onCancel={() => setRenameQueue((prev) => prev.slice(1))}
         onConfirm={(newName) => {
