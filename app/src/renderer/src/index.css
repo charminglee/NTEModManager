@@ -342,17 +342,16 @@ input[type='checkbox'] {
 }
 .gamebanana-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
   flex: 1;
   min-height: 0;
   padding-top: 14px;
 }
 .gamebanana-mod-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-content: start;
-  gap: 10px;
+  gap: 14px;
   min-height: 0;
   overflow: auto;
   padding: 1px 2px 18px 1px;
@@ -375,10 +374,12 @@ input[type='checkbox'] {
 }
 .gamebanana-mod-card {
   display: flex;
+  flex-direction: column;
   min-width: 0;
-  min-height: 90px;
-  gap: 10px;
-  padding: 8px;
+  min-height: 258px;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
   border: 1px solid #9a9285;
   border-radius: 2px;
   background: rgb(255 252 246 / 78%);
@@ -397,11 +398,11 @@ input[type='checkbox'] {
 }
 .gamebanana-mod-card img,
 .gamebanana-card-placeholder {
-  width: 84px;
-  height: 72px;
+  width: 100%;
+  height: 154px;
   flex-shrink: 0;
   object-fit: cover;
-  border-radius: 1px;
+  border-radius: 0;
   background: #2f2e2a;
 }
 .gamebanana-card-placeholder {
@@ -415,23 +416,49 @@ input[type='checkbox'] {
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  justify-content: center;
-  gap: 5px;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 12px 13px;
 }
 .gamebanana-card-copy strong,
 .gamebanana-card-copy span,
 .gamebanana-card-copy small {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .gamebanana-card-copy strong {
-  font-size: 13px;
+  display: -webkit-box;
+  font-size: 15px;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
 }
 .gamebanana-card-copy span,
 .gamebanana-card-copy small {
   color: #655c50;
   font-size: 10px;
+  white-space: nowrap;
+}
+.gamebanana-detail-dialog {
+  max-width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #7c7569;
+  border-radius: 2px;
+  background: var(--surface-ink);
+}
+.gamebanana-detail-dialog .gamebanana-detail {
+  max-height: calc(100vh - 32px);
+  border: 0;
+}
+.gamebanana-detail-dialog-header {
+  gap: 5px;
+}
+.gamebanana-detail-dialog-header h2 {
+  margin: 3px 0 0;
 }
 .gamebanana-detail {
   display: flex;
@@ -444,7 +471,7 @@ input[type='checkbox'] {
 }
 .gamebanana-detail-image {
   width: 100%;
-  height: 145px;
+  height: 220px;
   flex-shrink: 0;
   object-fit: cover;
   opacity: 0.9;
@@ -933,7 +960,8 @@ input[type='checkbox'] {
   height: 85px;
   position: absolute;
   right: 0;
-  top: -12px;
+  top: 50%;
+  transform: translateY(-50%);
   opacity: 0.6;
   pointer-events: none;
 }
@@ -1883,6 +1911,17 @@ select {
   }
 }
 @media (max-width: 760px) {
+  .gamebanana-mod-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .gamebanana-mod-card {
+    min-height: 220px;
+  }
+  .gamebanana-mod-card img,
+  .gamebanana-card-placeholder {
+    height: 112px;
+  }
   .character-sidebar {
     width: 154px;
     padding: 10px 6px;

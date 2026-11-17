@@ -7,6 +7,13 @@ import type {
   GameBananaMod
 } from '@shared/types'
 import { Button } from './ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from './ui/dialog'
 import { Input } from './ui/input'
 import PromptDialog from './prompt-dialog'
 import GameBananaDownloadDrawer from './gamebanana-download-drawer'
@@ -251,34 +258,6 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
               </div>
             </section>
 
-            {selected && (
-              <aside className="gamebanana-detail" aria-label="GameBanana 模组详情">
-                {selected.previewUrl ? <img className="gamebanana-detail-image" src={selected.previewUrl} alt="" /> : null}
-                <div className="gamebanana-detail-body">
-                  <span className="eyebrow">MOD #{selected.id}</span>
-                  <h2>{selected.name}</h2>
-                  <p className="gamebanana-detail-byline">{selected.authors} · 更新于 {formatUpdatedAt(selected.updatedAt)}</p>
-                  <p className="gamebanana-description">{selected.description || '作者没有提供描述。'}</p>
-                  <div className="gamebanana-stats">
-                    <span><strong>{shortNumber(selected.downloads)}</strong>下载</span>
-                    <span><strong>{shortNumber(selected.likes)}</strong>喜欢</span>
-                    <span><strong>{shortNumber(selected.views)}</strong>浏览</span>
-                  </div>
-                  <div className="gamebanana-file-list">
-                    <h3>可下载文件</h3>
-                    {selected.files.length === 0 ? <p>暂无可下载文件。</p> : selected.files.map((file) => (
-                      <div className="gamebanana-file-row" key={file.id}>
-                        <div><strong>{file.name}</strong><span>{formatFileSize(file.sizeBytes)} · {shortNumber(file.downloadCount)} 次下载</span></div>
-                        <Button size="sm" onClick={() => openDownload(selected, file)}><Download />下载</Button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" className="gamebanana-open-button" onClick={() => void window.api.openExternal(selected.profileUrl)}>
-                    <ExternalLink />打开 GameBanana 页面
-                  </Button>
-                </div>
-              </aside>
-            )}
           </div>
         )}
 
@@ -289,6 +268,42 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
         </div>
       </div>
 
+      <Dialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null) }}>
+        <DialogContent className="gamebanana-detail-dialog">
+          {selected && (
+            <div className="gamebanana-detail" aria-label="GameBanana 模组详情">
+              {selected.previewUrl ? <img className="gamebanana-detail-image" src={selected.previewUrl} alt="" /> : null}
+              <div className="gamebanana-detail-body">
+                <DialogHeader className="gamebanana-detail-dialog-header">
+                  <span className="eyebrow">MOD #{selected.id}</span>
+                  <DialogTitle>{selected.name}</DialogTitle>
+                  <DialogDescription className="gamebanana-detail-byline">
+                    {selected.authors} · 更新于 {formatUpdatedAt(selected.updatedAt)}
+                  </DialogDescription>
+                </DialogHeader>
+                <p className="gamebanana-description">{selected.description || '作者没有提供描述。'}</p>
+                <div className="gamebanana-stats">
+                  <span><strong>{shortNumber(selected.downloads)}</strong>下载</span>
+                  <span><strong>{shortNumber(selected.likes)}</strong>喜欢</span>
+                  <span><strong>{shortNumber(selected.views)}</strong>浏览</span>
+                </div>
+                <div className="gamebanana-file-list">
+                  <h3>可下载文件</h3>
+                  {selected.files.length === 0 ? <p>暂无可下载文件。</p> : selected.files.map((file) => (
+                    <div className="gamebanana-file-row" key={file.id}>
+                      <div><strong>{file.name}</strong><span>{formatFileSize(file.sizeBytes)} · {shortNumber(file.downloadCount)} 次下载</span></div>
+                      <Button size="sm" onClick={() => openDownload(selected, file)}><Download />下载</Button>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="outline" className="gamebanana-open-button" onClick={() => void window.api.openExternal(selected.profileUrl)}>
+                  <ExternalLink />打开 GameBanana 页面
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       <GameBananaDownloadDrawer open={drawerOpen} tasks={tasks} onClose={() => setDrawerOpen(false)} />
       <PromptDialog
         open={downloadTarget !== null}
