@@ -53,7 +53,8 @@ type PendingConfirm =
   | { kind: 'delete'; modName: string }
   | { kind: 'install-invalid'; modName: string }
   | { kind: 'reinstall-invalid'; modName: string }
-  | { kind: 'install-all-invalid'; modNames: string[] }
+  | { kind: 'install-all'; category: string; invalidNames: string[] }
+  | { kind: 'uninstall-all'; category: string }
   | { kind: 'batch-delete'; modNames: string[] }
   | {
       kind: 'batch-invalid'
@@ -474,28 +475,16 @@ export default function App() {
     [reinstallByName, refreshMods]
   )
 
-  const handleInstallAll = useCallback(async () => {
-    const list = visibleMods.filter((mod) => !mod.installed && mod.invalid)
-    if (list.length > 0) {
-      setPendingConfirm({ kind: 'install-all-invalid', modNames: list.map((mod) => mod.name) })
-      return
-    }
-    const result = await runOperation('正在批量安装模组...', () =>
-      window.api.installAll(currentCategory)
-    )
-    if (result) {
-      await refreshMods()
-    }
-  }, [visibleMods, currentCategory, runOperation, refreshMods])
+  const handleInstallAll = useCallback(() => {
+    const invalidNames = categoryMods
+      .filter((mod) => !mod.installed && mod.invalid)
+      .map((mod) => mod.name)
+    setPendingConfirm({ kind: 'install-all', category: currentCategory, invalidNames })
+  }, [categoryMods, currentCategory])
 
-  const handleUninstallAll = useCallback(async () => {
-    const result = await runOperation('正在批量卸载模组...', () =>
-      window.api.uninstallAll(currentCategory)
-    )
-    if (result) {
-      await refreshMods()
-    }
-  }, [currentCategory, runOperation, refreshMods])
+  const handleUninstallAll = useCallback(() => {
+    setPendingConfirm({ kind: 'uninstall-all', category: currentCategory })
+  }, [currentCategory])
 
   // ============ 多选与批量操作 ============
   /** 切换一张卡的选中态;Shift 时从锚点到该卡范围选中(替换现有选中) */
@@ -953,8 +942,8 @@ export default function App() {
                   handleClearSelection()
                 }}
                 onRefresh={handleRefreshMods}
-                onInstallAll={() => void handleInstallAll()}
-                onUninstallAll={() => void handleUninstallAll()}
+                onInstallAll={handleInstallAll}
+                onUninstallAll={handleUninstallAll}
               />
               <div
                 ref={modListRef}
@@ -1244,19 +1233,20 @@ export default function App() {
               </AlertDialogFooter>
             </>
           )}
-          {pendingConfirm?.kind === 'install-all-invalid' && (
+          {pendingConfirm?.kind === 'install-all' && (
             <>
               <AlertDialogHeader>
-                <AlertDialogTitle>安装失效模组</AlertDialogTitle>
-                <AlertDialogDescription>{`当前操作包含 ${pendingConfirm.modNames.length} 个已标记为失效的模组：\n${pendingConfirm.modNames.join('\n')}\n可能无法正常工作，是否仍要继续？`}</AlertDialogDescription>
+                <AlertDialogTitle>全部安装模组</AlertDialogTitle>
+                <AlertDialogDescription>{`将安装当前分类“${pendingConfirm.category}”中的全部未安装模组，是否继续？${pendingConfirm.invalidNames.length > 0 ? `\n\n其中 ${pendingConfirm.invalidNames.length} 个模组已标记为失效：\n${pendingConfirm.invalidNames.join('\n')}\n这些模组可能无法正常工作。` : ''}`}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>取消</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => {
+                    const category = pendingConfirm.category
                     setPendingConfirm(null)
                     void runOperation('正在批量安装模组...', () =>
-                      window.api.installAll(currentCategory)
+                      window.api.installAll(category)
                     ).then((result) => {
                       if (result) {
                         void refreshMods()
@@ -1265,6 +1255,33 @@ export default function App() {
                   }}
                 >
                   仍要继续
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+          {pendingConfirm?.kind === 'uninstall-all' && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>全部卸载模组</AlertDialogTitle>
+                <AlertDialogDescription>{`将卸载当前分类“${pendingConfirm.category}”中的全部已安装模组，是否继续？`}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={() => {
+                    const category = pendingConfirm.category
+                    setPendingConfirm(null)
+                    void runOperation('正在批量卸载模组...', () =>
+                      window.api.uninstallAll(category)
+                    ).then((result) => {
+                      if (result) {
+                        void refreshMods()
+                      }
+                    })
+                  }}
+                >
+                  继续卸载
                 </AlertDialogAction>
               </AlertDialogFooter>
             </>

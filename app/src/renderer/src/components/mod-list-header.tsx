@@ -1,13 +1,7 @@
 import { memo } from 'react'
-import { MoreHorizontal, RefreshCw, Search } from 'lucide-react'
+import { RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from './ui/dropdown-menu'
 import ticket from '@/assets/ticket-stamp.svg'
 export type StatusFilter = 'all' | 'installed' | 'uninstalled' | 'invalid'
 interface Props {
@@ -47,20 +41,15 @@ function ModListHeader(p: Props) {
             onChange={(e) => p.onSearchChange(e.target.value)}
           />
         </label>
+        <Button variant="default" onClick={p.onInstallAll} disabled={p.busy}>
+          全部安装
+        </Button>
+        <Button variant="outline" onClick={p.onUninstallAll} disabled={p.busy}>
+          全部卸载
+        </Button>
         <Button variant="outline" size="icon" onClick={p.onRefresh} disabled={p.busy} title="重新扫描模组目录">
           <RefreshCw />
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" aria-label="当前分类操作" disabled={p.busy}>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={p.onInstallAll}>当前分类全部安装</DropdownMenuItem>
-            <DropdownMenuItem onSelect={p.onUninstallAll}>当前分类全部卸载</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
       <div className="library-filter-row">
         <div role="group" aria-label="按安装状态筛选">
