@@ -86,7 +86,6 @@ export interface AppConfigData {
   backgroundImagesDirectory: string
   /** 游戏启动器路径;随游戏安装目录自动生成 */
   gameLauncher: string
-  packagerDirectory: string
   autoUseLastPackagingPath: boolean
   exclusiveInstallExemptGroups: string[]
   categories: string[]
@@ -111,7 +110,6 @@ export interface AppConfigPatch {
   backupsDirectory?: string
   backgroundImagesDirectory?: string
   gameLauncher?: string
-  packagerDirectory?: string
   autoUseLastPackagingPath?: boolean
   exclusiveInstallExemptGroups?: string[]
   restoreLastCategory?: boolean

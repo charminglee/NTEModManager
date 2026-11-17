@@ -172,8 +172,7 @@ function createDefaultConfig(filePath: string): void {
     mods_directory: `${DEFAULT_GAME_DIRECTORY}/${GAME_MODS_SUBPATH}`,
     backups_directory: 'E:/NteMod/Backups',
     background_images_directory: 'D:/pictures/真人',
-    game_launcher: `${DEFAULT_GAME_DIRECTORY}/${GAME_LAUNCHER_FILENAME}`,
-    packager_directory: 'E:/Projects/ModManager/傻瓜打包器'
+    game_launcher: `${DEFAULT_GAME_DIRECTORY}/${GAME_LAUNCHER_FILENAME}`
   }
   ini.Categories = {
     names: DEFAULT_MOD_CATEGORIES.join(',')
@@ -224,7 +223,6 @@ export function getAppConfig(): AppConfigData {
     backupsDirectory: getPath('backups_directory', 'E:/NteMod/Backups'),
     backgroundImagesDirectory: getPath('background_images_directory', 'D:/pictures/真人', true),
     gameLauncher,
-    packagerDirectory: getPath('packager_directory', 'E:/Projects/ModManager/傻瓜打包器'),
     autoUseLastPackagingPath: getBool('Preferences', 'auto_use_last_packaging_path', true),
     exclusiveInstallExemptGroups: getList('Preferences', 'exclusive_install_exempt_groups', ['UI']),
     categories: getList('Categories', 'names', DEFAULT_MOD_CATEGORIES),
@@ -365,13 +363,17 @@ const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
   modsDirectory: 'mods_directory',
   backupsDirectory: 'backups_directory',
   backgroundImagesDirectory: 'background_images_directory',
-  gameLauncher: 'game_launcher',
-  packagerDirectory: 'packager_directory'
+  gameLauncher: 'game_launcher'
 }
 
 /** 设置界面保存:将补丁写入配置文件,未指定的字段保持原值。 */
 export function updateAppConfig(patch: AppConfigPatch): void {
   const ini = readIni()
+
+  // 打包器已随应用内置，保存设置时清理旧版可配置路径。
+  if (ini.Paths) {
+    delete ini.Paths.packager_directory
+  }
 
   const pathEntries: Record<string, string> = {}
   if (typeof patch.gameDirectory === 'string') {

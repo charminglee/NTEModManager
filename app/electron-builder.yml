@@ -9,6 +9,14 @@ extraResources:
     to: category-bg
   - from: ../img/nte-mod-manager.ico
     to: nte-mod-manager.ico
+  # 内置傻瓜打包器，运行时从应用资源目录读取；只排除运行时生成内容。
+  - from: ../傻瓜打包器
+    to: packager
+    filter:
+      - "**/*"
+      - "!xg/HT/Content/**"
+      - "!LastImportFolder.txt"
+      - "!temp_base.pak"
 # Python 资源(解释器/识别脚本/pt 模型)不打包:运行时从程序目录旁的 python/
 # 或项目根的 python/ 解析(见 config.ts pythonAssetsDir),部署时把 python/ 目录
 # 放到 exe 旁边即可

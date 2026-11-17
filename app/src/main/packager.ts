@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
@@ -7,6 +8,13 @@ import type { OperationResult } from '../shared/types'
 
 /** 傻瓜打包器约定:退出码 2 表示用户在脚本中取消了操作。 */
 export const PACKAGER_CANCELLED_EXIT_CODE = 2
+
+/** 内置打包器在开发环境使用仓库目录，打包后使用应用 resources 目录。 */
+export function builtInPackagerDirectory(): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'packager')
+    : path.join(app.getAppPath(), '..', '傻瓜打包器')
+}
 
 export interface PackageOptions {
   batchPath: string

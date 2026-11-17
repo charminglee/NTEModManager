@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path'
 import * as repository from './repository'
 import { changeInstallationForAll, installModExclusively, runBatchModAction } from './operations'
 import { getAppConfig, getLastCategory, setCategoryOrder, setLastCategory, setSortOrder, updateAppConfig } from './config'
-import { runPackager } from './packager'
+import { builtInPackagerDirectory, runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { describeError, logger } from './logger'
@@ -112,9 +112,10 @@ async function repackageModWithSource(
     }
   }
 
+  const packageDirectory = builtInPackagerDirectory()
   const packResult = await runPackager({
-    batchPath: join(config.packagerDirectory, '傻瓜打包器.bat'),
-    packageDirectory: config.packagerDirectory,
+    batchPath: join(packageDirectory, '傻瓜打包器.bat'),
+    packageDirectory,
     sourceDirectory
   })
   if (!packResult.success) {
@@ -122,7 +123,7 @@ async function repackageModWithSource(
   }
 
   report(`正在替换 ${mod.name} 的源文件...`)
-  const replaced = await repository.replacePackagedMod(mod, config.packagerDirectory)
+  const replaced = await repository.replacePackagedMod(mod, packageDirectory)
   if (!replaced.success) {
     return replaced
   }
@@ -370,10 +371,10 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('package:run', (_event, sourceDirectory?: string) =>
     runExclusive('打包模组', async () => {
-      const config = getAppConfig()
+      const packageDirectory = builtInPackagerDirectory()
       return runPackager({
-        batchPath: join(config.packagerDirectory, '傻瓜打包器.bat'),
-        packageDirectory: config.packagerDirectory,
+        batchPath: join(packageDirectory, '傻瓜打包器.bat'),
+        packageDirectory,
         sourceDirectory
       })
     })
@@ -387,8 +388,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('package:import', (_event, modName: string) =>
     runExclusive(`导入打包模组 ${modName}`, async () => {
-      const config = getAppConfig()
-      return repository.importPackagedMod(modName, config.packagerDirectory)
+      return repository.importPackagedMod(modName, builtInPackagerDirectory())
     })
   )
 

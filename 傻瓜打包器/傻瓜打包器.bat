@@ -25,14 +25,6 @@ echo =======================================================
 echo.
 
 :: 1. 环境检查
-if not exist "%SOURCE_FOLDER%" (
-    color 0C
-    echo [错误] 找不到文件夹: %SOURCE_FOLDER%
-    echo 请确保文件夹和本脚本放在一起。
-    pause
-    exit
-)
-
 if not exist "%MORPH_PATCH_EXE%" (
     color 0C
     echo [错误] 找不到 NteMorphTargetPatch.exe

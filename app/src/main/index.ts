@@ -14,6 +14,7 @@ import {
 import { TEST_IMAGES_ROOT, decodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { registerIpcHandlers, setMainWindowProvider } from './ipc'
+import { builtInPackagerDirectory } from './packager'
 import { registerWindowLifecycle } from './window-lifecycle'
 import { registerWindowControls } from './window-controls'
 
@@ -338,7 +339,8 @@ if (!gotSingleInstanceLock) {
     logger.info(`配置：mods_directory=${config.modsDirectory}`)
     logger.info(`配置：backups_directory=${config.backupsDirectory}`)
     logger.info(`配置：background_images_directory=${config.backgroundImagesDirectory}`)
-    logger.info(`配置：game_launcher=${config.gameLauncher},packager_directory=${config.packagerDirectory}`)
+    logger.info(`配置：game_launcher=${config.gameLauncher}`)
+    logger.info(`内置打包器：${builtInPackagerDirectory()}`)
     createWindow()
     backgroundCarousel.start(() => mainWindow)
 

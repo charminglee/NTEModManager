@@ -333,7 +333,6 @@ const config: AppConfigData = {
   backupsDirectory: 'D:/Games/NTE/mods.bak',
   backgroundImagesDirectory: 'D:/pictures/wallpapers',
   gameLauncher: 'D:/Games/NTE/NTE.exe',
-  packagerDirectory: 'D:/Games/NTE/packager',
   autoUseLastPackagingPath: true,
   exclusiveInstallExemptGroups: [],
   categories: [...CATEGORIES],
