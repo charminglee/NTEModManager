@@ -14,18 +14,21 @@
   transition: opacity var(--motion-normal) ease;
 }
 
-/* 只为实际进入的新页面和内容播放入场，不因输入或日志刷新而重播。 */
-.mod-workspace,
-.settings-workspace,
-.logs-workspace,
+/* 页面底色与边界保持静止，只对新进入的内容播放入场。 */
+.mod-library-header,
+.settings-page > .workspace-page-heading,
+.settings-footer,
+.logs-workspace > .workspace-page-heading,
+.logs-toolbar,
+.logs-table > table,
 .settings-content,
 .mod-list-scroll,
 .detail-file-panel,
 .detail-metadata {
   animation: motion-content-in var(--motion-slow) var(--motion-out);
 }
-.character-sidebar,
-.settings-navigation {
+.character-sidebar > *,
+.settings-navigation > button {
   animation: motion-sidebar-in var(--motion-slow) var(--motion-out);
 }
 .mod-detail {
