@@ -1191,20 +1191,20 @@ select {
   padding: 10px 9px;
   min-height: 66px;
   border-bottom: 1px solid var(--rule);
-  background: var(--surface-cream);
+  background: rgb(255 252 246 / 40%);
 }
 .mod-row:last-child {
   border-bottom: 0;
 }
 .mod-row:hover {
-  background: rgb(244 237 226 / 80%);
+  background: rgb(244 237 226 / 60%);
 }
 .mod-row.is-active {
-  background: rgb(244 227 222 / 82%);
+  background: rgb(244 227 222 / 62%);
   box-shadow: inset 3px 0 var(--vermilion);
 }
 .mod-row.is-selected {
-  background: rgb(244 227 222 / 82%);
+  background: rgb(244 227 222 / 62%);
 }
 .mod-checkbox {
   display: flex;
