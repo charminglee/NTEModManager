@@ -299,7 +299,7 @@ input[type='checkbox'] {
   color: #8b8376;
   opacity: 0.28;
   pointer-events: none;
-  animation: launch-city-scroll 48s linear infinite;
+  animation: launch-city-scroll 40s linear infinite;
 }
 @keyframes launch-city-scroll {
   to {
