@@ -13,7 +13,7 @@
 - **模组卡片**:展开查看文件树(文件夹折叠、双击文件名内联重命名,`pak/ucas/utoc` 三件套按 `_P` 规则组重命名);更多菜单:重命名、重新打包、添加压缩包、更新/替换压缩包、标记失效、打开源/安装位置、删除。
 - **打包模组 / 重新打包**:运行随应用构建的 `傻瓜打包器.bat`(退出码 2 视为取消);重新打包自动复用该模组上次选择的源文件夹(`auto_use_last_packaging_path`)。
 - **失效标记**:标记时自动卸载,安装失效模组前要求确认。
-- **排序**:默认(已安装优先)/ 名称 A-Z / Z-A / 导入时间 / 文件大小;默认与名称排序按二级名称分组显示。
+- **分组显示**：模组按二级名称分组，组内保持仓库扫描顺序。
 - **日志页**:运行日志实时推送、跟随滚动、按级别着色;日志文件在 `~/.ntemm/logs/NteModManager.log`。
 - **背景图轮播 + AI 识别**:主进程随机选图后调用内嵌 Python 视觉识别(`visual_region_detector.py`,YOLO 姿态 + 方向分类)计算人物焦点区域,按窗口视口裁剪铺满显示;每 10 秒轮换并以 900ms 交叉淡化过渡,窗口 resize 后自动重新识别。方向模型缺失或 Python 不可用时自动回退为显著性焦点检测。`↓` 切换背景,`F10` 打开当前背景源文件,`F12` 开关 AI 调试线框(状态栏显示识别状态),`F9` 隐藏/显示界面(双击背景恢复),`F11` 全屏(浏览器模式下为 Chrome 内置全屏,Electron 下为窗口原生全屏)。外部程序可运行 `python/visual_region_detector.py --http` 通过 HTTP 接口获取同样的 AI 裁剪背景图,见 `docs/background-image-service.md`。
 
@@ -23,7 +23,7 @@ Python 服务通过 stderr 的 JSON Lines 日志通道传递级别、时间和�
 
 ## 界面动效
 
-界面采用精致克制的动效节奏，统一定义于 `src/renderer/src/motion.css`：控件反馈约 140 毫秒，内容过渡约 240 至 360 毫秒，列表错峰最多延迟 72 毫秒。覆盖主页面、设置分组、分类与筛选、模组排序、详情面板、文件树、批量操作栏、导入反馈和浮层。排序与筛选仅对可见模组补间位置，业务状态立即更新；持续推送的日志不逐行播放入场。
+界面采用精致克制的动效节奏，统一定义于 `src/renderer/src/motion.css`：控件反馈约 140 毫秒，内容过渡约 240 至 360 毫秒，列表错峰最多延迟 72 毫秒。覆盖主页面、设置分组、分类与筛选、详情面板、文件树、批量操作栏、导入反馈和浮层。筛选仅对可见模组补间位置，业务状态立即更新；持续推送的日志不逐行播放入场。
 
 条件面板使用 `MotionPresence` 保留短暂退场，退场期间禁用交互和键盘访问，快速重新打开会取消卸载。系统开启「减少动态效果」时，关闭位移、回弹和循环播放，保留即时状态反馈。动效不引入额外运行依赖。
 
@@ -69,7 +69,6 @@ npm run dist       # electron-builder 打包(dist/ 目录,绿色版)
 | `Paths/game_launcher` | 「启动游戏」按钮启动的启动器 |
 | `Categories/names` | 角色分类名(逗号分隔) |
 | `Preferences/mod_category_order` | 分类拖拽排序结果 |
-| `Preferences/mod_list_sort_order` | 排序方式(0-6) |
 | `Preferences/auto_use_last_packaging_path` | 重新打包时自动复用上次的源文件夹 |
 | `Preferences/exclusive_install_exempt_groups` | 互斥安装豁免的二级名称分组 |
 | `Preferences/window_size` | 窗口尺寸(关闭时自动保存) |
@@ -84,7 +83,7 @@ npm run dist       # electron-builder 打包(dist/ 目录,绿色版)
 ## 架构
 
 ```
-src/shared/       主进程与渲染进程共享:类型、分类/排序纯逻辑
+src/shared/       主进程与渲染进程共享：类型、分类纯逻辑
 src/main/         Electron 主进程
   ntemm-paths.ts    ~/.ntemm 数据目录布局与旧 userData 迁移
   config.ts         NteModManager.ini 读写(含 Python/模型路径)

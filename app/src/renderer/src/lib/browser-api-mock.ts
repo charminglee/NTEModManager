@@ -4,7 +4,6 @@ import {
   ALL_CATEGORY,
   BACKGROUND_MASK_OPACITY_DEFAULT,
   OTHER_CATEGORY,
-  SortOrder,
   UI_CORNER_RADIUS_DEFAULT,
   type AppConfigData,
   type BackgroundRect,
@@ -416,7 +415,6 @@ const config: AppConfigData = {
   exclusiveInstallExemptGroups: [],
   categories: [...CATEGORIES],
   categoryOrder: [],
-  sortOrder: SortOrder.InstalledFirst,
   restoreLastCategory: false,
   testImagesEnabled: true,
   fpsCounterEnabled: false,
@@ -785,11 +783,6 @@ const api: Api = {
 
   async openConfigFile() {
     return unavailable('打开配置文件')
-  },
-
-  async setSortOrder(sortOrder) {
-    config.sortOrder = sortOrder
-    return { success: true, message: '' }
   },
 
   async setCategoryOrder(order) {

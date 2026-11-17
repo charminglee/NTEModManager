@@ -1,7 +1,6 @@
 import {
   ALL_CATEGORY,
   OTHER_CATEGORY,
-  SortOrder,
   type ModInfo
 } from './types'
 
@@ -71,48 +70,18 @@ export function countByCategory(mods: ModInfo[], categories: string[]): Map<stri
   return counts
 }
 
-function localeCompare(left: string, right: string): number {
-  return left.localeCompare(right, 'zh-Hans-CN', { numeric: true })
-}
-
-export function filterAndSort(
+export function filterByCategory(
   mods: ModInfo[],
   category: string,
-  categories: string[],
-  sortOrder: SortOrder
+  categories: string[]
 ): ModInfo[] {
-  let list = mods
-  if (category !== ALL_CATEGORY) {
-    list = list.filter((mod) => categoryForMod(mod, categories) === category)
+  if (category === ALL_CATEGORY) {
+    return mods
   }
-  const copy = [...list]
-  switch (sortOrder) {
-    case SortOrder.NameAscending:
-      copy.sort((a, b) => localeCompare(a.name, b.name))
-      break
-    case SortOrder.NameDescending:
-      copy.sort((a, b) => localeCompare(b.name, a.name))
-      break
-    case SortOrder.ImportedNewestFirst:
-      copy.sort((a, b) => b.importedAt.localeCompare(a.importedAt))
-      break
-    case SortOrder.ImportedOldestFirst:
-      copy.sort((a, b) => a.importedAt.localeCompare(b.importedAt))
-      break
-    case SortOrder.SizeLargestFirst:
-      copy.sort((a, b) => b.sizeBytes - a.sizeBytes)
-      break
-    case SortOrder.SizeSmallestFirst:
-      copy.sort((a, b) => a.sizeBytes - b.sizeBytes)
-      break
-    case SortOrder.InstalledFirst:
-    default:
-      break
-  }
-  return copy
+  return mods.filter((mod) => categoryForMod(mod, categories) === category)
 }
 
-/** 默认、名称升序、名称降序三种排序下按二级名称分组展示 */
+/** 按二级名称分组展示，组内保持扫描顺序。 */
 export function groupBySecondaryName(
   mods: ModInfo[],
   categories: string[]

@@ -9,7 +9,6 @@ import {
   BACKGROUND_MASK_OPACITY_DEFAULT,
   BACKGROUND_MASK_OPACITY_MAX,
   BACKGROUND_MASK_OPACITY_MIN,
-  SortOrder,
   UI_CORNER_RADIUS_DEFAULT,
   UI_CORNER_RADIUS_MAX,
   UI_CORNER_RADIUS_MIN
@@ -178,7 +177,6 @@ function createDefaultConfig(filePath: string): void {
     names: DEFAULT_MOD_CATEGORIES.join(',')
   }
   ini.Preferences = {
-    mod_list_sort_order: String(SortOrder.NameAscending),
     mod_category_order: DEFAULT_CATEGORY_ORDER.join(','),
     auto_use_last_packaging_path: '1',
     exclusive_install_exempt_groups: 'UI',
@@ -228,7 +226,6 @@ export function getAppConfig(): AppConfigData {
     exclusiveInstallExemptGroups: getList('Preferences', 'exclusive_install_exempt_groups', ['UI']),
     categories: getList('Categories', 'names', DEFAULT_MOD_CATEGORIES),
     categoryOrder: getList('Preferences', 'mod_category_order', DEFAULT_CATEGORY_ORDER),
-    sortOrder: clampSortOrder(getInt('Preferences', 'mod_list_sort_order', SortOrder.NameAscending)),
     restoreLastCategory: getBool('Preferences', 'restore_last_category', false),
     testImagesEnabled: getBool('Debug', 'test_images', false),
     // 冒烟测量工具可用 NTEMM_FPS=1 强制开启,不受配置开关影响
@@ -248,13 +245,6 @@ export function getAppConfig(): AppConfigData {
   }
 }
 
-function clampSortOrder(value: number): SortOrder {
-  if (value < SortOrder.InstalledFirst || value > SortOrder.SizeSmallestFirst) {
-    return SortOrder.NameAscending
-  }
-  return value as SortOrder
-}
-
 function clampUiCornerRadius(value: number): number {
   if (!Number.isFinite(value)) {
     return UI_CORNER_RADIUS_DEFAULT
@@ -267,13 +257,6 @@ function clampBackgroundMaskOpacity(value: number): number {
     return BACKGROUND_MASK_OPACITY_DEFAULT
   }
   return Math.min(BACKGROUND_MASK_OPACITY_MAX, Math.max(BACKGROUND_MASK_OPACITY_MIN, Math.round(value)))
-}
-
-export function setSortOrder(sortOrder: SortOrder): void {
-  writeSection('Preferences', {
-    ...readIni().Preferences,
-    mod_list_sort_order: String(sortOrder)
-  })
 }
 
 export function setCategoryOrder(categoryOrder: string[]): void {

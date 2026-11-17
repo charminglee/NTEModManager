@@ -7,13 +7,12 @@ import {
   type AppConfigData,
   type BatchModAction,
   type ModInfo,
-  type OperationResult,
-  SortOrder
+  type OperationResult
 } from '@shared/types'
 import {
   categoryForMod,
   countByCategory,
-  filterAndSort,
+  filterByCategory,
   groupBySecondaryName,
   normalizeCategories,
   orderedCategories
@@ -234,17 +233,20 @@ export default function App() {
   }, [displayCategories])
 
   // ============ 模组列表 ============
-  const matchingMods = useMemo(() => {
+  const categoryMods = useMemo(() => {
     if (!config) {
       return []
     }
-    const filtered = filterAndSort(mods, currentCategory, categories, config.sortOrder)
+    return filterByCategory(mods, currentCategory, categories)
+  }, [config, mods, currentCategory, categories])
+
+  const matchingMods = useMemo(() => {
     if (search.trim().length === 0) {
-      return filtered
+      return categoryMods
     }
     const keyword = search.trim().toLowerCase()
-    return filtered.filter((mod) => mod.name.toLowerCase().includes(keyword))
-  }, [config, mods, currentCategory, categories, search])
+    return categoryMods.filter((mod) => mod.name.toLowerCase().includes(keyword))
+  }, [categoryMods, search])
 
   const statusCounts = useMemo(
     () => ({
@@ -283,16 +285,10 @@ export default function App() {
   )
   useEffect(() => window.api.onProgress(setActivity), [])
 
-  const groupedMods = useMemo(() => {
-    if (!config) {
-      return []
-    }
-    const groupable = config.sortOrder === 0 || config.sortOrder === 1 || config.sortOrder === 2
-    if (!groupable) {
-      return null
-    }
-    return groupBySecondaryName(visibleMods, categories)
-  }, [config, visibleMods, categories])
+  const groupedMods = useMemo(
+    () => groupBySecondaryName(visibleMods, categories),
+    [visibleMods, categories]
+  )
 
   // ============ 多选状态维护 ============
   // 镜像「屏幕顺序」:分组模式下屏幕顺序是各组按首现位置拼接(组内保序),
@@ -358,11 +354,6 @@ export default function App() {
     selectionAnchorRef.current = null
     // 记录上次打开的分类,供「启动时恢复」使用(与设置开关无关,始终记录)
     void window.api.setLastCategory(category)
-  }, [])
-
-  const handleSortOrderChange = useCallback((sortOrder: SortOrder) => {
-    setConfig((prev) => (prev ? { ...prev, sortOrder } : prev))
-    void window.api.setSortOrder(sortOrder)
   }, [])
 
   const handleImportArchives = useCallback(
@@ -954,11 +945,9 @@ export default function App() {
                 category={currentCategory}
                 counts={statusCounts}
                 search={search}
-                sortOrder={config.sortOrder}
                 status={statusFilter}
                 busy={busy}
                 onSearchChange={setSearch}
-                onSortOrderChange={handleSortOrderChange}
                 onStatusChange={(value) => {
                   setStatusFilter(value)
                   handleClearSelection()
@@ -1000,7 +989,7 @@ export default function App() {
                     )}
                   </div>
                 ) : (
-                  (groupedMods ?? [{ secondary: '模组', mods: visibleMods }]).map((group) => (
+                  groupedMods.map((group) => (
                     <section className="mod-group" key={group.secondary}>
                       <div className="mod-group-heading">
                         <h2>{group.secondary || '其他模组'}</h2>

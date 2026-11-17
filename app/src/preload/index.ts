@@ -10,7 +10,6 @@ import type {
   LogEntry,
   ModInfo,
   OperationResult,
-  SortOrder,
   WindowAction,
   WindowState
 } from '../shared/types'
@@ -79,8 +78,6 @@ const api = {
   updateConfig: (patch: AppConfigPatch): Promise<AppConfigData> =>
     ipcRenderer.invoke('config:update', patch),
   openConfigFile: (): Promise<OperationResult> => ipcRenderer.invoke('config:open'),
-  setSortOrder: (sortOrder: SortOrder): Promise<OperationResult> =>
-    ipcRenderer.invoke('config:setSortOrder', sortOrder),
   setCategoryOrder: (order: string[]): Promise<OperationResult> =>
     ipcRenderer.invoke('config:setCategoryOrder', order),
   setLastCategory: (category: string): Promise<OperationResult> =>

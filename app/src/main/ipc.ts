@@ -3,7 +3,7 @@ import { existsSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
 import { changeInstallationForAll, installModExclusively, runBatchModAction } from './operations'
-import { getAppConfig, getLastCategory, setCategoryOrder, setLastCategory, setSortOrder, updateAppConfig } from './config'
+import { getAppConfig, getLastCategory, setCategoryOrder, setLastCategory, updateAppConfig } from './config'
 import { builtInPackagerDirectory, runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
@@ -17,7 +17,7 @@ import {
   listMods as listGameBananaMods,
   setTaskBroadcaster
 } from './gamebanana'
-import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult, SortOrder } from '../shared/types'
+import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult } from '../shared/types'
 
 type ProgressReporter = (message: string) => void
 
@@ -482,11 +482,6 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
       backgroundCarousel.reloadImages(sourceChanged)
     }
     return next
-  })
-  ipcMain.handle('config:setSortOrder', (_event, sortOrder: SortOrder) => {
-    setSortOrder(sortOrder)
-    logger.debug(`排序方式已保存：${sortOrder}`)
-    return { success: true, message: '' }
   })
   ipcMain.handle('config:setCategoryOrder', (_event, order: string[]) => {
     setCategoryOrder(order)

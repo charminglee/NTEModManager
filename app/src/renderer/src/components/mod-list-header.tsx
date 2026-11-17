@@ -1,6 +1,5 @@
 import { memo } from 'react'
 import { MoreHorizontal, RefreshCw, Search } from 'lucide-react'
-import { SORT_OPTIONS, type SortOrder } from '@shared/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -15,11 +14,9 @@ interface Props {
   category: string
   counts: Record<StatusFilter, number>
   search: string
-  sortOrder: SortOrder
   status: StatusFilter
   busy: boolean
   onSearchChange: (value: string) => void
-  onSortOrderChange: (order: SortOrder) => void
   onStatusChange: (status: StatusFilter) => void
   onRefresh: () => void
   onInstallAll: () => void
@@ -50,17 +47,6 @@ function ModListHeader(p: Props) {
             onChange={(e) => p.onSearchChange(e.target.value)}
           />
         </label>
-        <select
-          aria-label="排序方式"
-          value={p.sortOrder}
-          onChange={(e) => p.onSortOrderChange(Number(e.target.value) as SortOrder)}
-        >
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
         <Button variant="outline" size="icon" onClick={p.onRefresh} disabled={p.busy} title="重新扫描模组目录">
           <RefreshCw />
         </Button>

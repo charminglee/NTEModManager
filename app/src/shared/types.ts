@@ -90,7 +90,6 @@ export interface AppConfigData {
   exclusiveInstallExemptGroups: string[]
   categories: string[]
   categoryOrder: string[]
-  sortOrder: SortOrder
   /** 启动时恢复上次打开的分类;上次分类单独记录在 [Preferences] last_category */
   restoreLastCategory: boolean
   testImagesEnabled: boolean
@@ -213,27 +212,6 @@ export interface GameBananaDownloadTask {
   message: string
   createdAt: string
 }
-
-/** 持久化到 INI 的 Preferences/mod_list_sort_order 取值 */
-export enum SortOrder {
-  InstalledFirst = 0,
-  NameAscending = 1,
-  NameDescending = 2,
-  ImportedNewestFirst = 3,
-  ImportedOldestFirst = 4,
-  SizeLargestFirst = 5,
-  SizeSmallestFirst = 6
-}
-
-export const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
-  { value: SortOrder.InstalledFirst, label: '默认' },
-  { value: SortOrder.NameAscending, label: '名称：A 到 Z' },
-  { value: SortOrder.NameDescending, label: '名称：Z 到 A' },
-  { value: SortOrder.ImportedNewestFirst, label: '导入时间：最新优先' },
-  { value: SortOrder.ImportedOldestFirst, label: '导入时间：最早优先' },
-  { value: SortOrder.SizeLargestFirst, label: '文件大小：从大到小' },
-  { value: SortOrder.SizeSmallestFirst, label: '文件大小：从小到大' }
-]
 
 export interface BackgroundRect {
   x: number
