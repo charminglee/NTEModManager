@@ -442,7 +442,7 @@ input[type='checkbox'] {
 }
 .gamebanana-detail-dialog-header {
   flex-shrink: 0;
-  padding: 25px 58px 22px 30px;
+  padding: 25px 30px 22px;
   border-bottom: 1px solid #59544c;
   background: #302d28;
 }
