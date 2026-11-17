@@ -24,6 +24,8 @@ const MOD_FIELDS = [
   'downloads',
   'likes',
   'views',
+  'postcount',
+  'date',
   'udate',
   'description',
   'Files().aFiles()',
@@ -144,6 +146,8 @@ function parseMod(id: number, value: Record<string, unknown>): GameBananaMod {
     downloads: Number(value.downloads ?? 0),
     likes: Number(value.likes ?? 0),
     views: Number(value.views ?? 0),
+    comments: Number(value.postcount ?? 0),
+    uploadedAt: Number(value.date ?? 0),
     updatedAt: Number(value.udate ?? 0),
     description: String(value.description ?? ''),
     previewUrl: typeof value['Preview().sSubFeedImageUrl()'] === 'string'

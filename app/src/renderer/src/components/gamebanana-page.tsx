@@ -31,8 +31,8 @@ interface DownloadTarget {
   file: GameBananaFile
 }
 
-function formatUpdatedAt(timestamp: number): string {
-  if (!timestamp) return '更新时间未知'
+function formatModDate(timestamp: number, fallback: string): string {
+  if (!timestamp) return fallback
   return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(
     new Date(timestamp * 1000)
   )
@@ -234,8 +234,10 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   {mod.previewUrl ? <img src={mod.previewUrl} alt="" /> : <div className="gamebanana-card-placeholder"><Download /></div>}
                   <div className="gamebanana-card-copy">
                     <strong>{mod.name}</strong>
-                    <span>{mod.authors} · {formatUpdatedAt(mod.updatedAt)}</span>
+                    <span>{mod.authors}</span>
+                    <small>{shortNumber(mod.views)} 浏览 · {shortNumber(mod.comments)} 评论</small>
                     <small>{shortNumber(mod.downloads)} 下载 · {shortNumber(mod.likes)} 喜欢</small>
+                    <small>上传 {formatModDate(mod.uploadedAt, '未知')} · 更新 {formatModDate(mod.updatedAt, '未知')}</small>
                   </div>
                 </button>
               ))}
@@ -275,7 +277,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   <span className="eyebrow">MOD #{selected.id}</span>
                   <DialogTitle>{selected.name}</DialogTitle>
                   <DialogDescription className="gamebanana-detail-byline">
-                    {selected.authors} · 更新于 {formatUpdatedAt(selected.updatedAt)}
+                    {selected.authors} · 上传于 {formatModDate(selected.uploadedAt, '未知')} · 更新于 {formatModDate(selected.updatedAt, '未知')}
                   </DialogDescription>
                 </DialogHeader>
                 <p className="gamebanana-description">{selected.description || '作者没有提供描述。'}</p>
@@ -283,6 +285,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   <span><strong>{shortNumber(selected.downloads)}</strong>下载</span>
                   <span><strong>{shortNumber(selected.likes)}</strong>喜欢</span>
                   <span><strong>{shortNumber(selected.views)}</strong>浏览</span>
+                  <span><strong>{shortNumber(selected.comments)}</strong>评论</span>
                 </div>
                 <div className="gamebanana-file-list">
                   <h3>可下载文件</h3>

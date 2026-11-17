@@ -139,6 +139,8 @@ export interface GameBananaMod {
   downloads: number
   likes: number
   views: number
+  comments: number
+  uploadedAt: number
   updatedAt: number
   description: string
   previewUrl: string | null
