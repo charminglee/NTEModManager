@@ -87,7 +87,7 @@ export default function App() {
   const [pendingView, setPendingView] = useState<AppView | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [focusedName, setFocusedName] = useState<string | null>(null)
-  const [detailsOpen, setDetailsOpen] = useState(true)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [activity, setActivity] = useState('')
   const [importSession, setImportSession] = useState<ImportSession | null>(null)
   const [categoryImages, setCategoryImages] = useState<Map<string, string | null>>(new Map())
@@ -353,7 +353,7 @@ export default function App() {
     setCurrentCategory(category)
     setStatusFilter('all')
     setFocusedName(null)
-    setDetailsOpen(true)
+    setDetailsOpen(false)
     setView('mods')
     setSearch('')
     // 选中集跟随分类视图:切换分类即清空,避免批量操作作用到看不见的模组上
