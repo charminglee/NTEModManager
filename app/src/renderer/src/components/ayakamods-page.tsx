@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ExternalLink, Globe, RefreshCw } from 'lucide-react'
+import { ExternalLink, RefreshCw } from 'lucide-react'
+import ayakamodsIcon from '@/assets/ayakamods.png'
 import { Button } from './ui/button'
 import './ayakamods-page.css'
 
@@ -103,7 +104,9 @@ export default function AyakaModsPage({ visible }: Props) {
           ) : (
             <div className="ayakamods-preview">
               <div className="ayakamods-preview-content">
-                <span className="ayakamods-preview-icon"><Globe size={32} /></span>
+                <span className="ayakamods-preview-icon">
+                  <img className="ayakamods-icon" src={ayakamodsIcon} width={32} height={32} alt="" aria-hidden="true" />
+                </span>
                 <h2>AyakaMods 社区浏览</h2>
                 <p>AyakaMods 禁止其他站点通过普通网页框架嵌入。桌面版会在此区域内嵌浏览，浏览器开发模式仅展示入口。</p>
                 <span className="ayakamods-preview-url">{COMMUNITY_URL}</span>

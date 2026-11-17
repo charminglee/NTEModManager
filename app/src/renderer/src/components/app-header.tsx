@@ -1,14 +1,27 @@
 import { Fragment } from 'react'
-import { FileText, Globe, LoaderCircle, Package, Play, Settings } from 'lucide-react'
+import { FileText, LoaderCircle, Package, Play, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HeaderModActions } from './header-mod-actions'
 import gamebananaIcon from '@/assets/gamebanana.png'
+import ayakamodsIcon from '@/assets/ayakamods.png'
 
 function GameBananaLogo({ size = 19 }: { size?: number }) {
   return (
     <img
       className="gamebanana-nav-icon"
       src={gamebananaIcon}
+      width={size}
+      height={size}
+      alt=""
+      aria-hidden="true"
+    />
+  )
+}
+function AyakaModsLogo({ size = 19 }: { size?: number }) {
+  return (
+    <img
+      className="ayakamods-icon"
+      src={ayakamodsIcon}
       width={size}
       height={size}
       alt=""
@@ -55,7 +68,7 @@ export default function AppHeader({
             [
               { id: 'mods', label: '模组库', Icon: Package },
               { id: 'gamebanana', label: 'GameBanana', Icon: GameBananaLogo },
-              { id: 'ayakamods', label: 'AyakaMods', Icon: Globe },
+              { id: 'ayakamods', label: 'AyakaMods', Icon: AyakaModsLogo },
               { id: 'logs', label: '运行日志', Icon: FileText },
               { id: 'settings', label: '设置', Icon: Settings }
             ] as const
