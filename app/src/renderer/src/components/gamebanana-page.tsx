@@ -183,14 +183,12 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
       <div className="gamebanana-main-column">
         <header className="workspace-page-heading gamebanana-heading">
           <div>
-            <span className="eyebrow">COMMUNITY MODS / NTE</span>
             <h1>GameBanana</h1>
             <p>浏览 Neverness To Everness 社区模组，下载后自动进入 NTEMM 模组库。</p>
           </div>
           <div className="gamebanana-heading-actions">
-            <Button variant="outline" onClick={() => void loadFirstPage()} disabled={loading || loadingMore}>
+            <Button variant="outline" onClick={() => void loadFirstPage()} disabled={loading || loadingMore} size="icon">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
-              刷新
             </Button>
           </div>
         </header>
