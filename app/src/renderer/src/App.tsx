@@ -882,6 +882,9 @@ export default function App() {
       }
     }
     const onDrop = (event: DragEvent) => {
+      if (!event.dataTransfer?.types.includes('Files')) {
+        return
+      }
       event.preventDefault()
       dragDepthRef.current = 0
       setDragOver(false)

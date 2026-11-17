@@ -231,7 +231,7 @@ export default function GameBananaPage({ config, onConfigChange, onModsChanged }
                   key={mod.id}
                   onClick={() => setSelected(mod)}
                 >
-                  {mod.previewUrl ? <img src={mod.previewUrl} alt="" /> : <div className="gamebanana-card-placeholder"><Download /></div>}
+                  {mod.previewUrl ? <img src={mod.previewUrl} alt="" draggable={false} /> : <div className="gamebanana-card-placeholder"><Download /></div>}
                   <div className="gamebanana-card-copy">
                     <strong>{mod.name}</strong>
                     <span>{mod.authors}</span>
