@@ -254,6 +254,7 @@ export async function listMods(page: number): Promise<GameBananaMod[]> {
     itemtype: 'Mod',
     gameid: String(NTE_GAME_ID),
     page: String(Math.max(1, page)),
+    include_updated: '1',
     format: 'json_min'
   })
   const ids = rows
