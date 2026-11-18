@@ -168,7 +168,6 @@ function FileRow({
       <File className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
       <span
         className="cursor-text truncate text-[13px] text-foreground/70"
-        title={`${relativePath}\n双击重命名`}
         onDoubleClick={() => {
           setDraft(name)
           setEditing(true)

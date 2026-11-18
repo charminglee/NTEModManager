@@ -10,7 +10,6 @@ import {
   X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,77 +64,50 @@ function BatchActionBar({
           </span>
           <div className="h-5 w-px bg-foreground/10" />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={allSelected ? onClear : onSelectAll}
-              >
-                {allSelected ? <X /> : <ListChecks />}
-                {allSelected ? '全不选' : '全选'}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {allSelected ? '取消当前列表中的全部选择（Esc）' : '选中当前列表中的全部模组（Ctrl+A）'}
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={allSelected ? onClear : onSelectAll}
+          >
+            {allSelected ? <X /> : <ListChecks />}
+            {allSelected ? '全不选' : '全选'}
+          </Button>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy || !canInstall}
-                onClick={onInstall}
-              >
-                <Download />
-                安装
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>安装选中项中未安装的模组</TooltipContent>
-          </Tooltip>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy || !canInstall}
+            onClick={onInstall}
+          >
+            <Download />
+            安装
+          </Button>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy || !canUninstall}
-                onClick={onUninstall}
-              >
-                <PackageOpen />
-                卸载
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>卸载选中项中已安装的模组</TooltipContent>
-          </Tooltip>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy || !canUninstall}
+            onClick={onUninstall}
+          >
+            <PackageOpen />
+            卸载
+          </Button>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy || !canUninstall}
-                onClick={onReinstall}
-              >
-                <RefreshCcw />
-                重新安装
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>卸载并重装选中项中已安装的模组</TooltipContent>
-          </Tooltip>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy || !canUninstall}
+            onClick={onReinstall}
+          >
+            <RefreshCcw />
+            重新安装
+          </Button>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" disabled={busy} onClick={onRepackage}>
-                <Package />
-                重新打包
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>逐个重新打包选中的模组(未记录源文件夹时会弹窗选择)</TooltipContent>
-          </Tooltip>
+          <Button variant="outline" size="sm" disabled={busy} onClick={onRepackage}>
+            <Package />
+            重新打包
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -149,15 +121,10 @@ function BatchActionBar({
               <DropdownMenuItem onSelect={onUnmarkInvalid}>取消失效标记</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={busy} onClick={onDelete}>
-                <Trash2 />
-                删除
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>删除选中的模组(不可撤销)</TooltipContent>
-          </Tooltip>
+          <Button variant="destructive" size="sm" disabled={busy} onClick={onDelete}>
+            <Trash2 />
+            删除
+          </Button>
         </div>
       </div>
     </div>

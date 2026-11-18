@@ -37,7 +37,6 @@ import SettingsView from '@/components/settings-view'
 import GameBananaPage from '@/components/gamebanana-page'
 import AyakaModsPage from '@/components/ayakamods-page'
 import { AppDialog } from '@/components/ui/dialog'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
 
@@ -1066,7 +1065,7 @@ export default function App() {
   }
 
   return (
-    <TooltipProvider delayDuration={350}>
+    <>
       <WindowControls
         isChromeHidden={chromeHidden}
         onFullScreenChange={setIsFullScreen}
@@ -1270,7 +1269,6 @@ export default function App() {
         <div
           className="fixed inset-0 z-0"
           onDoubleClick={() => setChromeHidden(false)}
-          title="双击恢复界面"
         />
       )}
       <ImportDialog
@@ -1337,6 +1335,6 @@ export default function App() {
         }
       />
       <Toaster />
-    </TooltipProvider>
+    </>
   )
 }

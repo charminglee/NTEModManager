@@ -82,7 +82,6 @@ function ModCard({
             actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
           else onActivate(mod.name)
         }}
-        title={mod.name}
       >
         <span className="mod-package-icon">
           {mod.subMods?.length ? <Layers /> : <Package />}

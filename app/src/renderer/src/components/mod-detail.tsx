@@ -39,7 +39,6 @@ export default function ModDetail({
           className="detail-rename-button"
           disabled={busy}
           aria-label={`重命名模组：${mod.name}`}
-          title="重命名模组"
           onClick={() => actions.onRename(mod)}
         >
           <Pencil aria-hidden="true" />

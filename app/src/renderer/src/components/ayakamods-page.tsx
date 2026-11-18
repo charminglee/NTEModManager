@@ -139,7 +139,7 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
         </div>
         {RUNS_IN_ELECTRON && (
           <div className="gamebanana-heading-actions">
-            <Button variant="outline" size="icon" onClick={reload} aria-label="刷新" title="刷新">
+            <Button variant="outline" size="icon" onClick={reload} aria-label="刷新">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
             </Button>
           </div>

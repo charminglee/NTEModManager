@@ -141,7 +141,6 @@ function LogView() {
           variant="outline"
           size="icon"
           aria-label="查看最新日志"
-          title="查看最新日志"
           onClick={() => {
             setFollow(true)
             if (container.current) container.current.scrollTop = container.current.scrollHeight

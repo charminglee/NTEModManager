@@ -45,7 +45,13 @@ function ModListHeader(p: Props) {
         <Button variant="outline" onClick={p.onUninstallAll} disabled={p.busy}>
           全部卸载
         </Button>
-        <Button variant="outline" size="icon" onClick={p.onRefresh} disabled={p.busy} title="重新扫描模组目录">
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="重新扫描模组目录"
+          onClick={p.onRefresh}
+          disabled={p.busy}
+        >
           <RefreshCw />
         </Button>
       </div>

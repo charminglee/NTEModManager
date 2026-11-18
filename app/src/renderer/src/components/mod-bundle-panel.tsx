@@ -33,7 +33,6 @@ export default function ModBundlePanel({ mod, busy, onToggle, onRename }: {
                     className="bundle-rename-button"
                     disabled={busy}
                     aria-label={`重命名子模组：${child.name}`}
-                    title="重命名子模组"
                     onClick={() => onRename(mod, child.name)}
                   >
                     <Pencil aria-hidden="true" />
