@@ -1,5 +1,6 @@
 import {
   CircleArrowUp,
+  Download,
   MoreHorizontal,
   Trash2,
   TriangleAlert
@@ -43,6 +44,10 @@ export default function ModActions({
         <DropdownMenuItem onSelect={() => actions.onReplaceArchive(mod)}>
           <CircleArrowUp />
           更新／替换
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => actions.onExportArchive(mod)}>
+          <Download />
+          导出
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => actions.onToggleInvalid(mod)}>

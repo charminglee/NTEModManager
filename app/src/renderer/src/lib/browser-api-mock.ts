@@ -678,6 +678,12 @@ const api: Api = {
       : { success: false, message: `未找到模组 ${name}` }
   },
 
+  async exportModArchive(name) {
+    return findMod(name)
+      ? unavailable('导出 ZIP')
+      : { success: false, message: `未找到模组 ${name}` }
+  },
+
   async installAll(category) {
     const targets = mods.filter(
       (mod) =>

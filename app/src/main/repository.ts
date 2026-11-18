@@ -3,9 +3,9 @@ import { mkdir, readdir, copyFile, stat } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { MANIFEST_FILE_NAME, type ModFileEntry, type ModInfo, type OperationResult } from '../shared/types'
-import { find7ZipExecutable, extractArchive } from './archive'
+import { createZipArchive, find7ZipExecutable, extractArchive } from './archive'
 import { getAppConfig } from './config'
-import { logger } from './logger'
+import { describeError, logger } from './logger'
 import { bundleChildren } from '../shared/mod-bundle'
 
 const IGNORED_COPY_EXTENSIONS = new Set(['zip', 'txt', 'png', 'jpg', 'md', 'json'])
@@ -642,6 +642,19 @@ function baseNameWithoutExtension(filePath: string): string {
   const name = basename(filePath)
   const dot = name.lastIndexOf('.')
   return dot > 0 ? name.slice(0, dot) : name
+}
+
+export async function exportArchive(mod: ModInfo, archivePath: string, appDir: string): Promise<OperationResult> {
+  const sevenZipPath = find7ZipExecutable(appDir)
+  if (!sevenZipPath) {
+    return finalize('导出模组', failure('未找到 7-Zip。请安装 7-Zip，或设置环境变量 NTE_7ZIP_PATH 指向 7z.exe。'))
+  }
+  try {
+    await createZipArchive(sevenZipPath, mod.sourcePath, archivePath)
+  } catch (error) {
+    return finalize('导出模组', failure(describeError(error)))
+  }
+  return finalize('导出模组', success(`已导出 ${mod.name}：${archivePath}`))
 }
 
 export async function importArchive(archivePath: string, appDir: string): Promise<OperationResult> {

@@ -1,4 +1,4 @@
-import { dialog, ipcMain, shell, webContents } from 'electron'
+import { app, dialog, ipcMain, shell, webContents } from 'electron'
 import { existsSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
@@ -422,6 +422,33 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
         return failure(`找不到模组：${name}`)
       }
       return repository.replaceFromArchive(mod, archivePath, appDir())
+    })
+  )
+
+  ipcMain.handle('mods:exportArchive', (_event, name: string) =>
+    runExclusive(`导出 ${name}`, async (report) => {
+      const mod = await findMod(name)
+      if (!mod) {
+        return failure(`找不到模组：${name}`)
+      }
+      const window = mainWindowProvider()
+      if (!window) {
+        return failure('无法打开文件保存窗口')
+      }
+      const picked = await dialog.showSaveDialog(window, {
+        title: `导出「${mod.name}」`,
+        defaultPath: join(app.getPath('downloads'), `${mod.name}.zip`),
+        filters: [{ name: 'ZIP 压缩包', extensions: ['zip'] }]
+      })
+      if (picked.canceled || !picked.filePath) {
+        return { success: false, message: '', cancelled: true }
+      }
+      if (!picked.filePath.toLowerCase().endsWith('.zip')) {
+        return failure('导出文件名必须以 .zip 结尾。')
+      }
+
+      report(`正在将 ${mod.name} 压缩为 ZIP……`)
+      return repository.exportArchive(mod, picked.filePath, appDir())
     })
   )
 

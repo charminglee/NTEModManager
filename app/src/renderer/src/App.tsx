@@ -793,6 +793,9 @@ export default function App() {
           }
         })()
       },
+      onExportArchive: (mod) => {
+        void runOperation(`正在导出 ${mod.name}……`, () => window.api.exportModArchive(mod.name))
+      },
       onToggleInvalid: (mod) => {
         void runOperation(
           mod.invalid ? `正在取消 ${mod.name} 的失效标记...` : `正在标记 ${mod.name} 为失效...`,

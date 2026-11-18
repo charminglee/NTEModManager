@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { realpath, rename, rm } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import iconv from 'iconv-lite'
 
 function findExecutable(candidates: string[]): string | null {
@@ -73,10 +75,42 @@ export interface ExtractOptions {
 
 export function extractArchive(options: ExtractOptions): Promise<void> {
   const { sevenZipPath, archivePath, destinationPath } = options
+  return run7Zip(sevenZipPath, ['x', '-y', '-aoa', `-o${destinationPath}`, archivePath], '解压')
+}
+
+export async function createZipArchive(
+  sevenZipPath: string,
+  sourcePath: string,
+  archivePath: string
+): Promise<void> {
+  const sourceDirectory = await realpath(sourcePath)
+  const targetDirectory = await realpath(dirname(archivePath))
+  const relativeDirectory = relative(sourceDirectory, targetDirectory)
+  if (
+    !isAbsolute(relativeDirectory) &&
+    relativeDirectory !== '..' &&
+    !relativeDirectory.startsWith(`..${sep}`)
+  ) {
+    throw new Error('请选择模组源目录以外的位置保存压缩包。')
+  }
+
+  const temporaryPath = join(targetDirectory, `.ntemm-export-${randomUUID()}.tmp`)
+  try {
+    await run7Zip(
+      resolve(sevenZipPath),
+      ['a', '-tzip', '-mcu=on', '-spd', '--', temporaryPath, `.${sep}${basename(sourcePath)}`],
+      '压缩',
+      dirname(sourcePath)
+    )
+    await rename(temporaryPath, join(targetDirectory, basename(archivePath)))
+  } finally {
+    await rm(temporaryPath, { force: true })
+  }
+}
+
+function run7Zip(sevenZipPath: string, args: string[], action: string, cwd?: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(sevenZipPath, ['x', '-y', '-aoa', `-o${destinationPath}`, archivePath], {
-      windowsHide: true
-    })
+    const child = spawn(sevenZipPath, args, { cwd, windowsHide: true })
     let output = Buffer.alloc(0)
     child.stdout.on('data', (chunk: Buffer) => {
       output = Buffer.concat([output, chunk])
@@ -85,14 +119,14 @@ export function extractArchive(options: ExtractOptions): Promise<void> {
       output = Buffer.concat([output, chunk])
     })
     child.on('error', (error) => {
-      reject(new Error(`无法启动 7-Zip:${error.message}`))
+      reject(new Error(`无法启动 7-Zip：${error.message}`))
     })
     child.on('close', (code) => {
       if (code === 0) {
         resolve()
       } else {
         const text = decodeConsoleOutput(output).trim()
-        reject(new Error(`解压失败：${text || `7-Zip 异常退出（退出码 ${code ?? 'unknown'}）`}`))
+        reject(new Error(`${action}失败：${text || `7-Zip 异常退出（退出码 ${code ?? 'unknown'}）`}`))
       }
     })
   })

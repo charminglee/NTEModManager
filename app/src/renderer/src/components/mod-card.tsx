@@ -13,6 +13,7 @@ export interface ModCardActions {
   onRepackage: (mod: ModInfo) => void
   onAddArchive: (mod: ModInfo) => void
   onReplaceArchive: (mod: ModInfo) => void
+  onExportArchive: (mod: ModInfo) => void
   onToggleInvalid: (mod: ModInfo) => void
   onDelete: (mod: ModInfo) => void
   onOpenSource: (mod: ModInfo) => void

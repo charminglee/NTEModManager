@@ -60,6 +60,8 @@ const api = {
     ipcRenderer.invoke('mods:addArchive', name, archivePath),
   replaceModArchive: (name: string, archivePath: string): Promise<OperationResult> =>
     ipcRenderer.invoke('mods:replaceArchive', name, archivePath),
+  exportModArchive: (name: string): Promise<OperationResult> =>
+    ipcRenderer.invoke('mods:exportArchive', name),
   installAll: (category: string): Promise<{ result: OperationResult }> =>
     ipcRenderer.invoke('mods:installAll', category),
   uninstallAll: (category: string): Promise<{ result: OperationResult }> =>
