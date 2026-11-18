@@ -1801,7 +1801,6 @@ select {
   background: var(--cream);
   color: var(--ink);
   border: 1px solid var(--ink);
-  border-left: 4px solid var(--vermilion);
   border-radius: var(--radius-lg);
   box-shadow: 4px 5px 0 #20201e20;
 }
