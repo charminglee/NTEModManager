@@ -93,14 +93,14 @@ function pendingConfirmCopy(confirm: NonNullable<PendingConfirm>): PendingConfir
       return {
         title: '全部安装模组',
         description: `将安装当前分类“${confirm.category}”中的全部未安装模组，是否继续？${confirm.invalidNames.length > 0 ? `\n\n其中 ${confirm.invalidNames.length} 个模组已标记为失效：\n${confirm.invalidNames.join('\n')}\n这些模组可能无法正常工作。` : ''}`,
-        confirmLabel: '仍要继续',
+        confirmLabel: '继续',
         destructive: false
       }
     case 'uninstall-all':
       return {
         title: '全部卸载模组',
         description: `将卸载当前分类“${confirm.category}”中的全部已安装模组，是否继续？`,
-        confirmLabel: '继续卸载',
+        confirmLabel: '卸载',
         destructive: true
       }
     case 'batch-delete':
@@ -114,7 +114,7 @@ function pendingConfirmCopy(confirm: NonNullable<PendingConfirm>): PendingConfir
       return {
         title: confirm.action === 'reinstall' ? '重装失效模组' : '安装失效模组',
         description: `当前操作包含 ${confirm.invalidNames.length} 个已标记为失效的模组：\n${confirm.invalidNames.join('\n')}\n可能无法正常工作，是否仍要继续？`,
-        confirmLabel: '仍要继续',
+        confirmLabel: '继续',
         destructive: false
       }
   }
