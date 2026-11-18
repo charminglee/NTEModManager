@@ -701,18 +701,22 @@ input[type='checkbox'] {
 .gamebanana-update[open] summary > svg { transform: rotate(90deg); }
 .gamebanana-update summary strong { font-size: 14px; overflow-wrap: anywhere; }
 .gamebanana-update summary time { margin-left: auto; font-size: 11px; color: #c2b29c; }
+.gamebanana-update summary > .gamebanana-translation-button { margin-left: 10px; }
 .gamebanana-version, .gamebanana-latest { font-size: 10px; padding: 2px 7px; border: 1px solid #76634b; border-radius: var(--radius-sm); color: #d7c1a3; white-space: nowrap; }
 .gamebanana-latest { color: #f1b59f; border-color: #99664e; background: #a957351a; }
 .gamebanana-update-content { padding: 18px; border-top: 1px solid #5b5042; }
-.gamebanana-change { display: grid; grid-template-columns: 95px minmax(0, 1fr); gap: 14px; align-items: start; }
+.gamebanana-change { min-width: 0; }
 .gamebanana-change + .gamebanana-change { margin-top: 12px; }
-.gamebanana-change > span { color: #dcb893; font-size: 11px; padding-top: 3px; overflow-wrap: anywhere; }
+.gamebanana-change-heading { display: flex; align-items: center; gap: 8px; color: #dcb893; font-size: 11px; }
 .gamebanana-html { display: block; width: 100%; min-height: 28px; border: 0; color-scheme: dark; }
-.gamebanana-translatable { min-width: 0; }
-.gamebanana-translation-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; }
-.gamebanana-translation-toolbar > button { height: 28px; padding-inline: 8px; color: #d9b79a; }
-.gamebanana-translation-toolbar > button:hover { color: #f3d1b3; }
-.gamebanana-translation-error { color: #f0a393; font-size: 11px; overflow-wrap: anywhere; }
+.gamebanana-translation-button { width: 28px; height: 28px; padding: 0; color: #d9b79a; }
+.gamebanana-translation-button:hover { color: #f3d1b3; }
+.section-heading .gamebanana-translation-button,
+.gamebanana-translation-heading .gamebanana-translation-button,
+.gamebanana-change-heading .gamebanana-translation-button { margin-left: auto; }
+.gamebanana-translation-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.gamebanana-translation-content { min-width: 0; }
+.gamebanana-translation-error { margin-bottom: 6px; color: #f0a393; font-size: 11px; overflow-wrap: anywhere; }
 .gamebanana-translation-result { margin-top: 10px; padding: 12px 14px; border-left: 2px solid #ce725a; background: #ffffff08; color: #eee5d8; }
 .gamebanana-translation-result > div { margin-bottom: 5px; color: #d1b28b; font-size: 10px; }
 .gamebanana-translation-result p { margin: 0; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -764,8 +768,10 @@ input[type='checkbox'] {
   .gamebanana-screenshots img { height: 145px; }
   .gamebanana-update summary { flex-wrap: wrap; }
   .gamebanana-update summary time { flex-basis: 100%; margin-left: 24px; }
-  .gamebanana-change { grid-template-columns: 1fr; gap: 3px; }
+  .gamebanana-change { gap: 4px; }
   .gamebanana-comment-dates { margin-left: 45px; }
+  .gamebanana-comment > header > .gamebanana-translation-button,
+  .gamebanana-update summary > .gamebanana-translation-button { margin-left: auto; }
   .gamebanana-replies { margin-left: 0; padding-left: 12px; }
   .gamebanana-lightbox-actions span { font-size: 10px; }
 }
@@ -826,7 +832,8 @@ input[type='checkbox'] {
 }
 .app-drawer-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 12px;
   flex-shrink: 0;
   padding: 25px 30px 22px;
@@ -838,6 +845,7 @@ input[type='checkbox'] {
   align-items: center;
   gap: 6px;
   flex: 1;
+  width: 100%;
   min-width: 0;
 }
 .app-drawer-title {

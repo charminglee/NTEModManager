@@ -34,11 +34,13 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
 }
 
 function Comments({ comments }: { comments: GameBananaComment[] }) {
-  return <div className="gamebanana-comments">{comments.map((comment) => <article className="gamebanana-comment" key={comment.id}>
-    <header><Author author={comment.author} /><div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span>{comment.editedAt > 0 && <span>编辑于 {date(comment.editedAt)}</span>}</div></header>
-    <GameBananaTranslation title={`${comment.author.name} 的评论`} html={comment.content} />
-    {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments comments={comment.replies} /></div>}
-  </article>)}</div>
+  return <div className="gamebanana-comments">{comments.map((comment) => <GameBananaTranslation key={comment.id} title={`${comment.author.name} 的评论`} html={comment.content}>
+    {({ button, content }) => <article className="gamebanana-comment">
+      <header><Author author={comment.author} /><div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span>{comment.editedAt > 0 && <span>编辑于 {date(comment.editedAt)}</span>}</div>{button}</header>
+      {content}
+      {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments comments={comment.replies} /></div>}
+    </article>}
+  </GameBananaTranslation>)}</div>
 }
 
 export default function GameBananaDetail({
@@ -127,20 +129,39 @@ export default function GameBananaDetail({
             {mod.updates.length > 0 && <section className="gamebanana-detail-section" aria-label="更新信息">
               <h3 className="section-heading">更新信息 <small>{mod.updates.length}</small></h3>
               <div className="gamebanana-updates">
-                {mod.updates.map((update, index) => <details className="gamebanana-update" key={update.id} open={index === 0}>
-                  <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time></summary>
-                  <div className="gamebanana-update-content">
-                    {update.description && <GameBananaTranslation html={update.description} title={`更新 ${update.name}`} />}
-                    {update.changes.map((change, changeIndex) => <div className="gamebanana-change" key={changeIndex}><span>{change.category || '更新'}</span><GameBananaTranslation html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`} /></div>)}
-                    {!update.description && update.changes.length === 0 && <p className="gamebanana-empty">作者没有填写更新说明。</p>}
-                  </div>
-                </details>)}
+                {mod.updates.map((update, index) => <GameBananaTranslation key={update.id} html={update.description} title={`更新 ${update.name || update.version || ''}`}>
+                  {({ button, content }) => <details className="gamebanana-update" open={index === 0}>
+                    <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time>{button}</summary>
+                    <div className="gamebanana-update-content">
+                      {update.description && content}
+                      {update.changes.map((change, changeIndex) => <GameBananaTranslation key={changeIndex} html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`}>
+                        {({ button: changeButton, content: changeContent }) => <div className="gamebanana-change">
+                          <div className="gamebanana-change-heading"><span>{change.category || '更新'}</span>{changeButton}</div>
+                          {changeContent}
+                        </div>}
+                      </GameBananaTranslation>)}
+                      {!update.description && update.changes.length === 0 && <p className="gamebanana-empty">作者没有填写更新说明。</p>}
+                    </div>
+                  </details>}
+                </GameBananaTranslation>)}
               </div>
             </section>}
             <section className="gamebanana-detail-section" aria-label="模组介绍">
-              <h3 className="section-heading">模组介绍</h3>
-              {mod.description ? <GameBananaTranslation html={mod.description} title="模组介绍" /> : <p className="gamebanana-empty">作者没有提供介绍。</p>}
-              {mod.installInstructions && <><h4>安装说明</h4><GameBananaTranslation html={mod.installInstructions} title="安装说明" /></>}
+              {mod.description ? <GameBananaTranslation html={mod.description} title="模组介绍">
+                {({ button, content }) => <>
+                  <h3 className="section-heading">模组介绍{button}</h3>
+                  {content}
+                </>}
+              </GameBananaTranslation> : <>
+                <h3 className="section-heading">模组介绍</h3>
+                <p className="gamebanana-empty">作者没有提供介绍。</p>
+              </>}
+              {mod.installInstructions && <GameBananaTranslation html={mod.installInstructions} title="安装说明">
+                {({ button, content }) => <>
+                  <h4 className="gamebanana-translation-heading">安装说明{button}</h4>
+                  {content}
+                </>}
+              </GameBananaTranslation>}
             </section>
             <section className="gamebanana-detail-section" aria-label="模组文件">
               <h3 className="section-heading">模组文件 <small>{mod.files.length}</small></h3>

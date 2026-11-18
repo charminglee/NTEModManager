@@ -1,7 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Globe, LoaderCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import GameBananaHtml from './gamebanana-html'
+
+interface TranslationParts {
+  button: ReactNode
+  content: ReactNode
+}
 
 function extractText(html: string): string {
   const document = new DOMParser().parseFromString(html, 'text/html')
@@ -15,7 +20,15 @@ function extractText(html: string): string {
     .trim()
 }
 
-export default function GameBananaTranslation({ html, title }: { html: string; title: string }) {
+export default function GameBananaTranslation({
+  html,
+  title,
+  children
+}: {
+  html: string
+  title: string
+  children: (parts: TranslationParts) => ReactNode
+}) {
   const text = useMemo(() => extractText(html), [html])
   const [translation, setTranslation] = useState('')
   const [showTranslation, setShowTranslation] = useState(false)
@@ -39,15 +52,27 @@ export default function GameBananaTranslation({ html, title }: { html: string; t
     }
   }
 
-  return (
-    <div className="gamebanana-translatable">
-      {text && <div className="gamebanana-translation-toolbar">
-        <Button variant="ghost" size="sm" onClick={() => void toggleTranslation()} disabled={loading} aria-expanded={showTranslation}>
-          {loading ? <LoaderCircle className="animate-spin" /> : <Globe />}
-          {loading ? '正在翻译' : showTranslation ? '收起译文' : translation ? '显示译文' : '翻译'}
-        </Button>
-        {error && <span className="gamebanana-translation-error" role="alert">{error}</span>}
-      </div>}
+  const buttonLabel = loading ? '正在翻译' : showTranslation ? '收起译文' : translation ? '显示译文' : '翻译'
+  const button = text ? (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="gamebanana-translation-button"
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        void toggleTranslation()
+      }}
+      disabled={loading}
+      aria-label={buttonLabel}
+      aria-expanded={showTranslation}
+    >
+      {loading ? <LoaderCircle className="animate-spin" /> : <Globe />}
+    </Button>
+  ) : null
+  const content = (
+    <div className="gamebanana-translation-content">
+      {error && <div className="gamebanana-translation-error" role="alert">{error}</div>}
       <GameBananaHtml html={html} title={title} />
       {showTranslation && <div className="gamebanana-translation-result" aria-live="polite">
         <div>有道翻译 · 简体中文</div>
@@ -55,4 +80,6 @@ export default function GameBananaTranslation({ html, title }: { html: string; t
       </div>}
     </div>
   )
+
+  return <>{children({ button, content })}</>
 }
