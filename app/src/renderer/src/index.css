@@ -969,7 +969,6 @@ input[type='checkbox'] {
   min-height: 0;
 }
 .sidebar-row {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -980,14 +979,6 @@ input[type='checkbox'] {
   background: transparent;
   border: 0;
   text-align: left;
-}
-.sidebar-scroll > .sidebar-row:not([aria-current='page'])::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  border-bottom: 1px solid #5a5850;
-  pointer-events: none;
 }
 .sidebar-row[aria-current='page'] {
   background: var(--vermilion);
