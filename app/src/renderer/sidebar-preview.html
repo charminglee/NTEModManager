@@ -15,16 +15,17 @@
       button { position: relative; isolation: isolate; overflow: hidden; width: 100%; height: 48px; display: flex; align-items: center; gap: 10px; padding: 6px 8px; color: inherit; background: none; border: 0; cursor: pointer; font: 700 15px system-ui; text-align: left }
       button:hover { background: #302f29 } button:focus-visible { outline: 2px solid ivory; outline-offset: -2px }
       button img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover } button b { margin-left: auto; font: 13px monospace }
-      .edge { pointer-events: none; position: absolute; inset: 1px; z-index: -1; padding: 2px; background: linear-gradient(105deg,#735a2e,#fff2bd,#926b32,#ffdc86,#735a2e); background-size: 220% 100%; animation: travel 3s ease-in-out infinite alternate; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude }
+      .edge { pointer-events: none; position: absolute; inset: 1px; z-index: -1; padding: 2px; background: #8e703c; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude }
       button { border-radius: 10px }
       .edge { border-radius: 9px; overflow: hidden }
-      .gpu { position: absolute; inset: 0; width: 100%; height: 100% }
+      .gpu { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .4 }
+      .edge::after { content: ''; position: absolute; width: 88px; height: 88px; background: radial-gradient(circle, #fff9cf 0 8%, #ffd36e 27%, transparent 70%); offset-path: inset(1px round 8px) border-box; animation: travel 2.4s linear infinite }
       .wave { pointer-events: none; position: absolute; z-index: -1; width: 12px; height: 12px; border-radius: 50%; border: 1px solid currentColor; background: radial-gradient(transparent 30%, color-mix(in srgb, currentColor 58%, transparent)); animation: wave .62s ease-out forwards }
-      @keyframes travel { to { background-position: 100% 0 } } @keyframes wave { from { transform: translate(-50%,-50%) scale(.2) } to { transform: translate(-50%,-50%) scale(44); opacity: 0 } }
+      @keyframes travel { to { offset-distance: 100% } } @keyframes wave { from { transform: translate(-50%,-50%) scale(.2) } to { transform: translate(-50%,-50%) scale(44); opacity: 0 } }
       article { flex: 2 1 280px; min-height: 240px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; background: radial-gradient(ellipse at top right,#444034,#282923 65%) }
       article img { width: 95px; height: 95px; align-self: flex-end; object-fit: cover; border-radius: 50%; border: 1px solid #877852 }
       h2 { font-size: 28px; margin: 6px 0 0 } p { color: #bebcb0; font-size: 13px; line-height: 1.7 }
-      @media(prefers-reduced-motion:reduce) { .edge { animation: none } .wave { display: none } }
+      @media(prefers-reduced-motion:reduce) { .edge::after, .wave { display: none } }
     </style>
   </head>
   <body><div id="root"></div><script type="module" src="/src/sidebar-preview.tsx"></script></body>
