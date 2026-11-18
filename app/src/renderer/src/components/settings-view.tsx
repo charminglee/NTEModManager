@@ -4,6 +4,7 @@ import type { AppConfigData, AppConfigPatch } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import Switch from './ui/switch'
+import Sidebar from './sidebar'
 import { toast } from './toast-card'
 interface Props {
   config: AppConfigData
@@ -16,6 +17,11 @@ type ToggleKey =
   | 'testImagesEnabled'
   | 'fpsCounterEnabled'
 const SAVE_DEBOUNCE_MS = 500
+const settingsSections = [
+  { id: 'paths', label: '路径', icon: <Folder size={20} /> },
+  { id: 'preferences', label: '操作偏好', icon: <Settings size={20} /> },
+  { id: 'advanced', label: '高级', icon: <Wrench size={20} /> }
+] as const
 const pathFields = [
   { key: 'gameDirectory', label: '游戏安装目录', help: '选择包含 Client 目录的游戏根目录。' },
   {
@@ -36,7 +42,7 @@ const parseGroups = (groupsText: string) =>
     .map((value) => value.trim())
     .filter(Boolean)
 export default function SettingsView({ config, onSaved }: Props) {
-  const [section, setSection] = useState<'paths' | 'preferences' | 'advanced'>('paths')
+  const [section, setSection] = useState<(typeof settingsSections)[number]['id']>('paths')
   const [draft, setDraft] = useState<SettingsDraft>(() => ({
     ...config,
     groupsText: config.exclusiveInstallExemptGroups.join('，')
@@ -126,25 +132,7 @@ export default function SettingsView({ config, onSaved }: Props) {
   )
   return (
     <section className="settings-workspace">
-      <nav className="settings-navigation ink-panel" aria-label="设置分组">
-        {(
-          [
-            { id: 'paths', label: '路径', Icon: Folder },
-            { id: 'preferences', label: '操作偏好', Icon: Settings },
-            { id: 'advanced', label: '高级', Icon: Wrench }
-          ] as const
-        ).map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            aria-current={section === id ? 'page' : undefined}
-            onClick={() => setSection(id)}
-          >
-            <Icon size={20} />
-            {label}
-          </button>
-        ))}
-      </nav>
+      <Sidebar label="设置分组" items={settingsSections} activeId={section} onSelect={setSection} />
       <div className="settings-page">
         <div className="workspace-page-heading">
           <h1>

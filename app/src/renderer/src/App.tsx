@@ -266,25 +266,46 @@ export default function App() {
     () => (config ? orderedCategories(categories, config.categoryOrder) : []),
     [config, categories]
   )
-  const displayCategories = useMemo(
-    () => [ALL_CATEGORY, ...orderedNormalCategories, OTHER_CATEGORY],
-    [orderedNormalCategories]
-  )
   const counts = useMemo(() => countByCategory(mods, categories), [mods, categories])
+  const modSidebar = useMemo(
+    () => ({
+      items: orderedNormalCategories.map((id) => {
+        const image = categoryImages.get(id)
+        return {
+          id,
+          label: id,
+          icon: image ? <img src={image} alt="" draggable={false} /> : <Blocks size={20} />,
+          count: counts.get(id) ?? 0
+        }
+      }),
+      footerItems: [
+        {
+          id: OTHER_CATEGORY,
+          label: OTHER_CATEGORY,
+          icon: <Blocks size={20} />,
+          count: counts.get(OTHER_CATEGORY) ?? 0
+        },
+        {
+          id: ALL_CATEGORY,
+          label: '全部模组',
+          icon: <Blocks size={20} />,
+          count: counts.get(ALL_CATEGORY) ?? 0
+        }
+      ]
+    }),
+    [orderedNormalCategories, categoryImages, counts]
+  )
 
   useEffect(() => {
     void (async () => {
       const entries = await Promise.all(
-        displayCategories.map(async (category) => {
-          if (category === ALL_CATEGORY || category === OTHER_CATEGORY) {
-            return [category, null] as const
-          }
+        orderedNormalCategories.map(async (category) => {
           return [category, await window.api.getCategoryImage(category)] as const
         })
       )
       setCategoryImages(new Map(entries.map(([category, image]) => [category, image])))
     })()
-  }, [displayCategories])
+  }, [orderedNormalCategories])
 
   // ============ 模组列表 ============
   const categoryMods = useMemo(() => {
@@ -1048,11 +1069,11 @@ export default function App() {
         {view === 'mods' ? (
           <div className="mod-workspace">
             <Sidebar
-              displayCategories={displayCategories}
-              counts={counts}
-              currentCategory={currentCategory}
-              categoryImages={categoryImages}
-              onSelectCategory={handleSelectCategory}
+              {...modSidebar}
+              label="角色分类"
+              emptyMessage="暂无角色分类"
+              activeId={currentCategory}
+              onSelect={handleSelectCategory}
             />
             <main className="mod-library">
               <ModListHeader

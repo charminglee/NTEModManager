@@ -1,57 +1,54 @@
-import { memo } from 'react'
-import { Blocks } from 'lucide-react'
-import { ALL_CATEGORY, OTHER_CATEGORY } from '@shared/types'
-import { cn } from '@/lib/utils'
-interface SidebarProps {
-  displayCategories: string[]
-  counts: Map<string, number>
-  currentCategory: string
-  categoryImages: Map<string, string | null>
-  onSelectCategory: (category: string) => void
+import type { ReactNode } from 'react'
+
+interface SidebarItem<Id extends string> {
+  id: Id
+  label: string
+  icon: ReactNode
+  count?: number
 }
-function Sidebar({
-  displayCategories,
-  counts,
-  currentCategory,
-  categoryImages,
-  onSelectCategory
-}: SidebarProps) {
-  const categoryButton = (category: string) => {
-    const image = categoryImages.get(category)
-    return (
-      <button
-        key={category}
-        type="button"
-        className={cn('category-row', currentCategory === category && 'is-active')}
-        aria-current={currentCategory === category ? 'page' : undefined}
-        onClick={() => onSelectCategory(category)}
-      >
-        {image ? (
-          <img src={image} alt="" draggable={false} />
-        ) : (
-          <span className="category-placeholder">
-            <Blocks size={20} />
-          </span>
-        )}
-        <span className="category-name">{category === ALL_CATEGORY ? '全部模组' : category}</span>
-        <span className="category-count">{counts.get(category) ?? 0}</span>
-      </button>
-    )
-  }
-  const characterCategories = displayCategories.filter(
-    (name) => name !== ALL_CATEGORY && name !== OTHER_CATEGORY
+
+interface SidebarProps<Id extends string> {
+  label: string
+  items: readonly SidebarItem<Id>[]
+  footerItems?: readonly SidebarItem<Id>[]
+  emptyMessage?: string
+  activeId: Id
+  onSelect: (id: Id) => void
+}
+
+export default function Sidebar<Id extends string>({
+  label,
+  items,
+  footerItems,
+  emptyMessage,
+  activeId,
+  onSelect
+}: SidebarProps<Id>) {
+  const renderItem = ({ id, icon, label, count }: SidebarItem<Id>) => (
+    <button
+      key={id}
+      type="button"
+      className="sidebar-row"
+      aria-current={activeId === id ? 'page' : undefined}
+      onClick={() => onSelect(id)}
+    >
+      <span className="sidebar-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="sidebar-label">{label}</span>
+      {count !== undefined && <span className="sidebar-count">{count}</span>}
+    </button>
   )
+
   return (
-    <aside className="character-sidebar">
-      <nav className="character-scroll" aria-label="角色分类">
-        {characterCategories.map(categoryButton)}
-        {!characterCategories.length && <p className="px-3 py-5 text-sm">暂无角色分类</p>}
-      </nav>
-      <div className="other-category">
-        {categoryButton(OTHER_CATEGORY)}
-        {categoryButton(ALL_CATEGORY)}
+    <nav className="app-sidebar ink-panel" aria-label={label}>
+      <div className="sidebar-scroll">
+        {items.map(renderItem)}
+        {items.length === 0 && emptyMessage && <p className="px-3 py-5 text-sm">{emptyMessage}</p>}
       </div>
-    </aside>
+      {footerItems && footerItems.length > 0 && (
+        <div className="sidebar-footer">{footerItems.map(renderItem)}</div>
+      )}
+    </nav>
   )
 }
-export default memo(Sidebar)

@@ -26,8 +26,7 @@
 .detail-metadata {
   animation: motion-content-in var(--motion-slow) var(--motion-out);
 }
-.character-sidebar > *,
-.settings-navigation > button {
+.app-sidebar > * {
   animation: motion-sidebar-in var(--motion-slow) var(--motion-out);
 }
 .mod-detail {
@@ -117,18 +116,16 @@
 .app-shell button:disabled,
 .dialog-panel button:disabled,
 .overlay-panel button:disabled { scale: 1; }
-.category-row .category-name,
-.category-row img,
-.category-placeholder,
+.sidebar-label,
+.sidebar-icon,
 .mod-package-icon {
   transition: translate var(--motion-normal) var(--motion-out),
     scale var(--motion-normal) var(--motion-settle),
     color var(--motion-fast) ease-out;
 }
 @media (hover: hover) {
-  .category-row:hover .category-name { translate: 3px 0; }
-  .category-row:hover img,
-  .category-row:hover .category-placeholder { scale: 1.05; }
+  .sidebar-row:hover .sidebar-label { translate: 3px 0; }
+  .sidebar-row:hover .sidebar-icon { scale: 1.05; }
   .mod-row:hover .mod-package-icon { translate: 0 -1px; }
 }
 .mod-row {
@@ -235,8 +232,7 @@
   .app-shell button:active:not(:disabled),
   .dialog-panel button:active:not(:disabled),
   .overlay-panel button:active:not(:disabled),
-  .category-row:hover img,
-  .category-row:hover .category-placeholder { scale: 1; }
-  .category-row:hover .category-name,
+  .sidebar-row:hover .sidebar-icon { scale: 1; }
+  .sidebar-row:hover .sidebar-label,
   .mod-row:hover .mod-package-icon { translate: none; }
 }
