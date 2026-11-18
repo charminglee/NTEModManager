@@ -18,7 +18,7 @@ export interface FileTreeProps {
  */
 export default function FileTree({ entries, depth, relativeBase, onRenameFile }: FileTreeProps) {
   return (
-    <div className={cn('flex flex-col', depth > 0 && 'border-l border-foreground/[0.08]')}>
+    <div className="flex flex-col">
       {entries.map((entry) => (
         <TreeRow
           key={`${relativeBase}/${entry.name}`}
