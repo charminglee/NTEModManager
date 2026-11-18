@@ -3,10 +3,20 @@ import type { WindowAction, WindowState } from '@shared/types'
 import { toast } from './toast-card'
 
 interface Props {
+  isChromeHidden: boolean
   onFullScreenChange: (isFullScreen: boolean) => void
+  onToggleChrome: () => void
+  onOpenBackground: () => Promise<void>
+  onToggleFullScreen: () => void
 }
 
-export default function WindowControls({ onFullScreenChange }: Props) {
+export default function WindowControls({
+  isChromeHidden,
+  onFullScreenChange,
+  onToggleChrome,
+  onOpenBackground,
+  onToggleFullScreen
+}: Props) {
   const [state, setState] = useState<WindowState>({ isMaximized: false, isFullScreen: false })
   const [pending, setPending] = useState(false)
   useEffect(() => {
@@ -48,7 +58,51 @@ export default function WindowControls({ onFullScreenChange }: Props) {
   const expanded = state.isMaximized || state.isFullScreen
   if (state.isFullScreen) return null
   return (
-    <div className="window-controls" role="group" aria-label="窗口控制">
+    <div className="window-controls" role="group" aria-label="窗口和快捷键控制">
+      <button
+        type="button"
+        className="window-shortcut"
+        aria-label={isChromeHidden ? '显示界面' : '隐藏界面'}
+        title={`${isChromeHidden ? '显示界面' : '隐藏界面'}（F9）`}
+        onClick={onToggleChrome}
+      >
+        {isChromeHidden ? (
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M1.5 8s2.3-4 6.5-4 6.5 4 6.5 4-2.3 4-6.5 4-6.5-4-6.5-4Z" />
+            <circle cx="8" cy="8" r="2" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m2.5 2.5 11 11M6.8 6.8a1.7 1.7 0 0 0 2.4 2.4" />
+            <path d="M4.3 4.5A7.7 7.7 0 0 1 8 3.5c4 0 6.5 4.5 6.5 4.5a12 12 0 0 1-2 2.4" />
+            <path d="M2 6a12 12 0 0 0-.5 2s2.5 4.5 6.5 4.5c.6 0 1.2-.1 1.8-.3" />
+          </svg>
+        )}
+      </button>
+      <button
+        type="button"
+        className="window-shortcut"
+        aria-label="打开当前背景图文件"
+        title="打开当前背景图文件（F10）"
+        onClick={() => void onOpenBackground()}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M2 2.5h12v11H2z" />
+          <circle cx="5.5" cy="6" r="1.2" />
+          <path d="m2.5 11 3.2-3 2.1 2 2.3-2.2 3.4 3.2" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className="window-shortcut"
+        aria-label="切换全屏"
+        title="切换全屏（F11）"
+        onClick={onToggleFullScreen}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M6 2H2v4m8-4h4v4m0 4v4h-4m-4 0H2v-4" />
+        </svg>
+      </button>
       <button
         type="button"
         disabled={pending}

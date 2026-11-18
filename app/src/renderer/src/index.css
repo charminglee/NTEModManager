@@ -71,7 +71,7 @@
   --vermilion: #ce3e35;
   --peach: #f4e3de;
   --rule: #d4ccbf;
-  --window-controls-width: 138px;
+  --window-controls-width: 276px;
   --surface-ink: rgb(32 32 30 / 65%);
   --surface-paper: rgb(243 239 230 / 40%);
   --surface-cream: rgb(255 252 246 / 60%);
@@ -229,11 +229,15 @@ input[type='checkbox'] {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(var(--window-controls-width) / 3);
+  width: calc(var(--window-controls-width) / 6);
   height: 35px;
   border: 0;
   background: transparent;
   color: inherit;
+}
+.window-controls button.window-shortcut {
+  font-size: 11px;
+  font-weight: 600;
 }
 .window-controls button:hover {
   background: #ffffff20;

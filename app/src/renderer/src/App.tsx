@@ -153,6 +153,21 @@ export default function App() {
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null)
   const [renameQueue, setRenameQueue] = useState<RenameQueueItem[]>([])
 
+  const toggleChromeVisibility = useCallback(() => {
+    setChromeHidden((value) => !value)
+  }, [])
+  const toggleFullScreen = useCallback(() => {
+    void window.api.controlWindow('toggle-fullscreen')
+  }, [])
+  const openCurrentBackground = useCallback(async () => {
+    const backgroundPath = await window.api.getCurrentBackgroundPath()
+    if (!backgroundPath) {
+      toast.info('当前没有可打开的背景图')
+      return
+    }
+    await window.api.openPath(backgroundPath)
+  }, [])
+
   // ============ 多选(批量操作) ============
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set())
   /** Shift 范围选择的锚点(卡片名) */
@@ -875,11 +890,11 @@ export default function App() {
       // F9 隐藏/恢复界面;F11 由主进程切换原生全屏,浏览器模式同步窗口状态。
       if (event.key === 'F9') {
         event.preventDefault()
-        setChromeHidden((value) => !value)
+        toggleChromeVisibility()
         return
       }
       if (event.key === 'F11') {
-        void window.api.controlWindow('toggle-fullscreen')
+        toggleFullScreen()
         return
       }
       if (
@@ -902,19 +917,12 @@ export default function App() {
       }
       if (event.key === 'F10') {
         event.preventDefault()
-        void (async () => {
-          const backgroundPath = await window.api.getCurrentBackgroundPath()
-          if (!backgroundPath) {
-            toast.info('当前没有可打开的背景图')
-            return
-          }
-          await window.api.openPath(backgroundPath)
-        })()
+        void openCurrentBackground()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [openCurrentBackground, toggleChromeVisibility, toggleFullScreen])
 
   // ============ 拖放导入 ============
   const isArchiveFile = useCallback((filePath: string) => {
@@ -977,7 +985,13 @@ export default function App() {
   if (!config) {
     return (
       <div className="flex h-full items-center justify-center bg-background">
-        <WindowControls onFullScreenChange={setIsFullScreen} />
+        <WindowControls
+          isChromeHidden={chromeHidden}
+          onFullScreenChange={setIsFullScreen}
+          onToggleChrome={toggleChromeVisibility}
+          onOpenBackground={openCurrentBackground}
+          onToggleFullScreen={toggleFullScreen}
+        />
         <LoaderCircle className="h-8 w-8 animate-spin text-primary" aria-label="加载中" />
       </div>
     )
@@ -1053,7 +1067,13 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={350}>
-      <WindowControls onFullScreenChange={setIsFullScreen} />
+      <WindowControls
+        isChromeHidden={chromeHidden}
+        onFullScreenChange={setIsFullScreen}
+        onToggleChrome={toggleChromeVisibility}
+        onOpenBackground={openCurrentBackground}
+        onToggleFullScreen={toggleFullScreen}
+      />
       <BackgroundLayer masked={!chromeHidden} maskOpacity={config.backgroundMaskOpacity} />
       <div className={cn('app-shell', chromeHidden && 'is-ui-hidden')}>
         <AppHeader
