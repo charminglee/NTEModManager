@@ -7,6 +7,7 @@ import type {
   BatchModAction,
   GameBananaDownloadTask,
   GameBananaMod,
+  GameBananaTranslationRequest,
   ImportResult,
   LogEntry,
   ModInfo,
@@ -139,8 +140,8 @@ const api = {
     ipcRenderer.invoke('youdao:saveCredentials', input),
   clearYoudaoCredentials: (): Promise<YoudaoCredentialsStatus> =>
     ipcRenderer.invoke('youdao:clearCredentials'),
-  translateGameBanana: (paragraphs: string[][]): Promise<(string | null)[]> =>
-    ipcRenderer.invoke('gamebanana:translate', paragraphs),
+  translateGameBanana: (request: GameBananaTranslationRequest): Promise<(string | null)[]> =>
+    ipcRenderer.invoke('gamebanana:translate', request),
   getGameBananaTasks: (): Promise<GameBananaDownloadTask[]> =>
     ipcRenderer.invoke('gamebanana:tasks'),
   getAyakaModsTasks: (): Promise<GameBananaDownloadTask[]> =>

@@ -17,13 +17,13 @@ import {
   listMods as listGameBananaMods,
   setTaskBroadcaster
 } from './gamebanana'
+import { translateGameBanana } from './gamebanana-translation'
 import {
   clearYoudaoCredentials,
   getYoudaoCredentialsStatus,
-  saveYoudaoCredentials,
-  translateYoudaoParagraphs
+  saveYoudaoCredentials
 } from './youdao-translation'
-import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult, YoudaoCredentialsInput } from '../shared/types'
+import type { AppConfigPatch, BatchModAction, GameBananaTranslationRequest, ImportResult, ModInfo, OperationResult, YoudaoCredentialsInput } from '../shared/types'
 import { cancelDownload, getPendingDownloads, prepareDownload } from './ayakamods'
 
 type ProgressReporter = (message: string) => void
@@ -259,7 +259,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     return saveYoudaoCredentials(input)
   })
   ipcMain.handle('youdao:clearCredentials', () => clearYoudaoCredentials())
-  ipcMain.handle('gamebanana:translate', (_event, paragraphs: string[][]) => translateYoudaoParagraphs(paragraphs))
+  ipcMain.handle('gamebanana:translate', (_event, request: GameBananaTranslationRequest) => translateGameBanana(request))
   ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))
   ipcMain.handle('ayakamods:pendingDownloads', () => getPendingDownloads())
   ipcMain.handle('ayakamods:tasks', () => getGameBananaTasks().filter((task) => task.source === 'ayakamods'))

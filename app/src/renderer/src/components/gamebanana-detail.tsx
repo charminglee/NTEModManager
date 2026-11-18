@@ -59,12 +59,19 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
   </article>)}</div>
 }
 
-function Comments({ comments }: { comments: GameBananaComment[] }) {
-  return <div className="gamebanana-comments">{comments.map((comment) => <GameBananaTranslation key={comment.id} title={`${comment.author.name} 的评论`} html={comment.content}>
+function Comments({ modId, comments }: { modId: number; comments: GameBananaComment[] }) {
+  return <div className="gamebanana-comments">{comments.map((comment) => <GameBananaTranslation
+    key={comment.id}
+    modId={modId}
+    section={`comment:${comment.id}`}
+    updatedAt={Math.max(comment.uploadedAt, comment.editedAt)}
+    title={`${comment.author.name} 的评论`}
+    html={comment.content}
+  >
     {({ button, content }) => <article className="gamebanana-comment">
       <header><Author author={comment.author} /><div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span>{comment.editedAt > 0 && <span>编辑于 {date(comment.editedAt)}</span>}</div>{button}</header>
       {content}
-      {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments comments={comment.replies} /></div>}
+      {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments modId={modId} comments={comment.replies} /></div>}
     </article>}
   </GameBananaTranslation>)}</div>
 }
@@ -157,7 +164,14 @@ export default function GameBananaDetail({
               <div className="gamebanana-updates">
                 {mod.updates.map((update, index) => {
                   const translationHtml = updateTranslationHtml(update)
-                  return <GameBananaTranslation key={update.id} html={translationHtml} title={`更新 ${update.name || update.version || ''}`}>
+                  return <GameBananaTranslation
+                    key={update.id}
+                    modId={mod.id}
+                    section={`update:${update.id}`}
+                    updatedAt={Math.max(update.uploadedAt, update.modifiedAt)}
+                    html={translationHtml}
+                    title={`更新 ${update.name || update.version || ''}`}
+                  >
                     {({ button, content }) => <details className="gamebanana-update" open={index === 0}>
                       <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time>{button}</summary>
                       <div className="gamebanana-update-content">
@@ -171,7 +185,13 @@ export default function GameBananaDetail({
               </div>
             </section>}
             <section className="gamebanana-detail-section" aria-label="模组介绍">
-              {mod.description ? <GameBananaTranslation html={mod.description} title="模组介绍">
+              {mod.description ? <GameBananaTranslation
+                modId={mod.id}
+                section="description"
+                updatedAt={Math.max(mod.uploadedAt, mod.modifiedAt, mod.updatedAt)}
+                html={mod.description}
+                title="模组介绍"
+              >
                 {({ button, content }) => <>
                   <h3 className="section-heading">模组介绍{button}</h3>
                   {content}
@@ -180,7 +200,13 @@ export default function GameBananaDetail({
                 <h3 className="section-heading">模组介绍</h3>
                 <p className="gamebanana-empty">作者没有提供介绍。</p>
               </>}
-              {mod.installInstructions && <GameBananaTranslation html={mod.installInstructions} title="安装说明">
+              {mod.installInstructions && <GameBananaTranslation
+                modId={mod.id}
+                section="instructions"
+                updatedAt={Math.max(mod.uploadedAt, mod.modifiedAt, mod.updatedAt)}
+                html={mod.installInstructions}
+                title="安装说明"
+              >
                 {({ button, content }) => <>
                   <h4 className="gamebanana-translation-heading">安装说明{button}</h4>
                   {content}
@@ -194,7 +220,7 @@ export default function GameBananaDetail({
             </section>
             <section className="gamebanana-detail-section" aria-label="用户评论">
               <h3 className="section-heading">用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>
-              {mod.commentItems.length === 0 ? <p className="gamebanana-empty">暂无评论。</p> : <Comments comments={mod.commentItems} />}
+              {mod.commentItems.length === 0 ? <p className="gamebanana-empty">暂无评论。</p> : <Comments modId={mod.id} comments={mod.commentItems} />}
             </section>
           </>
         )}
