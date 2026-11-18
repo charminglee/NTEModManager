@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Info } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import type { YoudaoCredentialsStatus } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { toast } from './toast-card'
+
+const SAVE_DEBOUNCE_MS = 500
 
 export default function YoudaoSettings() {
   const [status, setStatus] = useState<YoudaoCredentialsStatus>({ configured: false, appId: '' })
@@ -11,6 +12,8 @@ export default function YoudaoSettings() {
   const [saving, setSaving] = useState(false)
   const [appId, setAppId] = useState('')
   const [appSecret, setAppSecret] = useState('')
+  const saveTimeoutRef = useRef<number | null>(null)
+  const pendingCredentialsRef = useRef<{ appId: string; appSecret: string } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -27,13 +30,19 @@ export default function YoudaoSettings() {
   }, [])
 
   const saveCredentials = async () => {
+    const credentials = pendingCredentialsRef.current
+    if (!credentials) return
+    pendingCredentialsRef.current = null
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
     setSaving(true)
     try {
-      const next = await window.api.saveYoudaoCredentials({ appId, appSecret })
+      const next = await window.api.saveYoudaoCredentials(credentials)
       setStatus(next)
       setAppId(next.appId)
-      setAppSecret('')
-      toast.success('有道翻译凭据已保存')
+      if (credentials.appSecret) setAppSecret('')
     } catch (error) {
       toast.error('保存有道翻译凭据失败', { description: error instanceof Error ? error.message : String(error) })
     } finally {
@@ -41,7 +50,28 @@ export default function YoudaoSettings() {
     }
   }
 
+  const scheduleSave = (nextAppId: string, nextAppSecret: string) => {
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    if (!nextAppId.trim() || (!nextAppSecret.trim() && !status.configured)) {
+      pendingCredentialsRef.current = null
+      return
+    }
+    pendingCredentialsRef.current = { appId: nextAppId, appSecret: nextAppSecret }
+    saveTimeoutRef.current = window.setTimeout(() => {
+      saveTimeoutRef.current = null
+      void saveCredentials()
+    }, SAVE_DEBOUNCE_MS)
+  }
+
   const clearCredentials = async () => {
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+    pendingCredentialsRef.current = null
     setSaving(true)
     try {
       const next = await window.api.clearYoudaoCredentials()
@@ -65,7 +95,12 @@ export default function YoudaoSettings() {
             id="youdao-app-id"
             autoComplete="off"
             value={appId}
-            onChange={(event) => setAppId(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value
+              setAppId(value)
+              scheduleSave(value, appSecret)
+            }}
+            onBlur={() => void saveCredentials()}
             placeholder="请输入有道应用 ID"
             disabled={loading || saving}
           />
@@ -80,25 +115,25 @@ export default function YoudaoSettings() {
             type="password"
             autoComplete="new-password"
             value={appSecret}
-            onChange={(event) => setAppSecret(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value
+              setAppSecret(value)
+              scheduleSave(appId, value)
+            }}
+            onBlur={() => void saveCredentials()}
             placeholder={status.configured ? '留空以保留已保存的密钥' : '请输入有道应用密钥'}
             disabled={loading || saving}
           />
-          <p>密钥通过 Windows 系统加密后保存在本机，不会写入配置文件。{loading ? '正在读取凭据状态……' : status.configured ? '当前已配置。' : '当前未配置。'}</p>
+          <p>{loading ? '正在读取凭据状态……' : saving ? '正在自动保存……' : status.configured ? '凭据已配置。' : '填写 ID 和密钥后自动保存。'}</p>
         </div>
       </div>
-      <div className="settings-translation-actions">
-        <Button onClick={() => void saveCredentials()} disabled={loading || saving}>
-          {saving ? '正在保存……' : status.configured ? '更新凭据' : '保存凭据'}
-        </Button>
-        {status.configured && <Button variant="outline" onClick={() => void clearCredentials()} disabled={saving}>
-          清除凭据
-        </Button>}
-      </div>
-      <div className="settings-note">
-        <Info size={17} />
-        社区内容仅在点击「翻译」时发送给有道，目标语言为简体中文；译文保留在原文下方。
-      </div>
+      {status.configured && (
+        <div className="settings-translation-actions">
+          <Button variant="outline" onClick={() => void clearCredentials()} disabled={saving}>
+            清除凭据
+          </Button>
+        </div>
+      )}
     </>
   )
 }
