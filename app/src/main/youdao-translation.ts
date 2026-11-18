@@ -134,26 +134,39 @@ function parseMessages(responseText: string): YoudaoMessage[] {
 async function translateChunk(text: string, credentials: StoredCredentials): Promise<string> {
   const salt = randomUUID()
   const curtime = String(Math.floor(Date.now() / 1000))
+  const parameters = new URLSearchParams({
+    appKey: credentials.appId,
+    salt,
+    curtime,
+    signType: 'v3',
+    sign: signature(credentials.appId, text, salt, curtime, credentials.appSecret),
+    i: text,
+    from: 'auto',
+    to: 'zh-CHS',
+    streamType: 'full',
+    handleOption: '0'
+  })
   const response = await fetch(TRANSLATION_URL, {
     method: 'POST',
-    headers: { Accept: 'text/event-stream', 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      appKey: credentials.appId,
-      salt,
-      curtime,
-      signType: 'v3',
-      sign: signature(credentials.appId, text, salt, curtime, credentials.appSecret),
-      i: text,
-      from: 'auto',
-      to: 'zh-CHS',
-      streamType: 'full',
-      handleOption: '0'
-    }),
+    headers: { Accept: 'text/event-stream', 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: parameters,
     signal: AbortSignal.timeout(30_000)
   })
-  if (!response.ok) throw new Error(`有道翻译请求失败（HTTP ${response.status}）。`)
 
-  const messages = parseMessages(await response.text())
+  const responseText = await response.text()
+  if (!response.ok) {
+    let detail = responseText.trim()
+    try {
+      const errorMessage = (JSON.parse(detail) as { message?: string }).message
+      if (errorMessage) detail = errorMessage
+    } catch {
+      detail = detail.replace(/<[^>]*>/g, '').trim()
+    }
+    if (detail.length > 300) detail = `${detail.slice(0, 300)}…`
+    throw new Error(`有道翻译请求失败（HTTP ${response.status}）${detail ? `：${detail}` : ''}。`)
+  }
+
+  const messages = parseMessages(responseText)
   let fullTranslation = ''
   let incrementalTranslation = ''
   for (const message of messages) {
