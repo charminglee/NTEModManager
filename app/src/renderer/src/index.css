@@ -1049,6 +1049,30 @@ input[type='checkbox'] {
   flex: 1;
   min-width: 0;
 }
+.sidebar-row.character-row { border-radius: 10px; overflow: hidden; isolation: isolate }
+.character-edge, .character-wave { position: absolute; pointer-events: none }
+.character-edge {
+  inset: 1px; border-radius: 9px; overflow: hidden; padding: 2px; background: var(--accent);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
+  animation: character-colors 6s ease-in-out infinite;
+}
+.character-edge-gpu { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .12 }
+.character-wave {
+  width: 12px; height: 12px; border-radius: 50%; color: var(--accent); border: 1px solid currentColor;
+  background: radial-gradient(transparent 30%, color-mix(in srgb, currentColor 58%, transparent));
+  animation: character-wave .62s ease-out forwards;
+}
+@keyframes character-colors {
+  0%, 100% { background-color: var(--accent) } 25% { background-color: var(--second) }
+  50% { background-color: var(--third) } 75% { background-color: var(--fourth) }
+}
+@keyframes character-wave {
+  from { transform: translate(-50%, -50%) scale(.2) } to { transform: translate(-50%, -50%) scale(44); opacity: 0 }
+}
+@media (prefers-reduced-motion: reduce) {
+  .character-edge { animation: none }
+  .character-edge-gpu, .character-wave { display: none }
+}
 .sidebar-icon {
   width: 35px;
   height: 35px;

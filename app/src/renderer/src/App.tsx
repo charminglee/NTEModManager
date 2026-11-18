@@ -1,3 +1,4 @@
+import { characterPalettes } from './lib/character-palettes'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/components/toast-card'
 import { Blocks, LoaderCircle, Package } from 'lucide-react'
@@ -288,6 +289,7 @@ export default function App() {
         return {
           id,
           label: id,
+          palette: characterPalettes.get(id),
           icon: image ? <img src={image} alt="" draggable={false} /> : <Blocks size={20} />,
           count: counts.get(id) ?? 0
         }

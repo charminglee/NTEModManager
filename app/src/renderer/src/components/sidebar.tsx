@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
+import { Shader, SolidColor } from 'shaders/react'
 import NavSelectionHighlight from './nav-selection-highlight'
 
 interface SidebarItem<Id extends string> {
@@ -6,6 +7,7 @@ interface SidebarItem<Id extends string> {
   label: string
   icon: ReactNode
   count?: number
+  palette?: readonly [string, string, string, string]
 }
 
 interface SidebarProps<Id extends string> {
@@ -25,13 +27,21 @@ export default function Sidebar<Id extends string>({
   activeId,
   onSelect
 }: SidebarProps<Id>) {
-  const renderItem = ({ id, icon, label, count }: SidebarItem<Id>) => (
+  const [wave, setWave] = useState<{ id: Id; x: number; y: number; sequence: number } | null>(null)
+  const renderItem = ({ id, icon, label, count, palette }: SidebarItem<Id>) => (
     <button
       key={id}
       type="button"
-      className="sidebar-row"
+      className={palette ? 'sidebar-row character-row' : 'sidebar-row'}
+      style={palette && ({ '--accent': palette[0], '--second': palette[1], '--third': palette[2], '--fourth': palette[3] } as CSSProperties)}
       aria-current={activeId === id ? 'page' : undefined}
-      onClick={({ currentTarget }) => {
+      onClick={({ currentTarget, detail, clientX, clientY }) => {
+        if (palette) {
+          const rect = currentTarget.getBoundingClientRect()
+          const x = detail ? clientX - rect.left : rect.width / 2
+          const y = detail ? clientY - rect.top : rect.height / 2
+          setWave(last => ({ id, x, y, sequence: (last?.sequence ?? 0) + 1 }))
+        }
         const scroll = currentTarget.closest<HTMLElement>('[data-nav-selection-scroll]')
         if (scroll) {
           const row = currentTarget.getBoundingClientRect()
@@ -45,6 +55,10 @@ export default function Sidebar<Id extends string>({
         onSelect(id)
       }}
     >
+      {palette && activeId === id && <>
+        <span className="character-edge" aria-hidden="true"><Shader className="character-edge-gpu" disableTelemetry><SolidColor color={palette[0]} /></Shader></span>
+        {wave?.id === id && <span key={wave.sequence} className="character-wave" aria-hidden="true" style={{ left: wave.x, top: wave.y }} onAnimationEnd={() => setWave(null)} />}
+      </>}
       <span className="nav-item-content">
         <span className="sidebar-icon" aria-hidden="true">
           {icon}
@@ -58,7 +72,7 @@ export default function Sidebar<Id extends string>({
   return (
     <nav className="app-sidebar ink-panel" aria-label={label}>
       <div className="sidebar-sections">
-        <NavSelectionHighlight />
+        {!items.some(item => item.id === activeId && item.palette) && <NavSelectionHighlight />}
         <div className="sidebar-scroll" data-nav-selection-scroll>
           {items.map(renderItem)}
           {items.length === 0 && emptyMessage && <p className="px-3 py-5 text-sm">{emptyMessage}</p>}
