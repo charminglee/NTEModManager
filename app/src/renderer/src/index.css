@@ -1247,7 +1247,7 @@ select {
   inset: calc(var(--mod-group-clip-top, 0%) + 2px) 2px calc(var(--mod-group-clip-bottom, 0%) + 2px);
   border-radius: calc(var(--radius-lg) - 2px);
   /* 从内缘向外铺满边框颜色，外缘只由分组裁剪一次。 */
-  box-shadow: 0 0 0 var(--radius-lg) #82796c;
+  box-shadow: 0 0 0 var(--radius-lg) hsl(var(--border));
   pointer-events: none;
 }
 .mod-group-rows {
