@@ -45,6 +45,7 @@ const parseGroups = (groupsText: string) =>
     .filter(Boolean)
 export default function SettingsView({ config, onSaved }: Props) {
   const [section, setSection] = useState<(typeof settingsSections)[number]['id']>('paths')
+  const [clearingCache, setClearingCache] = useState(false)
   const [draft, setDraft] = useState<SettingsDraft>(() => ({
     ...config,
     groupsText: config.exclusiveInstallExemptGroups.join('，')
@@ -115,6 +116,19 @@ export default function SettingsView({ config, onSaved }: Props) {
       })
     }
   }
+  const clearTranslationCache = async () => {
+    setClearingCache(true)
+    try {
+      await window.api.clearGameBananaTranslationCache()
+      toast.success('已清除 GameBanana 翻译缓存')
+    } catch (error) {
+      toast.error('清除翻译缓存失败', {
+        description: error instanceof Error ? error.message : String(error)
+      })
+    } finally {
+      setClearingCache(false)
+    }
+  }
   const toggle = (key: ToggleKey, label: string, help: string) => (
     <label className="settings-toggle">
       <span>
@@ -174,6 +188,15 @@ export default function SettingsView({ config, onSaved }: Props) {
               <div className="settings-note">
                 <Info size={17} />
                 修改备份目录不会搬移原目录中的文件。
+              </div>
+              <div className="settings-toggle">
+                <span>
+                  <strong>翻译缓存</strong>
+                  <small id="translation-cache-description">仅清除 GameBanana 翻译结果，下次翻译会重新请求有道。</small>
+                </span>
+                <Button type="button" variant="outline" aria-describedby="translation-cache-description" onClick={() => void clearTranslationCache()} disabled={clearingCache}>
+                  {clearingCache ? '正在清除…' : '清除缓存'}
+                </Button>
               </div>
             </>
           )}

@@ -142,6 +142,8 @@ const api = {
     ipcRenderer.invoke('youdao:clearCredentials'),
   translateGameBanana: (request: GameBananaTranslationRequest): Promise<string> =>
     ipcRenderer.invoke('gamebanana:translate', request),
+  clearGameBananaTranslationCache: (): Promise<void> =>
+    ipcRenderer.invoke('gamebanana:clearTranslationCache'),
   getGameBananaTasks: (): Promise<GameBananaDownloadTask[]> =>
     ipcRenderer.invoke('gamebanana:tasks'),
   getAyakaModsTasks: (): Promise<GameBananaDownloadTask[]> =>

@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { GameBananaTranslationRequest } from '../shared/types'
 import { describeError, logger } from './logger'
@@ -16,6 +16,7 @@ interface CachedTranslation {
 }
 
 const pending = new Map<string, { revision: string; result: Promise<string> }>()
+const cacheDirectory = () => join(app.getPath('userData'), 'gamebanana-translations')
 
 function readCache(path: string, updatedAt: number, sourceHash: string): string | null {
   try {
@@ -48,11 +49,31 @@ function writeCache(path: string, entry: CachedTranslation): void {
   }
 }
 
+export function clearGameBananaTranslationCache(): void {
+  const directory = cacheDirectory()
+  try {
+    const entry = lstatSync(directory, { throwIfNoEntry: false })
+    if (entry) {
+      if (!entry.isDirectory()) throw new Error('翻译缓存路径不是普通目录。')
+      for (const name of readdirSync(directory)) {
+        if (/^[a-f0-9]{64}\.json(?:\.[a-f0-9-]{36}\.tmp)?$/u.test(name)) {
+          rmSync(join(directory, name), { force: true })
+        }
+      }
+    }
+    pending.clear()
+  } catch (error) {
+    logger.error(`清除 GameBanana 翻译缓存失败：${describeError(error)}`)
+    throw error
+  }
+  logger.info('已清除 GameBanana 翻译缓存。')
+}
+
 export async function translateGameBanana({ modId, section, html, updatedAt, sourceLanguage }: GameBananaTranslationRequest) {
   if (sourceLanguage !== 'en' && sourceLanguage !== 'ru') throw new Error('请选择英语或俄语作为原文语言。')
   if (typeof html !== 'string' || !html.trim()) throw new Error('没有可翻译的原文 HTML。')
   const cacheKey = createHash('sha256').update(JSON.stringify([modId, section, sourceLanguage])).digest('hex')
-  const path = join(app.getPath('userData'), 'gamebanana-translations', `${cacheKey}.json`)
+  const path = join(cacheDirectory(), `${cacheKey}.json`)
   const sourceHash = createHash('sha256').update(html).digest('hex')
   const revision = `${updatedAt}:${sourceHash}`
   const cached = readCache(path, updatedAt, sourceHash)

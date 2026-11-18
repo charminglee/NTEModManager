@@ -807,6 +807,8 @@ const api: Api = {
     return document.documentElement.outerHTML
   },
 
+  clearGameBananaTranslationCache: () => Promise.resolve(),
+
   async updateConfig(patch) {
     const testImagesBefore = config.testImagesEnabled
     Object.assign(config, patch)
