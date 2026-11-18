@@ -1302,24 +1302,6 @@ select {
   padding-left: 8px;
   padding-right: 8px;
 }
-.import-drop-hint {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 13px;
-  border: 1px dashed #696256;
-  min-height: 47px;
-  margin: 10px 0 0;
-  background: rgb(255 252 246 / 40%);
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--ink);
-}
-.import-drop-hint:hover {
-  border-color: var(--vermilion);
-  color: var(--vermilion);
-}
 .library-empty {
   min-height: 280px;
   height: 100%;
@@ -2154,14 +2136,6 @@ select {
   .mod-install-button {
     min-width: 45px;
     font-size: 10px;
-  }
-  .import-drop-hint {
-    font-size: 10px;
-    gap: 6px;
-    padding: 8px;
-  }
-  .import-drop-hint svg {
-    display: none;
   }
   .settings-navigation {
     width: 135px;

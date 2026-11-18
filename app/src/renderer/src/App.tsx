@@ -1131,15 +1131,6 @@ export default function App() {
                   ))
                 )}
               </div>
-              <button
-                type="button"
-                className="import-drop-hint"
-                disabled={busy}
-                onClick={handleImportAction}
-              >
-                <Package size={24} />
-                <span>拖入 ZIP、RAR、7Z 压缩包以导入</span>
-              </button>
               <MotionPresence present={selectedNames.size > 0}>
                 {selectedNames.size > 0 ? (
                   <BatchActionBar
