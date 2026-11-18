@@ -23,6 +23,7 @@ function updateTranslationHtml(update: GameBananaUpdate): string {
       if (change.category) {
         const heading = document.createElement('div')
         heading.className = 'ntemm-update-change-heading'
+        heading.setAttribute('translate', 'no')
         heading.textContent = change.category
         block.append(heading)
       }
