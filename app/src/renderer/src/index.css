@@ -71,6 +71,7 @@
   --vermilion: #ce3e35;
   --peach: #f4e3de;
   --rule: #d4ccbf;
+  --window-titlebar-height: 35px;
   --window-controls-width: 276px;
   --surface-ink: rgb(32 32 30 / 65%);
   --surface-paper: rgb(243 239 230 / 40%);
@@ -194,7 +195,7 @@ input[type='checkbox'] {
   position: relative;
   /* 拖动区域在按钮左侧结束，避免原生命中测试截走按钮的鼠标事件。 */
   width: calc(100% - var(--window-controls-width));
-  height: 35px;
+  height: var(--window-titlebar-height);
   border-bottom: 1px solid #65635b;
   display: flex;
   align-items: center;
@@ -218,7 +219,7 @@ input[type='checkbox'] {
   top: 0;
   right: 0;
   width: var(--window-controls-width);
-  height: 35px;
+  height: var(--window-titlebar-height);
   display: flex;
   z-index: 60;
   background: transparent;
@@ -230,7 +231,7 @@ input[type='checkbox'] {
   align-items: center;
   justify-content: center;
   width: calc(var(--window-controls-width) / 6);
-  height: 35px;
+  height: var(--window-titlebar-height);
   border: 0;
   background: transparent;
   color: inherit;
@@ -836,7 +837,7 @@ input[type='checkbox'] {
   align-items: flex-start;
   gap: 12px;
   flex-shrink: 0;
-  padding: 25px 30px 22px;
+  padding: calc(25px + var(--window-titlebar-height)) 30px 22px;
   border-bottom: 1px solid #59544c;
   background: #302d28;
 }
