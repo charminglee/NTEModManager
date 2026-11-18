@@ -3,6 +3,7 @@ import { ArrowDown, RefreshCw, Search } from 'lucide-react'
 import type { LogEntry } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 const labels: Record<LogEntry['level'], string> = {
   debug: 'DEBUG',
   info: 'INFO',
@@ -72,14 +73,19 @@ function LogView() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        <select aria-label="日志级别" value={level} onChange={(e) => setLevel(e.target.value)}>
-          <option value="all">全部级别</option>
-          {Object.entries(labels).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <Select value={level} onValueChange={setLevel}>
+          <SelectTrigger className="log-level-trigger" aria-label="日志级别">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="log-level-menu" align="start">
+            <SelectItem value="all">全部级别</SelectItem>
+            {Object.entries(labels).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           type="button"
           className="follow-toggle"
