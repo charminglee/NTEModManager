@@ -539,18 +539,19 @@ input[type='checkbox'] {
   overflow: hidden;
   border: 1px solid #9a9285;
   border-radius: 2px;
-  background: rgb(255 252 246 / 78%);
+  background: rgb(255 252 246 / 40%);
   color: var(--ink);
   text-align: left;
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 .gamebanana-mod-card:hover {
   border-color: var(--vermilion);
+  background: rgb(244 237 226 / 60%);
   transform: translateY(-1px);
 }
 .gamebanana-mod-card.is-selected {
   border-color: var(--vermilion);
-  background: rgb(244 227 222 / 90%);
+  background: rgb(244 227 222 / 62%);
   box-shadow: inset 3px 0 var(--vermilion);
 }
 .gamebanana-mod-card img,
