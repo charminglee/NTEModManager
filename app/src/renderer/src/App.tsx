@@ -1210,6 +1210,7 @@ export default function App() {
             <div className={cn('community-view-panel', view === 'gamebanana' && 'is-active')}>
               <GameBananaPage
                 active={view === 'gamebanana'}
+                visible={!chromeHidden}
                 config={config}
                 onConfigChange={setConfig}
                 onModsChanged={handleGameBananaModsChanged}

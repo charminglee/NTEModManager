@@ -1,12 +1,12 @@
-import { Check, Download, LoaderCircle, TriangleAlert, X } from 'lucide-react'
+import { Check, Download, LoaderCircle, TriangleAlert } from 'lucide-react'
 import type { GameBananaDownloadTask } from '@shared/types'
 import { formatFileSize } from '@/lib/format'
+import { AppDrawer } from './ui/drawer'
 
 interface Props {
   open: boolean
   tasks: GameBananaDownloadTask[]
   onClose: () => void
-  source?: string
 }
 
 function statusText(task: GameBananaDownloadTask): string {
@@ -24,59 +24,40 @@ function progress(task: GameBananaDownloadTask): number {
   return Math.min(100, Math.round((task.downloadedBytes / task.totalBytes) * 100))
 }
 
-export default function GameBananaDownloadDrawer({ open, tasks, onClose, source = 'GameBanana' }: Props) {
-  if (!open) return null
+export default function GameBananaDownloadDrawer({ open, tasks, onClose }: Props) {
   return (
-    <div className="gamebanana-drawer-overlay" role="presentation" onClick={onClose}>
-      <aside
-        className="gamebanana-download-drawer"
-        role="dialog"
-        aria-label={`${source} 下载列表`}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="dialog-header gamebanana-detail-dialog-header">
-          <span className="eyebrow">DOWNLOAD QUEUE</span>
-          <div className="dialog-heading-row">
-            <h2 className="dialog-title">下载列表</h2>
-          </div>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="关闭下载列表">
-            <X />
-          </button>
+    <AppDrawer open={open} title="下载列表" onClose={onClose}>
+      {tasks.length === 0 ? (
+        <div className="gamebanana-download-empty">
+          <Download size={32} />
+          <strong>还没有下载任务</strong>
+          <span>从模组详情页开始下载。</span>
         </div>
-        <div className="gamebanana-download-list">
-          {tasks.length === 0 ? (
-            <div className="gamebanana-download-empty">
-              <Download size={32} />
-              <strong>还没有下载任务</strong>
-              <span>从模组详情页开始下载。</span>
+      ) : (
+        tasks.map((task) => (
+          <article className="gamebanana-download-item" key={task.id}>
+            <div className="gamebanana-download-item-heading">
+              <div className="gamebanana-download-item-icon">
+                {task.status === 'completed' ? <Check /> : task.status === 'failed' ? <TriangleAlert /> : <LoaderCircle className="animate-spin" />}
+              </div>
+              <div className="gamebanana-download-item-copy">
+                <strong title={task.customName}>{task.customName}</strong>
+                <span>{task.fileName}</span>
+              </div>
+              <small>{statusText(task)}</small>
             </div>
-          ) : (
-            tasks.map((task) => (
-              <article className="gamebanana-download-item" key={task.id}>
-                <div className="gamebanana-download-item-heading">
-                  <div className="gamebanana-download-item-icon">
-                    {task.status === 'completed' ? <Check /> : task.status === 'failed' ? <TriangleAlert /> : <LoaderCircle className="animate-spin" />}
-                  </div>
-                  <div className="gamebanana-download-item-copy">
-                    <strong title={task.customName}>{task.customName}</strong>
-                    <span>{task.fileName}</span>
-                  </div>
-                  <small>{statusText(task)}</small>
-                </div>
-                <div className="gamebanana-progress-track" aria-label={`${progress(task)}%`}>
-                  <span style={{ width: `${progress(task)}%` }} />
-                </div>
-                <div className="gamebanana-download-item-meta">
-                  <span>{task.message}</span>
-                  {task.totalBytes ? (
-                    <span>{formatFileSize(task.downloadedBytes)}／{formatFileSize(task.totalBytes)}</span>
-                  ) : null}
-                </div>
-              </article>
-            ))
-          )}
-        </div>
-      </aside>
-    </div>
+            <div className="gamebanana-progress-track" aria-label={`${progress(task)}%`}>
+              <span style={{ width: `${progress(task)}%` }} />
+            </div>
+            <div className="gamebanana-download-item-meta">
+              <span>{task.message}</span>
+              {task.totalBytes ? (
+                <span>{formatFileSize(task.downloadedBytes)}／{formatFileSize(task.totalBytes)}</span>
+              ) : null}
+            </div>
+          </article>
+        ))
+      )}
+    </AppDrawer>
   )
 }

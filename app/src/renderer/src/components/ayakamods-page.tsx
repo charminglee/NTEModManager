@@ -176,7 +176,7 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
             ? `  ·  ${tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length}` : ''}
         </Button>
       </div>
-      <GameBananaDownloadDrawer source="AyakaMods" open={active && drawerOpen && !target} tasks={tasks} onClose={() => setDrawerOpen(false)} />
+      <GameBananaDownloadDrawer open={visible && drawerOpen && !target} tasks={tasks} onClose={() => setDrawerOpen(false)} />
       <PromptDialog
         open={active && target !== undefined}
         title="下载 AyakaMods 模组"

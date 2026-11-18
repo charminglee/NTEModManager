@@ -15,6 +15,7 @@ import { toast } from './toast-card'
 
 interface Props {
   active: boolean
+  visible: boolean
   config: AppConfigData
   onConfigChange: (config: AppConfigData) => void
   onModsChanged: () => void
@@ -40,7 +41,7 @@ function shortNumber(value: number): string {
   return new Intl.NumberFormat('zh-CN', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 }
 
-export default function GameBananaPage({ active, config, onConfigChange, onModsChanged }: Props) {
+export default function GameBananaPage({ active, visible, config, onConfigChange, onModsChanged }: Props) {
   const [mods, setMods] = useState<GameBananaMod[]>([])
   const [selected, setSelected] = useState<GameBananaMod | null>(null)
   const lastSelectedRef = useRef<GameBananaMod | null>(null)
@@ -285,7 +286,7 @@ export default function GameBananaPage({ active, config, onConfigChange, onModsC
           onDownload={openDownload}
         />
       )}
-      <GameBananaDownloadDrawer open={active && drawerOpen} tasks={tasks} onClose={() => setDrawerOpen(false)} />
+      <GameBananaDownloadDrawer open={active && visible && drawerOpen} tasks={tasks} onClose={() => setDrawerOpen(false)} />
       <PromptDialog
         open={active && downloadTarget !== null}
         title="下载 GameBanana 模组"
