@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>角色侧栏 · 流金预览</title>
+    <title>角色侧栏 · 流彩预览</title>
     <style>
       * { box-sizing: border-box }
       body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 32px 18px; background: #141513; color: #f3edda; font: 15px system-ui, sans-serif }
@@ -15,12 +15,12 @@
       button { position: relative; isolation: isolate; overflow: hidden; width: 100%; height: 48px; display: flex; align-items: center; gap: 10px; padding: 6px 8px; color: inherit; background: none; border: 0; cursor: pointer; font: 700 15px system-ui; text-align: left }
       button:hover { background: #302f29 } button:focus-visible { outline: 2px solid ivory; outline-offset: -2px }
       button img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover } button b { margin-left: auto; font: 13px monospace }
-      .edge { pointer-events: none; position: absolute; inset: 1px; z-index: -1; padding: 2px; background: #f2ba64; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude }
+      .edge { pointer-events: none; position: absolute; inset: 1px; z-index: -1; padding: 2px; background: var(--accent); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude }
       button { border-radius: 10px }
       .edge { border-radius: 9px; overflow: hidden; animation: edge-color 6s ease-in-out infinite }
       .gpu { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .12 }
       .wave { pointer-events: none; position: absolute; z-index: -1; width: 12px; height: 12px; border-radius: 50%; border: 1px solid currentColor; background: radial-gradient(transparent 30%, color-mix(in srgb, currentColor 58%, transparent)); animation: wave .62s ease-out forwards }
-      @keyframes edge-color { 0%, 100% { background-color: #f2ba64 } 33% { background-color: #ed938a } 66% { background-color: #ffe8a8 } }
+      @keyframes edge-color { 0%, 100% { background-color: var(--accent) } 25% { background-color: var(--second) } 50% { background-color: var(--third) } 75% { background-color: var(--fourth) } }
       @keyframes wave { from { transform: translate(-50%,-50%) scale(.2) } to { transform: translate(-50%,-50%) scale(44); opacity: 0 } }
       article { flex: 2 1 280px; min-height: 240px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; background: radial-gradient(ellipse at top right,#444034,#282923 65%) }
       article img { width: 95px; height: 95px; align-self: flex-end; object-fit: cover; border-radius: 50%; border: 1px solid #877852 }

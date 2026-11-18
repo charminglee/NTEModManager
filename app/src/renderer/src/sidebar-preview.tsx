@@ -1,13 +1,13 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Shader, SolidColor } from 'shaders/react'
 
 const characters = [
-  { name: '娜娜莉', count: 12, accent: '#f56b85' },
-  { name: '九原', count: 8, accent: '#9789ec' },
-  { name: '薄荷', count: 5, accent: '#62d5e1' },
-  { name: '伊洛伊', count: 9, accent: '#71d6b7' },
-  { name: '安魂曲', count: 3, accent: '#dc76aa' }
+  { name: '娜娜莉', count: 12, palette: ['#f56b85', '#bf254c', '#fff1e4', '#a298a7'] },
+  { name: '九原', count: 8, palette: ['#9789ec', '#645b7a', '#f0d8cf', '#8b879b'] },
+  { name: '薄荷', count: 5, palette: ['#62d5e1', '#1e8faa', '#89feff', '#d8aeb8'] },
+  { name: '伊洛伊', count: 9, palette: ['#71d6b7', '#65938c', '#bcdbc7', '#a8727f'] },
+  { name: '安魂曲', count: 3, palette: ['#dc76aa', '#ad0b39', '#d8d3eb', '#917686'] }
 ]
 const motion = matchMedia('(prefers-reduced-motion: reduce)')
 function subscribeMotion(notify: () => void) {
@@ -22,8 +22,9 @@ function Preview() {
   const reduced = useSyncExternalStore(subscribeMotion, () => motion.matches)
   return <main>
     <small>NTEMM　／　MOTION STUDY　01</small>
-    <h1>流金 · 角色侧栏</h1>
-    <section><nav aria-label="角色列表">{characters.map(({ name, count, accent }, index) => <button key={name}
+    <h1>流彩 · 角色侧栏</h1>
+    <section><nav aria-label="角色列表">{characters.map(({ name, count, palette: [accent, second, third, fourth] }, index) => <button key={name}
+      style={{ '--accent': accent, '--second': second, '--third': third, '--fourth': fourth } as CSSProperties}
       aria-pressed={selected === index} onClick={event => {
         const rect = event.currentTarget.getBoundingClientRect()
         select(index)
@@ -33,7 +34,7 @@ function Preview() {
       }}>
       {selected === index && <><span className="edge" aria-hidden="true">{!reduced && <Shader className="gpu" disableTelemetry
         onReady={() => setEngine('WebGPU')} onUnavailable={() => setEngine('CSS 流光')}>
-        <SolidColor color="#ffefc9" />
+        <SolidColor color={accent} />
       </Shader>}</span>{wave.sequence > 0 && <span key={wave.sequence} className="wave" aria-hidden="true" style={{ left: wave.x, top: wave.y, color: accent }} />}</>}
       <img src={`/${name}.png`} alt="" />{name}<b>{count}</b>
     </button>)}</nav><article><small>角色档案　／　{String(selected + 1).padStart(2, '0')}</small>
