@@ -1,6 +1,5 @@
 import {
   CircleArrowUp,
-  FolderInput,
   MoreHorizontal,
   Trash2,
   TriangleAlert
@@ -41,10 +40,6 @@ export default function ModActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onSelect={() => actions.onAddArchive(mod)}>
-          <FolderInput />
-          添加
-        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => actions.onReplaceArchive(mod)}>
           <CircleArrowUp />
           更新／替换

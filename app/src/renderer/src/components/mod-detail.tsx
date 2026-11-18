@@ -1,4 +1,4 @@
-import { FolderOpen, Package, PackageOpen, Pencil, RefreshCw } from 'lucide-react'
+import { FolderInput, FolderOpen, Package, PackageOpen, Pencil, RefreshCw } from 'lucide-react'
 import type { ModFileEntry, ModInfo } from '@shared/types'
 import type { ModCardActions } from './mod-card'
 import { ModStatus } from './mod-card'
@@ -66,6 +66,10 @@ export default function ModDetail({
           >
             <RefreshCw />
             重新安装
+          </Button>
+          <Button variant="outline" disabled={busy} onClick={() => actions.onAddArchive(mod)}>
+            <FolderInput />
+            添加
           </Button>
           <Button variant="outline" disabled={busy} onClick={() => actions.onOpenSource(mod)}>
             <FolderOpen />
