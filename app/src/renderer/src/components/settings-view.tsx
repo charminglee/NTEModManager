@@ -150,7 +150,6 @@ export default function SettingsView({ config, onSaved }: Props) {
           <h1>
             {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : '高级设置'}
           </h1>
-          <p>设置修改后自动保存。</p>
         </div>
         <div className="settings-content" key={section}>
           {section === 'paths' && (
