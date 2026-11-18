@@ -28,7 +28,7 @@ export default function GameBananaTranslation({
 }) {
   const source = useMemo(() => ({ modId, section, updatedAt, html }), [modId, section, updatedAt, html])
   const hasText = useMemo(() => hasTranslatableText(html), [html])
-  const [sourceLanguage, setSourceLanguage] = useState<GameBananaTranslationLanguage | null>(null)
+  const [sourceLanguage, setSourceLanguage] = useState<GameBananaTranslationLanguage>('en')
   const [menuOpen, setMenuOpen] = useState(false)
   const [translation, setTranslation] = useState<{ source: typeof source; language: GameBananaTranslationLanguage; html: string } | null>(null)
   const [showTranslation, setShowTranslation] = useState(false)
@@ -56,43 +56,48 @@ export default function GameBananaTranslation({
     }
   }
 
-  const buttonLabel = loading ? '正在翻译' : isTranslated ? '显示原文' : translatedHtml ? '显示译文' : '翻译'
+  const buttonLabel = loading ? '正在翻译' : isTranslated ? '显示原文' : translatedHtml ? '显示译文' : `翻译${sourceLanguage === 'en' ? '英语' : '俄语'}原文`
   const button = hasText ? (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-      <span className="gamebanana-translation-actions" role="group" aria-label="翻译操作">
+      <DropdownMenuTrigger asChild disabled={loading}>
         <Button
           type="button"
           variant="ghost"
           size="icon"
           className={`gamebanana-translation-button${isTranslated ? ' is-translated' : ''}`}
+          onPointerDown={(event) => {
+            if (event.button !== 0 || event.ctrlKey) return
+            event.preventDefault()
+            event.currentTarget.focus()
+          }}
+          onKeyDownCapture={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') event.stopPropagation()
+          }}
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()
             if (translatedHtml) setShowTranslation(!showTranslation)
-            else if (sourceLanguage) void translate(sourceLanguage)
-            else setMenuOpen(true)
+            else void translate(sourceLanguage)
           }}
-          disabled={loading}
           aria-label={buttonLabel}
           aria-pressed={isTranslated}
+          aria-keyshortcuts="ArrowDown"
         >
           {loading ? <LoaderCircle className="animate-spin" /> : <Globe />}
-        </Button>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="gamebanana-translation-button gamebanana-translation-arrow"
-            onClick={(event) => { event.preventDefault(); event.stopPropagation() }}
-            disabled={loading}
-            aria-label="选择原文语言"
+          <span
+            className="gamebanana-translation-arrow"
+            aria-hidden="true"
             title="选择原文语言"
-          ><ChevronDown /></Button>
-        </DropdownMenuTrigger>
-      </span>
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              setMenuOpen((open) => !open)
+            }}
+          ><ChevronDown /></span>
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="z-[70]" aria-label="原文语言">
-        <DropdownMenuRadioGroup value={sourceLanguage ?? undefined}>
+        <DropdownMenuRadioGroup value={sourceLanguage}>
           <DropdownMenuRadioItem value="en" onSelect={() => void translate('en')}>英语</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="ru" onSelect={() => void translate('ru')}>俄语</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
