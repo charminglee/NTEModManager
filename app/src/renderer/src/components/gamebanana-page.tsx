@@ -32,6 +32,8 @@ function formatModDate(timestamp: number, now: number): string {
   const totalMinutes = Math.floor(Math.abs(difference) / 60_000)
   if (totalMinutes === 0) return '刚刚'
   const days = Math.floor(totalMinutes / 1440)
+  if (days >= 365) return `${Math.floor(days / 365)}y`
+  if (days >= 30) return `${Math.floor(days / 30)}mo`
   const hours = Math.floor(totalMinutes / 60)
   const duration = days > 0 ? `${days}d` : hours > 0 ? `${hours}h` : `${totalMinutes}m`
   return `${duration}`
