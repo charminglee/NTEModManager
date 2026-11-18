@@ -19,7 +19,7 @@
       button { border-radius: 10px }
       .edge { border-radius: 9px; overflow: hidden }
       .gpu { position: absolute; inset: 0; width: 100%; height: 100% }
-      .wave { pointer-events: none; position: absolute; z-index: -1; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #ffe3a0; background: radial-gradient(transparent 30%,#e9b75188); animation: wave .62s ease-out forwards }
+      .wave { pointer-events: none; position: absolute; z-index: -1; width: 12px; height: 12px; border-radius: 50%; border: 1px solid currentColor; background: radial-gradient(transparent 30%, color-mix(in srgb, currentColor 58%, transparent)); animation: wave .62s ease-out forwards }
       @keyframes travel { to { background-position: 100% 0 } } @keyframes wave { from { transform: translate(-50%,-50%) scale(.2) } to { transform: translate(-50%,-50%) scale(44); opacity: 0 } }
       article { flex: 2 1 280px; min-height: 240px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; background: radial-gradient(ellipse at top right,#444034,#282923 65%) }
       article img { width: 95px; height: 95px; align-self: flex-end; object-fit: cover; border-radius: 50%; border: 1px solid #877852 }

@@ -2,8 +2,13 @@ import { useState, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MeshGradient, Shader } from 'shaders/react'
 
-const names = ['娜娜莉', '九原', '薄荷', '伊洛伊', '安魂曲']
-const counts = [12, 8, 5, 9, 3]
+const characters = [
+  { name: '娜娜莉', count: 12, accent: '#f56b85' },
+  { name: '九原', count: 8, accent: '#9789ec' },
+  { name: '薄荷', count: 5, accent: '#62d5e1' },
+  { name: '伊洛伊', count: 9, accent: '#71d6b7' },
+  { name: '安魂曲', count: 3, accent: '#dc76aa' }
+]
 const motion = matchMedia('(prefers-reduced-motion: reduce)')
 function subscribeMotion(notify: () => void) {
   motion.addEventListener('change', notify)
@@ -18,7 +23,7 @@ function Preview() {
   return <main>
     <small>NTEMM　／　MOTION STUDY　01</small>
     <h1>流金 · 角色侧栏</h1>
-    <section><nav aria-label="角色列表">{names.map((name, index) => <button key={name}
+    <section><nav aria-label="角色列表">{characters.map(({ name, count, accent }, index) => <button key={name}
       aria-pressed={selected === index} onClick={event => {
         const rect = event.currentTarget.getBoundingClientRect()
         select(index)
@@ -29,10 +34,10 @@ function Preview() {
       {selected === index && <><span className="edge" aria-hidden="true">{!reduced && <Shader className="gpu" disableTelemetry
         onReady={() => setEngine('WebGPU')} onUnavailable={() => setEngine('CSS 流光')}>
         <MeshGradient colorA="#664522" colorB="#fff0ac" speed={0.65} />
-      </Shader>}</span>{wave.sequence > 0 && <span key={wave.sequence} className="wave" aria-hidden="true" style={{ left: wave.x, top: wave.y }} />}</>}
-      <img src={`/${name}.png`} alt="" />{name}<b>{counts[index]}</b>
+      </Shader>}</span>{wave.sequence > 0 && <span key={wave.sequence} className="wave" aria-hidden="true" style={{ left: wave.x, top: wave.y, color: accent }} />}</>}
+      <img src={`/${name}.png`} alt="" />{name}<b>{count}</b>
     </button>)}</nav><article><small>角色档案　／　{String(selected + 1).padStart(2, '0')}</small>
-      <img src={`/${names[selected]}.png`} alt="" /><div><output>{reduced ? '静态描边' : engine}</output><h2>{names[selected]}</h2></div>
+      <img src={`/${characters[selected].name}.png`} alt="" /><div><output>{reduced ? '静态描边' : engine}</output><h2>{characters[selected].name}</h2></div>
     </article></section><p>点击角色切换流光，重复点击可重播光波。</p>
   </main>
 }
