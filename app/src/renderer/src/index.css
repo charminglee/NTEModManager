@@ -1145,7 +1145,6 @@ select {
 .mod-list-scroll {
   flex: 1;
   min-height: 0;
-  border-radius: var(--radius-md);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 3px 1px 20px;
