@@ -134,7 +134,7 @@ function parseMessages(responseText: string): YoudaoMessage[] {
   })
 }
 
-async function translateChunk(text: string, credentials: StoredCredentials): Promise<string> {
+async function translateChunk(text: string, credentials: StoredCredentials, prompt?: string): Promise<string> {
   const salt = randomUUID()
   const curtime = String(Math.floor(Date.now() / 1000))
   const parameters = new URLSearchParams({
@@ -147,9 +147,9 @@ async function translateChunk(text: string, credentials: StoredCredentials): Pro
     from: 'auto',
     to: 'zh-CHS',
     streamType: 'full',
-    handleOption: '0',
-    prompt: STRUCTURED_TRANSLATION_PROMPT
+    handleOption: '0'
   })
+  if (prompt) parameters.set('prompt', prompt)
   const response = await fetch(TRANSLATION_URL, {
     method: 'POST',
     headers: { Accept: 'text/event-stream', 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -197,48 +197,61 @@ export async function translateYoudaoParagraphs(paragraphs: string[][]): Promise
     splitLongFragment(text).map((source) => ({ id: nextId++, paragraphId, source }))
   ))
   const translations = new Map<number, string | null>()
-  let batch: string[] = []
-  let batchIds = new Set<number>()
+  let batch: { id: number; text: string; json: string }[] = []
   let length = 2
+  let useStructuredBatch = true
 
   const flush = async () => {
-    const response = await translateChunk(`[${batch.join(',')}]`, credentials)
-    const json = response.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/iu, '$1')
-    let rows: unknown
-    try {
-      rows = JSON.parse(json)
-    } catch (error) {
-      if (!(error instanceof SyntaxError)) throw error
-      logger.warning('有道翻译未返回有效的 JSON，该批原文保持不变。')
-    }
-    if (Array.isArray(rows)) {
-      for (const row of rows) {
-        if (!Array.isArray(row) || !batchIds.has(row[0])) continue
-        const [id, value] = row
-        translations.set(id, !translations.has(id) && row.length === 2 && typeof value === 'string'
-          ? value.trim() || null
-          : null)
+    const attemptedBatch = useStructuredBatch && batch.length > 1
+    if (attemptedBatch) {
+      const response = await translateChunk(`[${batch.map(({ json }) => json).join(',')}]`, credentials, STRUCTURED_TRANSLATION_PROMPT)
+      const json = response.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/iu, '$1')
+      let rows: unknown
+      try {
+        rows = JSON.parse(json)
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error
+        rows = null
+      }
+      if (Array.isArray(rows)) {
+        const batchIds = new Set(batch.map(({ id }) => id))
+        for (const row of rows) {
+          if (!Array.isArray(row) || !batchIds.has(row[0])) continue
+          const [id, value] = row
+          translations.set(id, !translations.has(id) && row.length === 2 && typeof value === 'string'
+            ? value.trim() || null
+            : null)
+        }
       }
     }
+
+    const unmatched = batch.filter(({ id }) => !translations.get(id))
+    if (attemptedBatch && unmatched.length > 0) {
+      logger.warning(`有道批量译文有 ${unmatched.length}／${batch.length} 个片段无法匹配，改用逐段纯文本翻译。`)
+      if (unmatched.length === batch.length) useStructuredBatch = false
+    }
+    for (const { id, text } of unmatched) {
+      const translation = await translateChunk(text, credentials)
+      translations.set(id, translation.trim() || null)
+    }
+
     batch = []
-    batchIds = new Set<number>()
     length = 2
   }
 
   for (const paragraph of groups) {
     const entries = paragraph.flat().flatMap(({ id, paragraphId, source }) => {
       const text = source.trim()
-      return text ? [{ id, json: JSON.stringify([id, paragraphId, text]) }] : []
+      return text ? [{ id, text, json: JSON.stringify([id, paragraphId, text]) }] : []
     })
     const paragraphLength = entries.reduce((total, { json }) => total + json.length + 1, 0)
     if (batch.length > 0 && paragraphLength + 1 <= MAX_TEXT_LENGTH && length + paragraphLength > MAX_TEXT_LENGTH) {
       await flush()
     }
-    for (const { id, json } of entries) {
-      if (length + json.length + Number(batch.length > 0) > MAX_TEXT_LENGTH) await flush()
-      length += json.length + Number(batch.length > 0)
-      batch.push(json)
-      batchIds.add(id)
+    for (const entry of entries) {
+      if (length + entry.json.length + Number(batch.length > 0) > MAX_TEXT_LENGTH) await flush()
+      length += entry.json.length + Number(batch.length > 0)
+      batch.push(entry)
     }
   }
   if (batch.length > 0) await flush()
