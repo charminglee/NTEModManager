@@ -1105,9 +1105,11 @@ export default function App() {
                 ) : (
                   groupedMods.map((group) => (
                     <section className="mod-group" key={group.secondary}>
-                      <div className="mod-group-heading">
-                        <h2>{group.secondary || '其他模组'}</h2>
-                      </div>
+                      {currentCategory !== OTHER_CATEGORY && (
+                        <div className="mod-group-heading">
+                          <h2>{group.secondary || '其他模组'}</h2>
+                        </div>
+                      )}
                       <div className="mod-group-surface">
                         <div className="mod-group-rows">
                           {group.mods.map((mod) => (
