@@ -17,7 +17,7 @@ function subscribeMotion(notify: () => void) {
 
 function Preview() {
   const [selected, select] = useState(0)
-  const [wave, setWave] = useState({ sequence: 0, x: 0, y: 0 })
+  const [wave, setWave] = useState({ sequence: 0, x: 0, y: 0, radius: 0 })
   const [engine, setEngine] = useState('正在初始化')
   const reduced = useSyncExternalStore(subscribeMotion, () => motion.matches)
   return <main>
@@ -30,16 +30,18 @@ function Preview() {
         select(index)
         const x = event.detail ? event.clientX - rect.left : rect.width / 2
         const y = event.detail ? event.clientY - rect.top : rect.height / 2
-        setWave(last => ({ sequence: last.sequence + 1, x, y }))
+        const radius = Math.ceil(Math.hypot(Math.max(x, rect.width - x), Math.max(y, rect.height - y))) + 2
+        setWave(last => ({ sequence: last.sequence + 1, x, y, radius }))
       }}>
       {selected === index && <><span className="edge" aria-hidden="true">{!reduced && <Shader className="gpu" disableTelemetry
         onReady={() => setEngine('WebGPU')} onUnavailable={() => setEngine('CSS 流光')}>
         <SolidColor color={accent} />
-      </Shader>}</span>{wave.sequence > 0 && <span key={wave.sequence} className="wave" aria-hidden="true" style={{ left: wave.x, top: wave.y, color: accent }} />}</>}
+      </Shader>}</span>{wave.sequence > 0 && <span key={wave.sequence} className="aurora" aria-hidden="true"
+        style={{ '--origin': `${wave.x}px ${wave.y}px`, '--radius': `${wave.radius}px` } as CSSProperties} />}</>}
       <img src={`/${name}.png`} alt="" />{name}<b>{count}</b>
     </button>)}</nav><article><small>角色档案　／　{String(selected + 1).padStart(2, '0')}</small>
       <img src={`/${characters[selected].name}.png`} alt="" /><div><output>{reduced ? '静态描边' : engine}</output><h2>{characters[selected].name}</h2></div>
-    </article></section><p>点击角色切换流光，重复点击可重播光波。</p>
+    </article></section><p>点击角色，光波会从落点揭开极光底色。再次点击可重播。</p>
   </main>
 }
 

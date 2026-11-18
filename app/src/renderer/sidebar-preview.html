@@ -19,13 +19,19 @@
       button { border-radius: 10px }
       .edge { border-radius: 9px; overflow: hidden; animation: edge-color 6s ease-in-out infinite }
       .gpu { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .12 }
-      .wave { pointer-events: none; position: absolute; z-index: -1; width: 12px; height: 12px; border-radius: 50%; border: 1px solid currentColor; background: radial-gradient(transparent 30%, color-mix(in srgb, currentColor 58%, transparent)); animation: wave .62s ease-out forwards }
+      @property --reach { syntax: '<length>'; inherits: true; initial-value: 0px }
+      .aurora { pointer-events: none; position: absolute; inset: 0; z-index: -2; --reach: var(--radius); clip-path: circle(var(--reach) at var(--origin)); animation: reveal .62s ease-out; background: color-mix(in srgb, var(--second) 17%, #20211e) }
+      .aurora::before, .aurora::after { content: ''; position: absolute; inset: 0 }
+      .aurora::before { inset: -50% -25%; opacity: .53; background: radial-gradient(ellipse 42% 33% at 26% 63%, var(--second), transparent), radial-gradient(ellipse 30% 15% at 52% 48%, var(--third), transparent), radial-gradient(ellipse 47% 30% at 76% 46%, var(--accent), transparent); animation: aurora-drift 8s ease-in-out infinite alternate }
+      .aurora::after { background: radial-gradient(circle at var(--origin), transparent max(0px, calc(var(--reach) - 16px)), var(--accent) var(--reach), transparent calc(var(--reach) + 1px)); animation: wave-fade .62s ease-out forwards }
       @keyframes edge-color { 0%, 100% { background-color: var(--accent) } 25% { background-color: var(--second) } 50% { background-color: var(--third) } 75% { background-color: var(--fourth) } }
-      @keyframes wave { from { transform: translate(-50%,-50%) scale(.2) } to { transform: translate(-50%,-50%) scale(44); opacity: 0 } }
+      @keyframes reveal { from { --reach: 0px } to { --reach: var(--radius) } }
+      @keyframes wave-fade { 0%, 45% { opacity: .85 } 100% { opacity: 0 } }
+      @keyframes aurora-drift { from { transform: translateX(-8%) rotate(-9deg) } to { transform: translateX(8%) rotate(6deg) } }
       article { flex: 2 1 280px; min-height: 240px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; background: radial-gradient(ellipse at top right,#444034,#282923 65%) }
       article img { width: 95px; height: 95px; align-self: flex-end; object-fit: cover; border-radius: 50%; border: 1px solid #877852 }
       h2 { font-size: 28px; margin: 6px 0 0 } p { color: #bebcb0; font-size: 13px; line-height: 1.7 }
-      @media(prefers-reduced-motion:reduce) { .edge { animation: none } .wave { display: none } }
+      @media(prefers-reduced-motion:reduce) { .edge, .aurora, .aurora::before { animation: none } .aurora::after { display: none } }
     </style>
   </head>
   <body><div id="root"></div><script type="module" src="/src/sidebar-preview.tsx"></script></body>
