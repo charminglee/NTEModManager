@@ -40,7 +40,7 @@ function formatModDate(timestamp: number, now: number): string {
 }
 
 function shortNumber(value: number): string {
-  return new Intl.NumberFormat('zh-CN', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value).toLowerCase()
 }
 
 export default function GameBananaPage({ active, visible, config, onConfigChange, onModsChanged }: Props) {
