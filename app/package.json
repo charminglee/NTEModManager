@@ -44,6 +44,7 @@
     "marked": "^18.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "shaders": "^4.0.7",
     "sonner": "^1.7.1",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.3",
