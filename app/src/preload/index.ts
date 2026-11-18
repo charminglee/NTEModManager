@@ -140,7 +140,7 @@ const api = {
     ipcRenderer.invoke('youdao:saveCredentials', input),
   clearYoudaoCredentials: (): Promise<YoudaoCredentialsStatus> =>
     ipcRenderer.invoke('youdao:clearCredentials'),
-  translateGameBanana: (request: GameBananaTranslationRequest): Promise<(string | null)[]> =>
+  translateGameBanana: (request: GameBananaTranslationRequest): Promise<string> =>
     ipcRenderer.invoke('gamebanana:translate', request),
   getGameBananaTasks: (): Promise<GameBananaDownloadTask[]> =>
     ipcRenderer.invoke('gamebanana:tasks'),

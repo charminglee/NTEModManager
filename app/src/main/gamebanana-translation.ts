@@ -4,26 +4,25 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path'
 import type { GameBananaTranslationRequest } from '../shared/types'
 import { describeError, logger } from './logger'
-import { translateYoudaoParagraphs } from './youdao-translation'
+import { translateYoudaoHtml } from './youdao-translation'
 
-const CACHE_VERSION = 1
+const CACHE_VERSION = 2
 
 interface CachedTranslation {
   version: number
   updatedAt: number
   sourceHash: string
-  translations: string[]
+  translatedHtml: string
 }
 
-const pending = new Map<string, { revision: string; result: Promise<(string | null)[]> }>()
+const pending = new Map<string, { revision: string; result: Promise<string> }>()
 
-function readCache(path: string, updatedAt: number, sourceHash: string, count: number): string[] | null {
+function readCache(path: string, updatedAt: number, sourceHash: string): string | null {
   try {
     const entry = JSON.parse(readFileSync(path, 'utf8')) as CachedTranslation | null
     if (entry?.version === CACHE_VERSION && entry.updatedAt === updatedAt && entry.sourceHash === sourceHash &&
-      Array.isArray(entry.translations) && entry.translations.length === count &&
-      entry.translations.every((text) => typeof text === 'string' && text.trim())) {
-      return entry.translations
+      typeof entry.translatedHtml === 'string' && entry.translatedHtml.trim()) {
+      return entry.translatedHtml
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -49,26 +48,27 @@ function writeCache(path: string, entry: CachedTranslation): void {
   }
 }
 
-export async function translateGameBanana({ modId, section, html, updatedAt, paragraphs }: GameBananaTranslationRequest) {
-  const cacheKey = createHash('sha256').update(JSON.stringify([modId, section])).digest('hex')
+export async function translateGameBanana({ modId, section, html, updatedAt, sourceLanguage }: GameBananaTranslationRequest) {
+  if (sourceLanguage !== 'en' && sourceLanguage !== 'ru') throw new Error('请选择英语或俄语作为原文语言。')
+  if (typeof html !== 'string' || !html.trim()) throw new Error('没有可翻译的原文 HTML。')
+  const cacheKey = createHash('sha256').update(JSON.stringify([modId, section, sourceLanguage])).digest('hex')
   const path = join(app.getPath('userData'), 'gamebanana-translations', `${cacheKey}.json`)
-  const sourceHash = createHash('sha256').update(JSON.stringify([html, paragraphs])).digest('hex')
+  const sourceHash = createHash('sha256').update(html).digest('hex')
   const revision = `${updatedAt}:${sourceHash}`
-  const count = paragraphs.reduce((total, paragraph) => total + paragraph.length, 0)
-  const cached = readCache(path, updatedAt, sourceHash, count)
+  const cached = readCache(path, updatedAt, sourceHash)
   if (cached) return cached
 
   const existing = pending.get(path)
   if (existing?.revision === revision) return existing.result
 
-  const result = translateYoudaoParagraphs(paragraphs)
+  const result = translateYoudaoHtml(html, sourceLanguage)
   pending.set(path, { revision, result })
   try {
-    const translations = await result
-    if (pending.get(path)?.result === result && translations.every((text) => text !== null)) {
-      writeCache(path, { version: CACHE_VERSION, updatedAt, sourceHash, translations })
+    const translatedHtml = await result
+    if (pending.get(path)?.result === result) {
+      writeCache(path, { version: CACHE_VERSION, updatedAt, sourceHash, translatedHtml })
     }
-    return translations
+    return translatedHtml
   } finally {
     if (pending.get(path)?.result === result) pending.delete(path)
   }

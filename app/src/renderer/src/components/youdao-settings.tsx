@@ -104,7 +104,7 @@ export default function YoudaoSettings() {
             placeholder="请输入有道应用 ID"
             disabled={loading || saving}
           />
-          <p>用于调用有道大模型翻译服务。</p>
+          <p>请填写已绑定有道网页翻译服务的应用 ID。</p>
         </div>
       </div>
       <div className="settings-field">
