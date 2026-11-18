@@ -845,7 +845,7 @@ export default function App() {
       const inEditable =
         target !== null &&
         (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      if (inEditable || modalOpenRef.current) {
+      if (event.defaultPrevented || inEditable || modalOpenRef.current || target?.closest('.app-drawer')) {
         return
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
@@ -885,6 +885,7 @@ export default function App() {
       if (
         event.key === 'ArrowDown' &&
         !inEditable &&
+        !target?.closest('.app-drawer') &&
         event.altKey === false &&
         !event.ctrlKey &&
         !event.metaKey &&
@@ -1181,18 +1182,16 @@ export default function App() {
                 ) : null}
               </MotionPresence>
             </main>
-            <MotionPresence present={focusedMod !== null}>
-              {focusedMod ? (
-                <ModDetail
-                  key={focusedMod.name}
-                  mod={focusedMod}
-                  category={categoryForMod(focusedMod, categories)}
-                  busy={busy}
-                  actions={modCardActions}
-                  onClose={() => setDetailsOpen(false)}
-                />
-              ) : null}
-            </MotionPresence>
+            {focusedMod && !chromeHidden && (
+              <ModDetail
+                key={focusedMod.name}
+                mod={focusedMod}
+                category={categoryForMod(focusedMod, categories)}
+                busy={busy}
+                actions={modCardActions}
+                onClose={() => setDetailsOpen(false)}
+              />
+            )}
           </div>
         ) : view === 'logs' ? (
           <LogView />

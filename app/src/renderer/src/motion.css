@@ -31,9 +31,6 @@
 .app-sidebar > * {
   animation: motion-sidebar-in var(--motion-slow) var(--motion-out);
 }
-.mod-detail {
-  animation: motion-detail-in var(--motion-slow) var(--motion-out);
-}
 .library-empty,
 .log-empty,
 .operation-progress,
@@ -215,10 +212,6 @@
 }
 @keyframes motion-sidebar-in {
   from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-@keyframes motion-detail-in {
-  from { opacity: 0; transform: translateX(12px); }
   to { opacity: 1; transform: translateX(0); }
 }
 @keyframes motion-dialog-in {

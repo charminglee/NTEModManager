@@ -117,7 +117,7 @@ export default function GameBananaDetail({
               </dl>
             </section>
             <section className="gamebanana-detail-section" aria-label="模组截图">
-              <h3>模组截图 <small>{mod.screenshots.length}</small></h3>
+              <h3 className="section-heading">模组截图 <small>{mod.screenshots.length}</small></h3>
               {mod.screenshots.length === 0 ? <p className="gamebanana-empty">作者没有提供截图。</p> : <div className="gamebanana-screenshots">
                 {mod.screenshots.map((image, index) => <button type="button" key={image.url} onClick={() => { setOriginalSize(false); setImageIndex(index) }} aria-label={`放大截图 ${index + 1}`}>
                   <img src={image.url} alt={`${mod.name} 截图 ${index + 1}`} loading="lazy" />
@@ -125,7 +125,7 @@ export default function GameBananaDetail({
               </div>}
             </section>
             {mod.updates.length > 0 && <section className="gamebanana-detail-section" aria-label="更新信息">
-              <h3>更新信息 <small>{mod.updates.length}</small></h3>
+              <h3 className="section-heading">更新信息 <small>{mod.updates.length}</small></h3>
               <div className="gamebanana-updates">
                 {mod.updates.map((update, index) => <details className="gamebanana-update" key={update.id} open={index === 0}>
                   <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time></summary>
@@ -138,17 +138,17 @@ export default function GameBananaDetail({
               </div>
             </section>}
             <section className="gamebanana-detail-section" aria-label="模组介绍">
-              <h3>模组介绍</h3>
+              <h3 className="section-heading">模组介绍</h3>
               {mod.description ? <GameBananaHtml html={mod.description} title="模组介绍" /> : <p className="gamebanana-empty">作者没有提供介绍。</p>}
               {mod.installInstructions && <><h4>安装说明</h4><GameBananaHtml html={mod.installInstructions} title="安装说明" /></>}
             </section>
             <section className="gamebanana-detail-section" aria-label="模组文件">
-              <h3>模组文件 <small>{mod.files.length}</small></h3>
+              <h3 className="section-heading">模组文件 <small>{mod.files.length}</small></h3>
               {mod.files.length === 0 ? <p className="gamebanana-empty">暂无可下载文件。</p> : <FileList files={mod.files} onDownload={(file) => onDownload(mod, file)} />}
               {mod.archivedFiles.length > 0 && <details className="gamebanana-archives"><summary><ChevronDown />归档文件 <small>{mod.archivedFiles.length}</small></summary><FileList files={mod.archivedFiles} onDownload={(file) => onDownload(mod, file)} /></details>}
             </section>
             <section className="gamebanana-detail-section" aria-label="用户评论">
-              <h3>用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>
+              <h3 className="section-heading">用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>
               {mod.commentItems.length === 0 ? <p className="gamebanana-empty">暂无评论。</p> : <Comments comments={mod.commentItems} />}
             </section>
           </>
