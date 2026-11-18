@@ -4,6 +4,7 @@ import type { GameBananaAuthor, GameBananaComment, GameBananaFile, GameBananaMod
 import { Button } from './ui/button'
 import { AppDialog } from './ui/dialog'
 import GameBananaTranslation from './gamebanana-translation'
+import GameBananaHtml from './gamebanana-html'
 import { formatFileSize } from '@/lib/format'
 
 function date(timestamp: number): string {
@@ -134,12 +135,10 @@ export default function GameBananaDetail({
                     <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time>{button}</summary>
                     <div className="gamebanana-update-content">
                       {update.description && content}
-                      {update.changes.map((change, changeIndex) => <GameBananaTranslation key={changeIndex} html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`}>
-                        {({ button: changeButton, content: changeContent }) => <div className="gamebanana-change">
-                          <div className="gamebanana-change-heading"><span>{change.category || '更新'}</span>{changeButton}</div>
-                          {changeContent}
-                        </div>}
-                      </GameBananaTranslation>)}
+                      {update.changes.map((change, changeIndex) => <div className="gamebanana-change" key={changeIndex}>
+                        <div className="gamebanana-change-heading"><span>{change.category || '更新'}</span></div>
+                        <GameBananaHtml html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`} />
+                      </div>)}
                       {!update.description && update.changes.length === 0 && <p className="gamebanana-empty">作者没有填写更新说明。</p>}
                     </div>
                   </details>}
