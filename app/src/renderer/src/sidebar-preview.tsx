@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
-import { MeshGradient, Shader } from 'shaders/react'
+import { Shader, SolidColor } from 'shaders/react'
 
 const characters = [
   { name: '娜娜莉', count: 12, accent: '#f56b85' },
@@ -33,7 +33,7 @@ function Preview() {
       }}>
       {selected === index && <><span className="edge" aria-hidden="true">{!reduced && <Shader className="gpu" disableTelemetry
         onReady={() => setEngine('WebGPU')} onUnavailable={() => setEngine('CSS 流光')}>
-        <MeshGradient colorA="#664522" colorB="#fff0ac" speed={0.65} />
+        <SolidColor color="#ffefc9" />
       </Shader>}</span>{wave.sequence > 0 && <span key={wave.sequence} className="wave" aria-hidden="true" style={{ left: wave.x, top: wave.y, color: accent }} />}</>}
       <img src={`/${name}.png`} alt="" />{name}<b>{count}</b>
     </button>)}</nav><article><small>角色档案　／　{String(selected + 1).padStart(2, '0')}</small>
