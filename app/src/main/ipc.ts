@@ -259,7 +259,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     return saveYoudaoCredentials(input)
   })
   ipcMain.handle('youdao:clearCredentials', () => clearYoudaoCredentials())
-  ipcMain.handle('youdao:translate', (_event, text: string) => translateYoudaoText(text))
+  ipcMain.handle('youdao:translate', (_event, text: string, prompt?: string) => translateYoudaoText(text, prompt))
   ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))
   ipcMain.handle('ayakamods:pendingDownloads', () => getPendingDownloads())
   ipcMain.handle('ayakamods:tasks', () => getGameBananaTasks().filter((task) => task.source === 'ayakamods'))

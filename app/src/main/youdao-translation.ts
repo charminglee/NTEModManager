@@ -131,7 +131,7 @@ function parseMessages(responseText: string): YoudaoMessage[] {
   })
 }
 
-async function translateChunk(text: string, credentials: StoredCredentials): Promise<string> {
+async function translateChunk(text: string, credentials: StoredCredentials, prompt?: string): Promise<string> {
   const salt = randomUUID()
   const curtime = String(Math.floor(Date.now() / 1000))
   const parameters = new URLSearchParams({
@@ -146,6 +146,7 @@ async function translateChunk(text: string, credentials: StoredCredentials): Pro
     streamType: 'full',
     handleOption: '0'
   })
+  if (prompt) parameters.set('prompt', prompt)
   const response = await fetch(TRANSLATION_URL, {
     method: 'POST',
     headers: { Accept: 'text/event-stream', 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -184,12 +185,12 @@ async function translateChunk(text: string, credentials: StoredCredentials): Pro
   return translation
 }
 
-export async function translateYoudaoText(text: string): Promise<string> {
+export async function translateYoudaoText(text: string, prompt?: string): Promise<string> {
   if (typeof text !== 'string' || !text.trim()) throw new Error('没有可翻译的文字。')
   const credentials = readCredentials()
   if (!credentials) throw new Error('请先在设置中的「有道翻译」填写应用 ID 和应用密钥。')
   const chunks = splitText(text)
   const translations: string[] = []
-  for (const chunk of chunks) translations.push(await translateChunk(chunk, credentials))
+  for (const chunk of chunks) translations.push(await translateChunk(chunk, credentials, prompt))
   return translations.join('\n').trim()
 }

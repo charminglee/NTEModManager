@@ -712,15 +712,13 @@ input[type='checkbox'] {
 .gamebanana-html { display: block; width: 100%; min-height: 28px; border: 0; color-scheme: dark; }
 .gamebanana-translation-button { width: 28px; height: 28px; padding: 0; color: #d9b79a; }
 .gamebanana-translation-button:hover { color: #f3d1b3; }
+.gamebanana-translation-button.is-translated { color: hsl(var(--primary-foreground)); background: hsl(var(--primary)); border-color: hsl(var(--primary)); }
 .section-heading .gamebanana-translation-button,
 .gamebanana-translation-heading .gamebanana-translation-button,
 .gamebanana-change-heading .gamebanana-translation-button { margin-left: auto; }
 .gamebanana-translation-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .gamebanana-translation-content { min-width: 0; }
 .gamebanana-translation-error { margin-bottom: 6px; color: #f0a393; font-size: 11px; overflow-wrap: anywhere; }
-.gamebanana-translation-result { margin-top: 10px; padding: 12px 14px; border-left: 2px solid #ce725a; background: #ffffff08; color: #eee5d8; }
-.gamebanana-translation-result > div { margin-bottom: 5px; color: #d1b28b; font-size: 10px; }
-.gamebanana-translation-result p { margin: 0; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .gamebanana-file-row { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 18px 0; border-bottom: 1px solid #554c40; }
 .gamebanana-file-row:first-child { padding-top: 0; }
 .gamebanana-file-row:last-child { padding-bottom: 0; border: 0; }

@@ -1,14 +1,38 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, Download, ExternalLink, LoaderCircle, TriangleAlert } from 'lucide-react'
-import type { GameBananaAuthor, GameBananaComment, GameBananaFile, GameBananaMod } from '@shared/types'
+import type { GameBananaAuthor, GameBananaComment, GameBananaFile, GameBananaMod, GameBananaUpdate } from '@shared/types'
 import { Button } from './ui/button'
 import { AppDialog } from './ui/dialog'
 import GameBananaTranslation from './gamebanana-translation'
-import GameBananaHtml from './gamebanana-html'
 import { formatFileSize } from '@/lib/format'
 
 function date(timestamp: number): string {
   return timestamp ? new Date(timestamp * 1000).toLocaleString('zh-CN', { hour12: false }) : '未提供'
+}
+
+function updateTranslationHtml(update: GameBananaUpdate): string {
+  const document = new DOMParser().parseFromString(update.description, 'text/html')
+  if (update.changes.length > 0) {
+    const style = document.createElement('style')
+    style.textContent = '.ntemm-update-change + .ntemm-update-change { margin-top: 12px; } .ntemm-update-change-heading { color: #dcb893; font-size: 11px; }'
+    document.head.append(style)
+
+    for (const change of update.changes) {
+      const block = document.createElement('div')
+      block.className = 'ntemm-update-change'
+      if (change.category) {
+        const heading = document.createElement('div')
+        heading.className = 'ntemm-update-change-heading'
+        heading.textContent = change.category
+        block.append(heading)
+      }
+      const content = document.createElement('div')
+      content.innerHTML = change.text
+      block.append(content)
+      document.body.append(block)
+    }
+  }
+  return document.documentElement.outerHTML
 }
 
 function Author({ author }: { author: GameBananaAuthor }) {
@@ -130,19 +154,19 @@ export default function GameBananaDetail({
             {mod.updates.length > 0 && <section className="gamebanana-detail-section" aria-label="更新信息">
               <h3 className="section-heading">更新信息 <small>{mod.updates.length}</small></h3>
               <div className="gamebanana-updates">
-                {mod.updates.map((update, index) => <GameBananaTranslation key={update.id} html={update.description} title={`更新 ${update.name || update.version || ''}`}>
-                  {({ button, content }) => <details className="gamebanana-update" open={index === 0}>
-                    <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time>{button}</summary>
-                    <div className="gamebanana-update-content">
-                      {update.description && content}
-                      {update.changes.map((change, changeIndex) => <div className="gamebanana-change" key={changeIndex}>
-                        <div className="gamebanana-change-heading"><span>{change.category || '更新'}</span></div>
-                        <GameBananaHtml html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`} />
-                      </div>)}
-                      {!update.description && update.changes.length === 0 && <p className="gamebanana-empty">作者没有填写更新说明。</p>}
-                    </div>
-                  </details>}
-                </GameBananaTranslation>)}
+                {mod.updates.map((update, index) => {
+                  const translationHtml = updateTranslationHtml(update)
+                  return <GameBananaTranslation key={update.id} html={translationHtml} title={`更新 ${update.name || update.version || ''}`}>
+                    {({ button, content }) => <details className="gamebanana-update" open={index === 0}>
+                      <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time>{button}</summary>
+                      <div className="gamebanana-update-content">
+                        {update.description || update.changes.length > 0
+                          ? content
+                          : <p className="gamebanana-empty">作者没有填写更新说明。</p>}
+                      </div>
+                    </details>}
+                  </GameBananaTranslation>
+                })}
               </div>
             </section>}
             <section className="gamebanana-detail-section" aria-label="模组介绍">
