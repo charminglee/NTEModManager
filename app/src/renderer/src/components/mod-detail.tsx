@@ -41,29 +41,26 @@ export default function ModDetail({
   return (
     <aside className="mod-detail ink-panel" aria-label="模组详情">
       <div className="detail-heading">
-        <h2>模组详情</h2>
+        <div className="detail-name-title">
+          <h2>{mod.name}</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="detail-rename-button"
+            disabled={busy}
+            aria-label={`重命名模组：${mod.name}`}
+            title="重命名模组"
+            onClick={() => actions.onRename(mod)}
+          >
+            <Pencil aria-hidden="true" />
+          </Button>
+        </div>
+        <ModStatus mod={mod} />
         <Button variant="ghost" size="icon" aria-label="关闭模组详情" onClick={onClose}>
           <X />
         </Button>
       </div>
       <div className="detail-scroll">
-        <div className="detail-name">
-          <div className="detail-name-title">
-            <h3>{mod.name}</h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="detail-rename-button"
-              disabled={busy}
-              aria-label={`重命名模组：${mod.name}`}
-              title="重命名模组"
-              onClick={() => actions.onRename(mod)}
-            >
-              <Pencil aria-hidden="true" />
-            </Button>
-          </div>
-          <ModStatus mod={mod} />
-        </div>
         <ModBundlePanel
           mod={mod}
           busy={busy}
