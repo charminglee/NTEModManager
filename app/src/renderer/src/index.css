@@ -71,6 +71,7 @@
   --vermilion: #ce3e35;
   --peach: #f4e3de;
   --rule: #d4ccbf;
+  --mod-card-border: #886b50;
   --window-titlebar-height: 35px;
   --window-controls-width: 276px;
   --surface-ink: rgb(32 32 30 / 65%);
@@ -582,7 +583,7 @@ input[type='checkbox'] {
   gap: 0;
   padding: 0;
   overflow: hidden;
-  border: 2px solid #9a9285;
+  border: 2px solid var(--mod-card-border);
   border-radius: var(--radius-lg);
   background: rgb(255 252 246 / 40%);
   color: var(--ink);
@@ -1272,7 +1273,7 @@ select {
   inset: calc(var(--mod-group-clip-top, 0%) + 2px) 2px calc(var(--mod-group-clip-bottom, 0%) + 2px);
   border-radius: calc(var(--radius-lg) - 2px);
   /* 从内缘向外铺满边框颜色，外缘只由分组裁剪一次。 */
-  box-shadow: 0 0 0 var(--radius-lg) hsl(var(--border));
+  box-shadow: 0 0 0 var(--radius-lg) var(--mod-card-border);
   pointer-events: none;
 }
 .mod-group-rows {
