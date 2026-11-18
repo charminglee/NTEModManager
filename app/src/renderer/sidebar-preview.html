@@ -15,22 +15,17 @@
       button { position: relative; isolation: isolate; overflow: hidden; width: 100%; height: 48px; display: flex; align-items: center; gap: 10px; padding: 6px 8px; color: inherit; background: none; border: 0; cursor: pointer; font: 700 15px system-ui; text-align: left }
       button:hover { background: #302f29 } button:focus-visible { outline: 2px solid ivory; outline-offset: -2px }
       button img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover } button b { margin-left: auto; font: 13px monospace }
+      .edge { pointer-events: none; position: absolute; inset: 1px; z-index: -1; padding: 2px; background: var(--accent); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude }
       button { border-radius: 10px }
-      button img, .character-name, button b { position: relative; z-index: 2 }
-      .edge { pointer-events: none; position: absolute; inset: 1px; z-index: 1; padding: 2px; border-radius: 9px; background: var(--accent); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; animation: edge-color 6s ease-in-out infinite }
-      .silk { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; background-color: color-mix(in srgb, var(--second) 68%, #15141d); animation: unfold .66s cubic-bezier(.2,.65,.25,1) }
-      .silk::before, .silk::after { content: ''; position: absolute; inset: 0 }
-      .silk::before { background: linear-gradient(122deg, #181421aa 4%, transparent 23%, var(--accent) 39%, var(--second) 48%, #161420aa 57%, var(--fourth) 75%, var(--accent) 89%); background-size: 155% 100%; animation: drape 7s ease-in-out infinite alternate }
-      .silk-gpu { position: absolute; inset: 0; width: 100%; height: 100% }
-      .silk::after { background: linear-gradient(90deg, #100e1840, #100e1866 43%, #100e1822 74%, #100e1860) }
-      .character-name, button b { text-shadow: 0 1px 3px #16101e }
+      .edge { border-radius: 9px; overflow: hidden; animation: edge-color 6s ease-in-out infinite }
+      .gpu { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .12 }
+      .wave { pointer-events: none; position: absolute; z-index: -1; width: 12px; height: 12px; border-radius: 50%; border: 1px solid currentColor; background: radial-gradient(transparent 30%, color-mix(in srgb, currentColor 58%, transparent)); animation: wave .62s ease-out forwards }
       @keyframes edge-color { 0%, 100% { background-color: var(--accent) } 25% { background-color: var(--second) } 50% { background-color: var(--third) } 75% { background-color: var(--fourth) } }
-      @keyframes unfold { from { clip-path: circle(0 at var(--origin)); filter: brightness(1.35) } to { clip-path: circle(var(--radius) at var(--origin)); filter: brightness(1) } }
-      @keyframes drape { to { background-position: 100% 0 } }
+      @keyframes wave { from { transform: translate(-50%,-50%) scale(.2) } to { transform: translate(-50%,-50%) scale(44); opacity: 0 } }
       article { flex: 2 1 280px; min-height: 240px; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; background: radial-gradient(ellipse at top right,#444034,#282923 65%) }
       article img { width: 95px; height: 95px; align-self: flex-end; object-fit: cover; border-radius: 50%; border: 1px solid #877852 }
       h2 { font-size: 28px; margin: 6px 0 0 } p { color: #bebcb0; font-size: 13px; line-height: 1.7 }
-      @media(prefers-reduced-motion:reduce) { .edge, .silk, .silk::before { animation: none } }
+      @media(prefers-reduced-motion:reduce) { .edge { animation: none } .wave { display: none } }
     </style>
   </head>
   <body><div id="root"></div><script type="module" src="/src/sidebar-preview.tsx"></script></body>

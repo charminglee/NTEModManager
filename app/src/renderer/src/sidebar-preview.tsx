@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Satin, Shader } from 'shaders/react'
+import { Shader, SolidColor } from 'shaders/react'
 
 const characters = [
   { name: '娜娜莉', count: 12, palette: ['#f56b85', '#bf254c', '#fff1e4', '#a298a7'] },
@@ -17,8 +17,8 @@ function subscribeMotion(notify: () => void) {
 
 function Preview() {
   const [selected, select] = useState(0)
-  const [wave, setWave] = useState({ sequence: 0, x: 0, y: 0, radius: 0 })
-  const [engine, setEngine] = useState('点击展开')
+  const [wave, setWave] = useState({ sequence: 0, x: 0, y: 0 })
+  const [engine, setEngine] = useState('正在初始化')
   const reduced = useSyncExternalStore(subscribeMotion, () => motion.matches)
   return <main>
     <small>NTEMM　／　MOTION STUDY　01</small>
@@ -30,19 +30,16 @@ function Preview() {
         select(index)
         const x = event.detail ? event.clientX - rect.left : rect.width / 2
         const y = event.detail ? event.clientY - rect.top : rect.height / 2
-        const radius = Math.ceil(Math.hypot(Math.max(x, rect.width - x), Math.max(y, rect.height - y))) + 2
-        setWave(last => ({ sequence: last.sequence + 1, x, y, radius }))
+        setWave(last => ({ sequence: last.sequence + 1, x, y }))
       }}>
-      {selected === index && <><span className="edge" aria-hidden="true" />{wave.sequence > 0 && <span key={wave.sequence} className="silk" aria-hidden="true"
-        style={{ '--origin': `${wave.x}px ${wave.y}px`, '--radius': `${wave.radius}px` } as CSSProperties}>
-        {!reduced && <Shader className="silk-gpu" disableTelemetry onReady={() => setEngine('WebGPU')} onUnavailable={() => setEngine('CSS 流绸')}>
-          <Satin color={second} highlightColor={third} foldCount={3} foldDirection={32} fiberAngle={32} foldWidth={0.22} foldDepth={0.42} pinning={0.14} weave={0.22} gloss={0.3} speed={0.55} breeze={0.34} />
-        </Shader>}
-      </span>}</>}
-      <img src={`/${name}.png`} alt="" /><span className="character-name">{name}</span><b>{count}</b>
+      {selected === index && <><span className="edge" aria-hidden="true">{!reduced && <Shader className="gpu" disableTelemetry
+        onReady={() => setEngine('WebGPU')} onUnavailable={() => setEngine('CSS 流光')}>
+        <SolidColor color={accent} />
+      </Shader>}</span>{wave.sequence > 0 && <span key={wave.sequence} className="wave" aria-hidden="true" style={{ left: wave.x, top: wave.y, color: accent }} />}</>}
+      <img src={`/${name}.png`} alt="" />{name}<b>{count}</b>
     </button>)}</nav><article><small>角色档案　／　{String(selected + 1).padStart(2, '0')}</small>
       <img src={`/${characters[selected].name}.png`} alt="" /><div><output>{reduced ? '静态描边' : engine}</output><h2>{characters[selected].name}</h2></div>
-    </article></section><p>点击角色，让绸面从指尖铺开。再次点击可重播。</p>
+    </article></section><p>点击角色切换流光，重复点击可重播光波。</p>
   </main>
 }
 
