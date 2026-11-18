@@ -1243,14 +1243,14 @@ select {
 .mod-group-surface::after {
   content: '';
   position: absolute;
-  inset: calc(var(--mod-group-clip-top, 0%) + 1px) 1px calc(var(--mod-group-clip-bottom, 0%) + 1px);
-  border-radius: calc(var(--radius-lg) - 1px);
+  inset: calc(var(--mod-group-clip-top, 0%) + 2px) 2px calc(var(--mod-group-clip-bottom, 0%) + 2px);
+  border-radius: calc(var(--radius-lg) - 2px);
   /* 从内缘向外铺满边框颜色，外缘只由分组裁剪一次。 */
   box-shadow: 0 0 0 var(--radius-lg) #918a7e;
   pointer-events: none;
 }
 .mod-group-rows {
-  padding: 1px;
+  padding: 2px;
 }
 .mod-row {
   position: relative;
