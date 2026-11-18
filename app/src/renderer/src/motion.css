@@ -199,6 +199,36 @@
 [role='alertdialog'][data-state='closed'] {
   animation: motion-exit 160ms ease-in;
 }
+.app-drawer {
+  transform: translate3d(100%, 0, 0);
+  transition-property: transform;
+}
+.app-drawer-overlay {
+  opacity: 0;
+  transition-property: opacity;
+}
+:is(.app-drawer, .app-drawer-overlay)[data-state='open'] {
+  animation: none;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.app-drawer[data-state='open'] {
+  transform: translate3d(0, 0, 0);
+}
+.app-drawer-overlay[data-state='open'] {
+  opacity: 1;
+}
+@starting-style {
+  .app-drawer[data-state='open'] { transform: translate3d(100%, 0, 0); }
+  .app-drawer-overlay[data-state='open'] { opacity: 0; }
+}
+:is(.app-drawer, .app-drawer-overlay)[data-state='closed'] {
+  --drawer-exit-duration: 150ms;
+  transition-duration: var(--drawer-exit-duration);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.75, 0.65);
+  /* 位移可从当前位置反向过渡；此动画只让 Radix 延迟卸载。 */
+  animation: motion-drawer-exit var(--drawer-exit-duration) step-end both;
+}
 .dialog-overlay { animation-duration: 180ms; }
 .background-mask { transition: opacity var(--motion-slow) ease; }
 
@@ -221,6 +251,10 @@
 @keyframes motion-exit {
   from { opacity: 1; }
   to { opacity: 0; }
+}
+@keyframes motion-drawer-exit {
+  from { visibility: visible; }
+  to { visibility: hidden; }
 }
 @keyframes motion-popover-in {
   from { opacity: 0; scale: 0.97; }

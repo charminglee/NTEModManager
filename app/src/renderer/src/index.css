@@ -811,11 +811,6 @@ input[type='checkbox'] {
   border-left: 3px solid #82796c;
   background: #272623;
   box-shadow: -18px 0 40px rgb(0 0 0 / 40%);
-  animation: app-drawer-in 220ms ease-out both;
-}
-@keyframes app-drawer-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
 }
 .app-drawer-header {
   display: flex;

@@ -31,6 +31,7 @@ export function AppDrawer({
       <Dialog.Content
         ref={panelRef}
         className="ink-panel app-drawer"
+        {...(!open ? { inert: '' } : {})}
         onOpenAutoFocus={(event) => {
           previousFocus.current = document.activeElement as HTMLElement | null
           event.preventDefault()

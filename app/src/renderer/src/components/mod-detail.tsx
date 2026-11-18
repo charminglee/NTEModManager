@@ -9,6 +9,7 @@ import ModActions from './mod-actions'
 import ModBundlePanel from './mod-bundle-panel'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 interface Props {
+  open: boolean
   mod: ModInfo
   category: string
   busy: boolean
@@ -16,6 +17,7 @@ interface Props {
   onClose: () => void
 }
 export default function ModDetail({
+  open,
   mod,
   category,
   busy,
@@ -24,7 +26,7 @@ export default function ModDetail({
 }: Props) {
   return (
     <AppDrawer
-      open
+      open={open}
       title={mod.name}
       onClose={onClose}
       onEscapeKeyDown={(event) => {

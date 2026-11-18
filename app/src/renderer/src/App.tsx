@@ -344,7 +344,7 @@ export default function App() {
     [matchingMods, statusFilter]
   )
   useModListMotion(modListRef, visibleMods, currentCategory, view)
-  const focusedMod = detailsOpen
+  const detailMod = focusedName !== null
     ? (visibleMods.find((mod) => mod.name === focusedName) ?? visibleMods[0] ?? null)
     : null
   const activateMod = useCallback((name: string) => {
@@ -1141,7 +1141,7 @@ export default function App() {
                               actions={modCardActions}
                               disabled={busy}
                               selected={selectedNames.has(mod.name)}
-                              active={focusedMod?.name === mod.name}
+                              active={detailsOpen && detailMod?.name === mod.name}
                               displayName={
                                 currentCategory !== ALL_CATEGORY &&
                                 mod.name.startsWith(currentCategory + '-')
@@ -1182,11 +1182,12 @@ export default function App() {
                 ) : null}
               </MotionPresence>
             </main>
-            {focusedMod && !chromeHidden && (
+            {detailMod && (
               <ModDetail
-                key={focusedMod.name}
-                mod={focusedMod}
-                category={categoryForMod(focusedMod, categories)}
+                key={detailMod.name}
+                open={detailsOpen && !chromeHidden}
+                mod={detailMod}
+                category={categoryForMod(detailMod, categories)}
                 busy={busy}
                 actions={modCardActions}
                 onClose={() => setDetailsOpen(false)}
