@@ -44,6 +44,7 @@ export { default as RefreshCcw } from 'lucide-react/dist/esm/icons/refresh-ccw.j
 export { default as RefreshCw } from 'lucide-react/dist/esm/icons/refresh-cw.js'
 export { default as Search } from 'lucide-react/dist/esm/icons/search.js'
 export { default as Settings } from 'lucide-react/dist/esm/icons/settings.js'
+export { default as SlidersHorizontal } from 'lucide-react/dist/esm/icons/sliders-horizontal.js'
 export { default as Trash2 } from 'lucide-react/dist/esm/icons/trash-2.js'
 export { default as TriangleAlert } from 'lucide-react/dist/esm/icons/triangle-alert.js'
 export { default as Upload } from 'lucide-react/dist/esm/icons/upload.js'

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Folder, FolderOpen, Globe, Info, Settings, Wrench } from 'lucide-react'
+import { FolderOpen, Globe, Info, Settings, SlidersHorizontal, Wrench } from 'lucide-react'
 import type { AppConfigData, AppConfigPatch } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -19,7 +19,7 @@ type ToggleKey =
   | 'fpsCounterEnabled'
 const SAVE_DEBOUNCE_MS = 500
 const settingsSections = [
-  { id: 'paths', label: '路径', icon: <Folder size={20} /> },
+  { id: 'paths', label: '通用', icon: <SlidersHorizontal size={20} /> },
   { id: 'preferences', label: '操作偏好', icon: <Settings size={20} /> },
   { id: 'translation', label: '有道翻译', icon: <Globe size={20} /> },
   { id: 'advanced', label: '高级', icon: <Wrench size={20} /> }
@@ -138,7 +138,7 @@ export default function SettingsView({ config, onSaved }: Props) {
       <div className="settings-page">
         <div className="workspace-page-heading">
           <h1>
-            {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : section === 'translation' ? '有道翻译' : '高级设置'}
+            {section === 'paths' ? '通用' : section === 'preferences' ? '操作偏好' : section === 'translation' ? '有道翻译' : '高级'}
           </h1>
         </div>
         <div className="settings-content" key={section}>
