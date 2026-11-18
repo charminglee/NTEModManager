@@ -801,8 +801,8 @@ const api: Api = {
     return { ...mockYoudaoCredentialStatus }
   },
 
-  async translateYoudaoText(text) {
-    return `浏览器预览模拟译文：\n${text}`
+  async translateGameBanana(paragraphs) {
+    return paragraphs.flat().map((text) => `【模拟译文】${text}`)
   },
 
   async updateConfig(patch) {

@@ -12,7 +12,7 @@ export default function GameBananaHtml({ html, title }: { html: string; title: s
         if (/^on/i.test(attribute.name) || attribute.name === 'srcdoc') element.removeAttribute(attribute.name)
       }
     })
-    return `<!doctype html><html><head><meta charset="utf-8">
+    document.head.insertAdjacentHTML('afterbegin', `<meta charset="utf-8">
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' https: data:; media-src 'self' https:; style-src 'unsafe-inline'; frame-src 'none'; form-action 'none'; base-uri https://gamebanana.com;">
       <base href="https://gamebanana.com/">
       <style>
@@ -29,7 +29,8 @@ export default function GameBananaHtml({ html, title }: { html: string; title: s
         blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid #c27b64; color: #c9c0b3; }
         ul, ol { padding-left: 24px; } h1, h2, h3, h4 { line-height: 1.4; } hr { border: 0; border-top: 1px solid #625c52; }
         .spoiler { background: #555; } .spoiler:hover { background: transparent; }
-      </style>${document.head.innerHTML}</head><body>${document.body.innerHTML}</body></html>`
+      </style>`)
+    return `<!doctype html>${document.documentElement.outerHTML}`
   }, [html])
 
   useEffect(() => () => cleanupRef.current(), [])
