@@ -9,7 +9,6 @@ import {
   TriangleAlert,
   X
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -60,7 +59,7 @@ function BatchActionBar({
   return (
     <div className="pointer-events-none absolute bottom-5 left-1/2 z-30 -translate-x-1/2">
       <div className="batch-bar-enter">
-        <div className={cn('pointer-events-auto batch-surface rounded-sm shadow-card')}>
+        <div className="pointer-events-auto batch-surface shadow-card">
           <span className="select-none whitespace-nowrap px-2 text-xs font-semibold text-foreground/90">
             已选 {count} 个
           </span>

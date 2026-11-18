@@ -50,7 +50,7 @@ function TreeRow({ entry, depth, relativeBase, onRenameFile }: TreeRowProps) {
           type="button"
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
-          className="group flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left transition-colors hover:bg-foreground/[0.05]"
+          className="group flex w-full items-center gap-1.5 px-2 py-1 text-left transition-colors hover:bg-foreground/[0.05]"
           style={{ paddingLeft: `${depth * 18 + 8}px` }}
         >
           <ChevronRight className="tree-chevron h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -154,7 +154,7 @@ function FileRow({
               setEditing(false)
             }
           }}
-          className="h-6 rounded-sm px-1.5 py-0 text-[13px]"
+          className="h-6 px-1.5 py-0 text-[13px]"
         />
       </div>
     )

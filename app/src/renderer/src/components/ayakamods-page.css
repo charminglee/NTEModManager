@@ -28,6 +28,7 @@
   min-height: 0;
   overflow: hidden;
   border: 1px solid #857d70;
+  border-radius: var(--radius-xl);
   background: #f7f4ee;
   box-shadow: 0 16px 40px rgb(32 32 30 / 14%);
 }
@@ -64,6 +65,7 @@
   place-items: center;
   margin-bottom: 18px;
   border: 1px solid #857d70;
+  border-radius: var(--radius-lg);
   background: var(--ink);
   color: var(--cream);
 }
@@ -81,6 +83,7 @@
   margin-bottom: 20px;
   padding: 8px 12px;
   border: 1px solid #c7bdad;
+  border-radius: var(--radius-md);
   background: #ffffffa8;
   color: #665e54;
   font: 12px/1.5 Consolas, monospace;
