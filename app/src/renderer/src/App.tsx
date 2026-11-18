@@ -20,6 +20,7 @@ import {
 import { basenameWithoutExtension, joinPath } from '@/lib/format'
 import BackgroundLayer from '@/components/background-layer'
 import MotionPresence from '@/components/motion-presence'
+import { useModGroupViewport } from '@/hooks/use-mod-group-viewport'
 import { useModListMotion } from '@/hooks/use-mod-list-motion'
 import Sidebar from '@/components/sidebar'
 import ModListHeader, { type StatusFilter } from '@/components/mod-list-header'
@@ -340,6 +341,8 @@ export default function App() {
     () => groupBySecondaryName(visibleMods, categories),
     [visibleMods, categories]
   )
+  const modListKey = `${currentCategory}:${statusFilter}`
+  useModGroupViewport(modListRef, groupedMods, view === 'mods' ? modListKey : null)
 
   // ============ 多选状态维护 ============
   // 镜像「屏幕顺序」:分组模式下屏幕顺序是各组按首现位置拼接(组内保序),
@@ -1072,7 +1075,7 @@ export default function App() {
               />
               <div
                 ref={modListRef}
-                key={`${currentCategory}:${statusFilter}`}
+                key={modListKey}
                 className={cn('mod-list-scroll', selectedNames.size > 0 && 'has-batch-actions')}
               >
                 {visibleMods.length === 0 ? (
@@ -1108,24 +1111,28 @@ export default function App() {
                       <div className="mod-group-heading">
                         <h2>{group.secondary || '其他模组'}</h2>
                       </div>
-                      <div className="mod-group-rows">
-                        {group.mods.map((mod) => (
-                          <ModCard
-                            key={mod.name}
-                            mod={mod}
-                            actions={modCardActions}
-                            disabled={busy}
-                            selected={selectedNames.has(mod.name)}
-                            active={focusedMod?.name === mod.name}
-                            displayName={
-                              currentCategory !== ALL_CATEGORY &&
-                              mod.name.startsWith(currentCategory + '-')
-                                ? mod.name.slice(currentCategory.length + 1)
-                                : mod.name
-                            }
-                            onActivate={activateMod}
-                          />
-                        ))}
+                      <div className="mod-group-body">
+                        <div className="mod-group-surface">
+                          <div className="mod-group-rows">
+                            {group.mods.map((mod) => (
+                              <ModCard
+                                key={mod.name}
+                                mod={mod}
+                                actions={modCardActions}
+                                disabled={busy}
+                                selected={selectedNames.has(mod.name)}
+                                active={focusedMod?.name === mod.name}
+                                displayName={
+                                  currentCategory !== ALL_CATEGORY &&
+                                  mod.name.startsWith(currentCategory + '-')
+                                    ? mod.name.slice(currentCategory.length + 1)
+                                    : mod.name
+                                }
+                                onActivate={activateMod}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </section>
                   ))

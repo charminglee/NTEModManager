@@ -44,6 +44,7 @@
 .mod-group-rows > .mod-row:nth-child(-n + 6) {
   animation: motion-content-in 300ms var(--motion-out) backwards;
 }
+.mod-group:nth-child(-n + 6) { animation-name: motion-fade-in; }
 .settings-content > :nth-child(2),
 .mod-group:nth-child(2),
 .mod-group-rows > .mod-row:nth-child(2) { animation-delay: 24ms; }
