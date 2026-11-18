@@ -379,7 +379,7 @@ input[type='checkbox'] {
   width: 100%;
   max-height: calc(100dvh - 40px);
   overflow: hidden;
-  border: 1px solid #82796c;
+  border: 2px solid #82796c;
   border-radius: var(--radius-xl);
   background: #272623;
   color: var(--dialog-text);
@@ -614,7 +614,6 @@ input[type='checkbox'] {
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  border: 1px solid #82796c;
   background: #272623;
   color: var(--paper);
 }
@@ -694,7 +693,7 @@ input[type='checkbox'] {
 .gamebanana-replies { margin: 18px 0 0 15px; border-left: 2px solid #766148; padding-left: 22px; }
 .gamebanana-detail-state { flex: 1; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 25px; color: #d5c8b4; }
 .gamebanana-detail-state p { max-width: 600px; overflow-wrap: anywhere; }
-.gamebanana-lightbox.dialog-panel { max-width: min(1800px, calc(100vw - 64px)); height: min(1040px, calc(100dvh - 120px)); margin-top: 35px; display: flex; flex-direction: column; gap: 14px; background: #1d1c19; color: #eee5d8; border: 1px solid #7b6b55; }
+.gamebanana-lightbox.dialog-panel { max-width: min(1800px, calc(100vw - 64px)); height: min(1040px, calc(100dvh - 120px)); margin-top: 35px; display: flex; flex-direction: column; gap: 14px; background: #1d1c19; color: #eee5d8; border-color: #7b6b55; }
 .gamebanana-lightbox-meta { color: #c3b49e; font-size: 12px; text-align: right; }
 .gamebanana-lightbox-body { gap: 0; padding: 0; overflow: hidden; }
 .gamebanana-lightbox-canvas { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; background: #121210; }
@@ -780,7 +779,7 @@ input[type='checkbox'] {
   width: min(440px, 100vw);
   flex-direction: column;
   overflow: hidden;
-  border-left: 1px solid #82796c;
+  border-left: 3px solid #82796c;
   border-radius: var(--radius-xl) 0 0 var(--radius-xl);
   background: #272623;
   color: var(--paper);
