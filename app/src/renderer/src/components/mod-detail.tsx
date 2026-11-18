@@ -1,5 +1,5 @@
 import { FolderOpen, Package, PackageOpen, Pencil, RefreshCw } from 'lucide-react'
-import type { ModInfo } from '@shared/types'
+import type { ModFileEntry, ModInfo } from '@shared/types'
 import type { ModCardActions } from './mod-card'
 import { ModStatus } from './mod-card'
 import { Button } from './ui/button'
@@ -24,6 +24,14 @@ export default function ModDetail({
   actions,
   onClose
 }: Props) {
+  let fileCount = 0
+  const entries: ModFileEntry[] = [...mod.files]
+  while (entries.length > 0) {
+    const entry = entries.pop()!
+    if (entry.directory) entries.push(...entry.children)
+    else fileCount += 1
+  }
+
   return (
     <AppDrawer
       open={open}
@@ -110,6 +118,8 @@ export default function ModDetail({
         <dl className="detail-metadata">
           <dt>文件大小</dt>
           <dd>{formatFileSize(mod.sizeBytes)}</dd>
+          <dt>文件数量</dt>
+          <dd>{fileCount} 个</dd>
           <dt>导入时间</dt>
           <dd>{formatImportedAt(mod.importedAt)}</dd>
           <dt>角色分类</dt>
