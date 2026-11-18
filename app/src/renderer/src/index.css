@@ -1166,6 +1166,7 @@ select {
 .mod-list-scroll {
   flex: 1;
   min-height: 0;
+  border-radius: var(--radius-md);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 3px 1px 20px;
@@ -1193,29 +1194,21 @@ select {
   min-width: 60px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
 }
-.mod-group-body {
-  --group-viewport-top: 0px;
-  --group-viewport-bottom: 0px;
-  padding-block: var(--group-viewport-top) var(--group-viewport-bottom);
-}
 .mod-group-surface {
   position: relative;
-  display: flow-root;
   border-radius: var(--radius-lg);
-  overflow: clip;
 }
 .mod-group-surface::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border: 1px solid #918a7e;
+  inset: var(--mod-group-clip-top, 0%) 0 var(--mod-group-clip-bottom, 0%);
   border-radius: inherit;
+  box-shadow: inset 0 0 0 1px #918a7e;
   pointer-events: none;
 }
 .mod-group-rows {
   padding: 1px;
-  /* 抵消外层留白，使圆角面板缩短时模组行仍在原来的滚动位置。 */
-  margin-block: calc(-1 * var(--group-viewport-top)) calc(-1 * var(--group-viewport-bottom));
+  clip-path: inset(var(--mod-group-clip-top, 0%) 0 var(--mod-group-clip-bottom, 0%) round var(--radius-lg));
 }
 .mod-row {
   position: relative;

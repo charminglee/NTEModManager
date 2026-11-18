@@ -55,6 +55,33 @@
 .mod-group:nth-child(n + 4),
 .mod-group-rows > .mod-row:nth-child(n + 4) { animation-delay: 72ms; }
 
+@property --mod-group-clip-top {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+@property --mod-group-clip-bottom {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+/* 穿过视口任一边缘时，裁剪进度等于越过该边缘的分组高度占比。 */
+@supports (animation-timeline: view(block 0px)) and (animation-range: entry-crossing) {
+  .mod-group-surface {
+    animation: mod-group-enter auto linear both, mod-group-exit auto linear both;
+    animation-timeline: view(block 0px), view(block 0px);
+    animation-range: entry-crossing, exit-crossing;
+  }
+}
+@keyframes mod-group-enter {
+  from { --mod-group-clip-bottom: 100%; }
+  to { --mod-group-clip-bottom: 0%; }
+}
+@keyframes mod-group-exit {
+  from { --mod-group-clip-top: 0%; }
+  to { --mod-group-clip-top: 100%; }
+}
+
 /* 将退场限制在面板本身，避免影响窗口按钮、提示和固定定位。 */
 .motion-presence { display: contents; }
 .motion-presence[data-state='closed'] > * {
@@ -204,6 +231,7 @@
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
+  .mod-group-surface { animation-duration: auto !important; }
   .app-shell button:active:not(:disabled),
   .dialog-panel button:active:not(:disabled),
   .overlay-panel button:active:not(:disabled),
