@@ -294,6 +294,39 @@ input[type='checkbox'] {
   display: flex;
   gap: 6px;
 }
+.global-toolbar nav,
+.sidebar-sections {
+  position: relative;
+  isolation: isolate;
+}
+/* 分割线和悬浮底色在下，选中层居中，图标和文字在上。 */
+.nav-selection-highlight {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  border-radius: var(--radius-md);
+  background: var(--vermilion);
+  pointer-events: none;
+}
+.global-nav-item,
+.sidebar-row {
+  position: relative;
+}
+:is(.global-nav-item, .sidebar-row)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.nav-item-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: inherit;
+}
 .global-nav-item {
   display: flex;
   align-items: center;
@@ -307,11 +340,8 @@ input[type='checkbox'] {
   font-size: 17px;
   font-weight: 800;
 }
-.global-nav-item.is-active {
-  background: var(--vermilion);
-}
-.global-nav-item:not(.is-active):hover {
-  background: #393832;
+.global-nav-item:not([aria-current='page']):hover::before {
+  background-color: #393832;
 }
 .gamebanana-nav-icon {
   display: block;
@@ -968,6 +998,12 @@ input[type='checkbox'] {
   border-right: 3px solid var(--paper);
   min-height: 0;
 }
+.sidebar-sections {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
 .sidebar-row {
   display: flex;
   align-items: center;
@@ -980,11 +1016,12 @@ input[type='checkbox'] {
   border: 0;
   text-align: left;
 }
-.sidebar-row[aria-current='page'] {
-  background: var(--vermilion);
+.sidebar-row:not([aria-current='page']):hover::before {
+  background-color: #35342f;
 }
-.sidebar-row:not([aria-current='page']):hover {
-  background: #35342f;
+.sidebar-row > .nav-item-content {
+  flex: 1;
+  min-width: 0;
 }
 .sidebar-icon {
   width: 35px;

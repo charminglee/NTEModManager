@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import NavSelectionHighlight from './nav-selection-highlight'
 
 interface SidebarItem<Id extends string> {
   id: Id
@@ -32,23 +33,28 @@ export default function Sidebar<Id extends string>({
       aria-current={activeId === id ? 'page' : undefined}
       onClick={() => onSelect(id)}
     >
-      <span className="sidebar-icon" aria-hidden="true">
-        {icon}
+      <span className="nav-item-content">
+        <span className="sidebar-icon" aria-hidden="true">
+          {icon}
+        </span>
+        <span className="sidebar-label">{label}</span>
+        {count !== undefined && <span className="sidebar-count">{count}</span>}
       </span>
-      <span className="sidebar-label">{label}</span>
-      {count !== undefined && <span className="sidebar-count">{count}</span>}
     </button>
   )
 
   return (
     <nav className="app-sidebar ink-panel" aria-label={label}>
-      <div className="sidebar-scroll">
-        {items.map(renderItem)}
-        {items.length === 0 && emptyMessage && <p className="px-3 py-5 text-sm">{emptyMessage}</p>}
+      <div className="sidebar-sections">
+        <NavSelectionHighlight />
+        <div className="sidebar-scroll" data-nav-selection-scroll>
+          {items.map(renderItem)}
+          {items.length === 0 && emptyMessage && <p className="px-3 py-5 text-sm">{emptyMessage}</p>}
+        </div>
+        {footerItems && footerItems.length > 0 && (
+          <div className="sidebar-footer">{footerItems.map(renderItem)}</div>
+        )}
       </div>
-      {footerItems && footerItems.length > 0 && (
-        <div className="sidebar-footer">{footerItems.map(renderItem)}</div>
-      )}
     </nav>
   )
 }

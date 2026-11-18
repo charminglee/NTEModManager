@@ -1,7 +1,7 @@
 import { Fragment } from 'react'
 import { FileText, LoaderCircle, Package, Play, Settings } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { HeaderModActions } from './header-mod-actions'
+import NavSelectionHighlight from './nav-selection-highlight'
 import gamebananaIcon from '@/assets/gamebanana.png'
 import ayakamodsIcon from '@/assets/ayakamods.png'
 
@@ -64,6 +64,7 @@ export default function AppHeader({
       )}
       <div className="global-toolbar">
         <nav aria-label="主导航">
+          <NavSelectionHighlight />
           {(
             [
               { id: 'mods', label: '模组库', Icon: Package },
@@ -79,12 +80,14 @@ export default function AppHeader({
               )}
               <button
                 type="button"
-                className={cn('global-nav-item', view === id && 'is-active')}
+                className="global-nav-item"
                 aria-current={view === id ? 'page' : undefined}
                 onClick={() => onNavigate(id)}
               >
-                <Icon size={19} />
-                {label}
+                <span className="nav-item-content">
+                  <Icon size={19} />
+                  {label}
+                </span>
               </button>
             </Fragment>
           ))}

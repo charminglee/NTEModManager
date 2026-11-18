@@ -99,6 +99,12 @@
   animation: motion-dialog-in var(--motion-slow) var(--motion-settle);
 }
 
+.nav-selection-highlight[data-moving] {
+  transition-property: transform, width, height;
+  transition-duration: var(--motion-normal);
+  transition-timing-function: var(--motion-out);
+}
+
 /* 控件仅过渡明确的属性，不让布局尺寸跟随 transition-all。 */
 .app-shell button,
 .dialog-panel button,
@@ -109,9 +115,20 @@
   transition-duration: var(--motion-fast);
   transition-timing-function: ease-out;
 }
-.app-shell button:active:not(:disabled),
+.app-shell button:active:not(:disabled, .global-nav-item, .sidebar-row),
 .dialog-panel button:active:not(:disabled),
 .overlay-panel button:active:not(:disabled) {
+  scale: 0.975;
+  transition-duration: 70ms;
+}
+:is(.global-nav-item, .sidebar-row)::before {
+  transition: background-color var(--motion-fast) ease-out, scale var(--motion-fast) ease-out;
+}
+.nav-item-content {
+  transition: scale var(--motion-fast) ease-out;
+}
+:is(.global-nav-item, .sidebar-row):active::before,
+:is(.global-nav-item, .sidebar-row):active > .nav-item-content {
   scale: 0.975;
   transition-duration: 70ms;
 }
@@ -234,6 +251,8 @@
   .app-shell button:active:not(:disabled),
   .dialog-panel button:active:not(:disabled),
   .overlay-panel button:active:not(:disabled),
+  :is(.global-nav-item, .sidebar-row):active::before,
+  :is(.global-nav-item, .sidebar-row):active > .nav-item-content,
   .sidebar-row:hover .sidebar-icon { scale: 1; }
   .sidebar-row:hover .sidebar-label,
   .mod-row:hover .mod-package-icon { translate: none; }
