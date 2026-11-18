@@ -31,7 +31,19 @@ export default function Sidebar<Id extends string>({
       type="button"
       className="sidebar-row"
       aria-current={activeId === id ? 'page' : undefined}
-      onClick={() => onSelect(id)}
+      onClick={({ currentTarget }) => {
+        const scroll = currentTarget.closest<HTMLElement>('[data-nav-selection-scroll]')
+        if (scroll) {
+          const row = currentTarget.getBoundingClientRect()
+          const viewport = scroll.getBoundingClientRect()
+          if (row.top < viewport.top) {
+            scroll.scrollBy({ top: Math.floor(row.top - viewport.top), behavior: 'instant' })
+          } else if (row.bottom > viewport.bottom) {
+            scroll.scrollBy({ top: Math.ceil(row.bottom - viewport.bottom), behavior: 'instant' })
+          }
+        }
+        onSelect(id)
+      }}
     >
       <span className="nav-item-content">
         <span className="sidebar-icon" aria-hidden="true">
