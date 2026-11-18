@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Folder, FolderOpen, Info, Settings, Wrench } from 'lucide-react'
+import { Folder, FolderOpen, Globe, Info, Settings, Wrench } from 'lucide-react'
 import type { AppConfigData, AppConfigPatch } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import Switch from './ui/switch'
 import Sidebar from './sidebar'
 import { toast } from './toast-card'
+import YoudaoSettings from './youdao-settings'
 interface Props {
   config: AppConfigData
   onSaved: (config: AppConfigData, refresh: boolean) => void
@@ -20,6 +21,7 @@ const SAVE_DEBOUNCE_MS = 500
 const settingsSections = [
   { id: 'paths', label: '路径', icon: <Folder size={20} /> },
   { id: 'preferences', label: '操作偏好', icon: <Settings size={20} /> },
+  { id: 'translation', label: '有道翻译', icon: <Globe size={20} /> },
   { id: 'advanced', label: '高级', icon: <Wrench size={20} /> }
 ] as const
 const pathFields = [
@@ -136,7 +138,7 @@ export default function SettingsView({ config, onSaved }: Props) {
       <div className="settings-page">
         <div className="workspace-page-heading">
           <h1>
-            {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : '高级设置'}
+            {section === 'paths' ? '路径设置' : section === 'preferences' ? '操作偏好' : section === 'translation' ? '有道翻译' : '高级设置'}
           </h1>
         </div>
         <div className="settings-content" key={section}>
@@ -209,6 +211,7 @@ export default function SettingsView({ config, onSaved }: Props) {
               </div>
             </>
           )}
+          {section === 'translation' && <YoudaoSettings />}
           {section === 'advanced' && (
             <>
               {toggle('testImagesEnabled', '使用测试背景图', '调试时使用固定的测试图片目录。')}

@@ -121,6 +121,16 @@ export interface AppConfigPatch {
   gameBananaInstallAfterDownload?: boolean
 }
 
+export interface YoudaoCredentialsStatus {
+  configured: boolean
+  appId: string
+}
+
+export interface YoudaoCredentialsInput {
+  appId: string
+  appSecret: string
+}
+
 export interface GameBananaFile {
   id: string
   name: string

@@ -14,6 +14,7 @@ import {
   type LogEntry,
   type ModFileEntry,
   type ModInfo,
+  type YoudaoCredentialsStatus,
   type WindowState
 } from '@shared/types'
 
@@ -423,6 +424,8 @@ const config: AppConfigData = {
   gameBananaInstallAfterDownload: false
 }
 
+let mockYoudaoCredentialStatus: YoudaoCredentialsStatus = { configured: false, appId: '' }
+
 const bootstrapLogs: LogEntry[] = [
   {
     level: 'info',
@@ -782,6 +785,24 @@ const api: Api = {
 
   async getConfig() {
     return { ...config }
+  },
+
+  async getYoudaoCredentialsStatus() {
+    return { ...mockYoudaoCredentialStatus }
+  },
+
+  async saveYoudaoCredentials(input) {
+    mockYoudaoCredentialStatus = { configured: true, appId: input.appId.trim() }
+    return { ...mockYoudaoCredentialStatus }
+  },
+
+  async clearYoudaoCredentials() {
+    mockYoudaoCredentialStatus = { configured: false, appId: '' }
+    return { ...mockYoudaoCredentialStatus }
+  },
+
+  async translateYoudaoText(text) {
+    return `浏览器预览模拟译文：\n${text}`
   },
 
   async updateConfig(patch) {

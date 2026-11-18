@@ -708,6 +708,14 @@ input[type='checkbox'] {
 .gamebanana-change + .gamebanana-change { margin-top: 12px; }
 .gamebanana-change > span { color: #dcb893; font-size: 11px; padding-top: 3px; overflow-wrap: anywhere; }
 .gamebanana-html { display: block; width: 100%; min-height: 28px; border: 0; color-scheme: dark; }
+.gamebanana-translatable { min-width: 0; }
+.gamebanana-translation-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 6px; }
+.gamebanana-translation-toolbar > button { height: 28px; padding-inline: 8px; color: #d9b79a; }
+.gamebanana-translation-toolbar > button:hover { color: #f3d1b3; }
+.gamebanana-translation-error { color: #f0a393; font-size: 11px; overflow-wrap: anywhere; }
+.gamebanana-translation-result { margin-top: 10px; padding: 12px 14px; border-left: 2px solid #ce725a; background: #ffffff08; color: #eee5d8; }
+.gamebanana-translation-result > div { margin-bottom: 5px; color: #d1b28b; font-size: 10px; }
+.gamebanana-translation-result p { margin: 0; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .gamebanana-file-row { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 18px 0; border-bottom: 1px solid #554c40; }
 .gamebanana-file-row:first-child { padding-top: 0; }
 .gamebanana-file-row:last-child { padding-bottom: 0; border: 0; }
@@ -1581,6 +1589,7 @@ select {
   line-height: 1.7;
   color: #514a42;
 }
+.settings-translation-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .settings-note {
   display: flex;
   align-items: center;

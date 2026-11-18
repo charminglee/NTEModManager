@@ -11,6 +11,8 @@ import type {
   LogEntry,
   ModInfo,
   OperationResult,
+  YoudaoCredentialsInput,
+  YoudaoCredentialsStatus,
   WindowAction,
   WindowState
 } from '../shared/types'
@@ -131,6 +133,13 @@ const api = {
     ipcRenderer.invoke('gamebanana:list', page),
   getGameBananaMod: (modId: number): Promise<GameBananaMod> =>
     ipcRenderer.invoke('gamebanana:detail', modId),
+  getYoudaoCredentialsStatus: (): Promise<YoudaoCredentialsStatus> =>
+    ipcRenderer.invoke('youdao:credentialsStatus'),
+  saveYoudaoCredentials: (input: YoudaoCredentialsInput): Promise<YoudaoCredentialsStatus> =>
+    ipcRenderer.invoke('youdao:saveCredentials', input),
+  clearYoudaoCredentials: (): Promise<YoudaoCredentialsStatus> =>
+    ipcRenderer.invoke('youdao:clearCredentials'),
+  translateYoudaoText: (text: string): Promise<string> => ipcRenderer.invoke('youdao:translate', text),
   getGameBananaTasks: (): Promise<GameBananaDownloadTask[]> =>
     ipcRenderer.invoke('gamebanana:tasks'),
   getAyakaModsTasks: (): Promise<GameBananaDownloadTask[]> =>

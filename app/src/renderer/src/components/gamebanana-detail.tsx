@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Download, ExternalLink, LoaderCircle, Triang
 import type { GameBananaAuthor, GameBananaComment, GameBananaFile, GameBananaMod } from '@shared/types'
 import { Button } from './ui/button'
 import { AppDialog } from './ui/dialog'
-import GameBananaHtml from './gamebanana-html'
+import GameBananaTranslation from './gamebanana-translation'
 import { formatFileSize } from '@/lib/format'
 
 function date(timestamp: number): string {
@@ -36,7 +36,7 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
 function Comments({ comments }: { comments: GameBananaComment[] }) {
   return <div className="gamebanana-comments">{comments.map((comment) => <article className="gamebanana-comment" key={comment.id}>
     <header><Author author={comment.author} /><div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span>{comment.editedAt > 0 && <span>编辑于 {date(comment.editedAt)}</span>}</div></header>
-    <GameBananaHtml title={`${comment.author.name} 的评论`} html={comment.content} />
+    <GameBananaTranslation title={`${comment.author.name} 的评论`} html={comment.content} />
     {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments comments={comment.replies} /></div>}
   </article>)}</div>
 }
@@ -130,8 +130,8 @@ export default function GameBananaDetail({
                 {mod.updates.map((update, index) => <details className="gamebanana-update" key={update.id} open={index === 0}>
                   <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time></summary>
                   <div className="gamebanana-update-content">
-                    {update.description && <GameBananaHtml html={update.description} title={`更新 ${update.name}`} />}
-                    {update.changes.map((change, changeIndex) => <div className="gamebanana-change" key={changeIndex}><span>{change.category || '更新'}</span><GameBananaHtml html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`} /></div>)}
+                    {update.description && <GameBananaTranslation html={update.description} title={`更新 ${update.name}`} />}
+                    {update.changes.map((change, changeIndex) => <div className="gamebanana-change" key={changeIndex}><span>{change.category || '更新'}</span><GameBananaTranslation html={change.text} title={`${update.name} 变更 ${changeIndex + 1}`} /></div>)}
                     {!update.description && update.changes.length === 0 && <p className="gamebanana-empty">作者没有填写更新说明。</p>}
                   </div>
                 </details>)}
@@ -139,8 +139,8 @@ export default function GameBananaDetail({
             </section>}
             <section className="gamebanana-detail-section" aria-label="模组介绍">
               <h3 className="section-heading">模组介绍</h3>
-              {mod.description ? <GameBananaHtml html={mod.description} title="模组介绍" /> : <p className="gamebanana-empty">作者没有提供介绍。</p>}
-              {mod.installInstructions && <><h4>安装说明</h4><GameBananaHtml html={mod.installInstructions} title="安装说明" /></>}
+              {mod.description ? <GameBananaTranslation html={mod.description} title="模组介绍" /> : <p className="gamebanana-empty">作者没有提供介绍。</p>}
+              {mod.installInstructions && <><h4>安装说明</h4><GameBananaTranslation html={mod.installInstructions} title="安装说明" /></>}
             </section>
             <section className="gamebanana-detail-section" aria-label="模组文件">
               <h3 className="section-heading">模组文件 <small>{mod.files.length}</small></h3>

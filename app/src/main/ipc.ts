@@ -17,7 +17,13 @@ import {
   listMods as listGameBananaMods,
   setTaskBroadcaster
 } from './gamebanana'
-import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult } from '../shared/types'
+import {
+  clearYoudaoCredentials,
+  getYoudaoCredentialsStatus,
+  saveYoudaoCredentials,
+  translateYoudaoText
+} from './youdao-translation'
+import type { AppConfigPatch, BatchModAction, ImportResult, ModInfo, OperationResult, YoudaoCredentialsInput } from '../shared/types'
 import { cancelDownload, getPendingDownloads, prepareDownload } from './ayakamods'
 
 type ProgressReporter = (message: string) => void
@@ -245,6 +251,15 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('gamebanana:list', (_event, page: number) => listGameBananaMods(page))
   ipcMain.handle('gamebanana:detail', (_event, modId: number) => getGameBananaMod(modId))
+  ipcMain.handle('youdao:credentialsStatus', () => getYoudaoCredentialsStatus())
+  ipcMain.handle('youdao:saveCredentials', (_event, input: YoudaoCredentialsInput) => {
+    if (!input || typeof input.appId !== 'string' || typeof input.appSecret !== 'string') {
+      throw new Error('有道翻译凭据格式无效。')
+    }
+    return saveYoudaoCredentials(input)
+  })
+  ipcMain.handle('youdao:clearCredentials', () => clearYoudaoCredentials())
+  ipcMain.handle('youdao:translate', (_event, text: string) => translateYoudaoText(text))
   ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))
   ipcMain.handle('ayakamods:pendingDownloads', () => getPendingDownloads())
   ipcMain.handle('ayakamods:tasks', () => getGameBananaTasks().filter((task) => task.source === 'ayakamods'))
