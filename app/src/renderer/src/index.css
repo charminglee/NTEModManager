@@ -823,9 +823,6 @@ input[type='checkbox'] {
   flex-shrink: 0;
   padding-top: 12px;
 }
-.gamebanana-queue-button {
-  margin-left: auto;
-}
 .app-drawer-overlay {
   position: fixed;
   inset: 0;

@@ -271,7 +271,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
         )}
 
         <div className="gamebanana-page-footer">
-          <Button variant="secondary" className="gamebanana-queue-button" onClick={() => setDrawerOpen(true)}>
+          <Button onClick={() => setDrawerOpen(true)}>
             <Download />下载列表{activeTaskCount > 0 ? `  ·  ${activeTaskCount}` : ''}
           </Button>
         </div>

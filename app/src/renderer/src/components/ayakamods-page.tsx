@@ -171,7 +171,7 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
         </div>
       </div>
       <div className="gamebanana-page-footer">
-        <Button variant="secondary" className="gamebanana-queue-button" onClick={() => setDrawerOpen(true)}>
+        <Button onClick={() => setDrawerOpen(true)}>
           <Download />下载列表{tasks.some((task) => !['completed', 'failed'].includes(task.status))
             ? `  ·  ${tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length}` : ''}
         </Button>
