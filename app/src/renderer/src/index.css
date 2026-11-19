@@ -1651,6 +1651,10 @@ select {
   font-weight: 750;
   padding-top: 7px;
 }
+.settings-field > div > input,
+.settings-input-row {
+  width: calc(100% - 250px);
+}
 .settings-input-row {
   display: flex;
   gap: 10px;
