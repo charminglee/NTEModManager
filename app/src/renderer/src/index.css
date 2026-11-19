@@ -698,9 +698,21 @@ input[type='checkbox'] {
 .gamebanana-update, .gamebanana-archives { border: 1px solid #61574a; border-radius: var(--radius-lg); }
 .gamebanana-update { background: #ffffff03; }
 .gamebanana-update + .gamebanana-update { margin-top: 10px; }
+.gamebanana-update::details-content {
+  block-size: 0;
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  transition-property: block-size, content-visibility;
+  transition-duration: var(--motion-normal);
+  transition-timing-function: var(--motion-out);
+  transition-behavior: allow-discrete;
+}
+.gamebanana-update[open]::details-content { block-size: auto; }
 .gamebanana-update summary, .gamebanana-archives summary { display: flex; align-items: center; gap: 9px; padding: 15px 16px; cursor: pointer; list-style: none; }
 .gamebanana-update summary::-webkit-details-marker, .gamebanana-archives summary::-webkit-details-marker { display: none; }
-.gamebanana-update summary > svg, .gamebanana-archives summary > svg { width: 15px; height: 15px; flex-shrink: 0; color: #c2b39d; transition: transform 160ms ease; }
+.gamebanana-update summary > svg, .gamebanana-archives summary > svg { width: 15px; height: 15px; flex-shrink: 0; color: #c2b39d; }
+.gamebanana-update summary > svg { transition: transform var(--motion-normal) var(--motion-out); }
+.gamebanana-archives summary > svg { transition: transform 160ms ease; }
 .gamebanana-update[open] summary > svg { transform: rotate(90deg); }
 .gamebanana-update summary strong { font-size: 14px; overflow-wrap: anywhere; }
 .gamebanana-update summary time { margin-left: auto; font-size: 11px; color: #c2b29c; }
@@ -778,6 +790,7 @@ input[type='checkbox'] {
 }
 @media (prefers-reduced-motion: reduce) {
   .gamebanana-screenshots img, .gamebanana-update summary > svg, .gamebanana-archives summary > svg { transition: none; }
+  .gamebanana-update::details-content { transition: none; }
 }
 .gamebanana-state {
   display: flex;
