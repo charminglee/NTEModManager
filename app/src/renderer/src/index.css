@@ -1602,8 +1602,7 @@ select {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: safe center;
+  align-items: center;
   padding: 32px 28px;
 }
 .settings-content > * {
