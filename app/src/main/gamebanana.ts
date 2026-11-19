@@ -19,6 +19,7 @@ import { describeError, logger } from './logger'
 
 const API_BASE = 'https://api.gamebanana.com'
 const NTE_GAME_ID = 23012
+const POST_STATUS_TRASHED = 3
 const MOD_FIELDS = [
   'name',
   'authors',
@@ -201,16 +202,21 @@ function parseUpdates(records: Record<string, unknown>[]): GameBananaUpdate[] {
 }
 
 async function parseComments(records: Record<string, unknown>[]): Promise<GameBananaComment[]> {
-  return Promise.all(records.map(async (record) => ({
-    id: String(record._idRow ?? ''),
-    author: parseAuthor(record._aPoster),
-    uploadedAt: Number(record._tsDateAdded ?? 0),
-    editedAt: Number(record._tsDateModified ?? 0),
-    content: String(record._sText ?? ''),
-    replies: Number(record._nReplyCount ?? 0) > 0
+  const threads = await Promise.all(records.map(async (record) => {
+    const replies = Number(record._nReplyCount ?? 0) > 0
       ? await parseComments(await getAllRecords<Record<string, unknown>>(`/Post/${record._idRow}/Posts`))
       : []
-  })))
+    if (record._nStatus === POST_STATUS_TRASHED) return replies
+    return [{
+      id: String(record._idRow ?? ''),
+      author: parseAuthor(record._aPoster),
+      uploadedAt: Number(record._tsDateAdded ?? 0),
+      editedAt: Number(record._tsDateModified ?? 0),
+      content: String(record._sText ?? ''),
+      replies
+    }]
+  }))
+  return threads.flat()
 }
 
 function parseMod(id: number, value: Record<string, unknown>): GameBananaMod {
