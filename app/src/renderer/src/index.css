@@ -1690,14 +1690,6 @@ select {
   font-size: 11px;
   color: #514a42;
 }
-.settings-exempt-groups {
-  flex-wrap: wrap;
-}
-.settings-exempt-groups > input {
-  width: 320px;
-  max-width: 100%;
-  margin-left: auto;
-}
 .settings-config-file {
   padding: 10px 0 24px;
 }
