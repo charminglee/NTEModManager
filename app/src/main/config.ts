@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { dirname, join } from 'node:path'
 import { describeError, logger } from './logger'
 import { ntemmConfigFile } from './ntemm-paths'
+import { builtInPackagerDirectory } from './packager'
 import { parseIni, serializeIni, splitList, unquote } from './ini'
 import type { AppConfigData, AppConfigPatch } from '../shared/types'
 import {
@@ -217,6 +218,9 @@ export function getAppConfig(): AppConfigData {
 
   return {
     configPath: configFilePath(),
+    workbenchAesKey: readIni().Workbench?.aes_key || '',
+    workbenchMapping: getPath('workbench_mapping', join(builtInPackagerDirectory(), 'Mappings', 'HT-5.6.1-0+UE5-0196ef29.usmap')),
+    workbenchExportDirectory: getPath('workbench_exports', join(app.getPath('documents'), 'NTEMM', 'Exports')),
     gameDirectory: deriveGameDirectory(modsDirectory, gameLauncher),
     modsDirectory,
     backupsDirectory: getPath('backups_directory', 'E:/NteMod/Backups'),
@@ -349,6 +353,8 @@ export function pythonModelCache(): string {
 }
 
 const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
+  workbenchMapping: 'workbench_mapping',
+  workbenchExportDirectory: 'workbench_exports',
   modsDirectory: 'mods_directory',
   backupsDirectory: 'backups_directory',
   backgroundImagesDirectory: 'background_images_directory',
@@ -358,6 +364,11 @@ const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
 /** 设置界面保存:将补丁写入配置文件,未指定的字段保持原值。 */
 export function updateAppConfig(patch: AppConfigPatch): void {
   const ini = readIni()
+  if (patch.workbenchAesKey !== undefined) {
+    const key = patch.workbenchAesKey.trim()
+    if (key && !/^(?:0x)?[0-9a-f]{64}$/i.test(key)) throw new Error('AES 密钥需要 64 位十六进制字符。')
+    ini.Workbench = { ...ini.Workbench, aes_key: key }
+  }
 
   // 打包器已随应用内置，保存设置时清理旧版可配置路径。
   if (ini.Paths) {
