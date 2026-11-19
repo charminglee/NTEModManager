@@ -1,9 +1,10 @@
 import type { DownloadItem, Session, WebContents } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { rename, rm } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { copyFile, rename, rm } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import type { AyakaModsDownloadRequest } from '../shared/types'
-import { getAppConfig } from './config'
+import { ntemmCacheDir } from './ntemm-paths'
 import { createDownloadTask, executeDownloadTask, updateTask } from './gamebanana'
 import { describeError, logger } from './logger'
 
@@ -35,7 +36,7 @@ export function registerAyakaModsDownloads(
       return
     }
     const request = { id: randomUUID(), fileName, sizeBytes: item.getTotalBytes() }
-    const path = join(getAppConfig().backupsDirectory, '.ayakamods-downloads', `${request.id}${extname(fileName)}`)
+    const path = join(ntemmCacheDir(), 'ayakamods-downloads', `${request.id}${extname(fileName)}`)
     item.setSavePath(path)
     item.pause()
     const download: PendingDownload = {
@@ -95,7 +96,12 @@ export function prepareDownload(id: string, customName: string, installAfterDown
           const state = await download.finished
           if (state !== 'completed') throw new Error(`AyakaMods 文件下载未完成：${state}`)
           updateTask(taskId, { downloadedBytes: download.downloadedBytes })
-          await rename(download.path, targetPath)
+          try {
+            await rename(download.path, targetPath)
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error
+            await copyFile(download.path, targetPath, constants.COPYFILE_EXCL)
+          }
         })
       } finally {
         if (download.state === 'progressing') download.item.cancel()
