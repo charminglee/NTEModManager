@@ -18,6 +18,7 @@ import { builtInPackagerDirectory } from './packager'
 import { registerWindowLifecycle } from './window-lifecycle'
 import { registerWindowControls } from './window-controls'
 import { cancelPendingDownloads, registerAyakaModsDownloads } from './ayakamods'
+import { parseYouTubeEmbedUrl, YOUTUBE_EMBED_SOURCES } from '../shared/youtube'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -107,7 +108,10 @@ app.on('web-contents-created', (_event, contents) => {
     }
   }
   contents.on('will-navigate', guardNavigation)
-  contents.on('will-redirect', guardNavigation)
+  contents.on('will-redirect', (event) => {
+    if (contents === mainWindow?.webContents && !event.isMainFrame && parseYouTubeEmbedUrl(event.url)) return
+    guardNavigation(event, event.url)
+  })
   if (isAyakaModsWebview) return
   // 渲染层的报错（JS 异常、未处理的 Promise 拒绝、资源加载失败）统一落进运行日志，
   // 否则渲染层出问题只在 devtools 里可见，日志文件里毫无痕迹。
@@ -121,6 +125,20 @@ app.on('web-contents-created', (_event, contents) => {
 
 
 let mainWindow: BrowserWindow | null = null
+
+function registerYouTubeReferrer(): void {
+  session.defaultSession.webRequest.onBeforeSendHeaders({
+    urls: YOUTUBE_EMBED_SOURCES.map((source) => `${source}*`)
+  }, (details, callback) => {
+    const headers = details.requestHeaders
+    if (details.resourceType === 'subFrame' && mainWindow && details.webContentsId === mainWindow.webContents.id &&
+      parseYouTubeEmbedUrl(details.url) && !Object.keys(headers).some((name) => name.toLowerCase() === 'referer')) {
+      // 本地 file:// 页面不会发送 Referer，使用应用标识向 YouTube 标识嵌入来源。
+      headers.Referer = 'https://com.nuoyan.nte-mod-manager/'
+    }
+    callback({ requestHeaders: headers })
+  })
+}
 
 function categoryImageBase(): string {
   if (app.isPackaged) {
@@ -383,6 +401,7 @@ if (!gotSingleInstanceLock) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
     registerAyakaModsDownloads(session.fromPartition('persist:ayakamods'), () => mainWindow?.webContents)
+    registerYouTubeReferrer()
     registerMediaProtocol()
     logger.addBroadcaster(() => mainWindow)
     registerIpcHandlers(categoryImageBase(), windowIcon())
