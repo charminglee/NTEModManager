@@ -162,7 +162,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                 <div className="settings-field" key={key}>
                   <label htmlFor={key}>{label}</label>
                   <div>
-                    <div className="settings-path-input">
+                    <div className="settings-input-row">
                       <Input
                         id={key}
                         value={draft[key]}
@@ -176,7 +176,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                           flush()
                         }}
                       />
-                      <Button variant="outline" onClick={() => void browse(key)}>
+                      <Button type="button" variant="outline" onClick={() => void browse(key)}>
                         <FolderOpen />
                         浏览
                       </Button>
@@ -239,9 +239,12 @@ export default function SettingsView({ config, onSaved }: Props) {
             <>
               {toggle('testImagesEnabled', '使用测试背景图', '调试时使用固定的测试图片目录。')}
               {toggle('fpsCounterEnabled', '显示帧率', '仅用于性能诊断。')}
-              <div className="settings-config-file">
-                <span className="select-text break-all">{config.configPath}</span>
-                <Button variant="outline" onClick={() => void window.api.openConfigFile()}>
+              <div className="settings-toggle">
+                <span>
+                  <strong>配置文件路径</strong>
+                  <small id="config-file-path" className="select-text wrap-anywhere">{config.configPath}</small>
+                </span>
+                <Button type="button" variant="outline" aria-describedby="config-file-path" onClick={() => void window.api.openConfigFile()}>
                   打开配置文件
                 </Button>
               </div>

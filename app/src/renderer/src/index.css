@@ -1342,8 +1342,12 @@ select {
   min-width: 0;
   gap: 4px;
 }
-.mod-row-copy strong {
+.mod-row-copy strong,
+.settings-field > label,
+.settings-toggle strong {
   font-size: 15px;
+}
+.mod-row-copy strong {
   line-height: 1.2;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1596,7 +1600,15 @@ select {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
   padding: 32px 28px;
+}
+.settings-content > * {
+  flex-shrink: 0;
+  width: min(calc(100% - 50px), 950px);
 }
 .settings-field {
   display: grid;
@@ -1604,14 +1616,15 @@ select {
   align-items: start;
   gap: 20px;
   padding: 0 0 27px;
-  max-width: 1000px;
+}
+.settings-field:last-child {
+  padding-bottom: 0;
 }
 .settings-field > label {
-  font-size: 14px;
   font-weight: 750;
   padding-top: 7px;
 }
-.settings-path-input {
+.settings-input-row {
   display: flex;
   gap: 10px;
 }
@@ -1621,7 +1634,6 @@ select {
   line-height: 1.7;
   color: #514a42;
 }
-.settings-translation-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .settings-note {
   display: flex;
   align-items: center;
@@ -1630,7 +1642,6 @@ select {
   background: rgb(231 223 209 / 80%);
   border-radius: var(--radius-lg);
   font-size: 12px;
-  max-width: 1000px;
 }
 .settings-toggle {
   display: flex;
@@ -1639,15 +1650,14 @@ select {
   gap: 30px;
   padding: 20px 0;
   margin-bottom: 14px;
-  max-width: 1000px;
+}
+.settings-toggle:last-child {
+  margin-bottom: 0;
 }
 .settings-toggle > span {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-.settings-toggle strong {
-  font-size: 14px;
 }
 .settings-toggle small {
   font-size: 11px;
@@ -1660,13 +1670,6 @@ select {
   width: 320px;
   max-width: 100%;
   margin-left: auto;
-}
-.settings-config-file {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  font-size: 12px;
-  padding: 25px 0;
 }
 .logs-workspace {
   flex: 1;
@@ -2092,7 +2095,9 @@ select {
   .mod-row .mod-status {
     display: none;
   }
-  .mod-row-copy strong {
+  .mod-row-copy strong,
+  .settings-field > label,
+  .settings-toggle strong {
     font-size: 13px;
   }
   .mod-row-copy small {
