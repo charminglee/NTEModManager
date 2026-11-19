@@ -12,7 +12,9 @@ import {
   createDownloadTask,
   executeDownloadTask,
   getMod as getGameBananaMod,
+  getModComments as getGameBananaModComments,
   getModSummary as getGameBananaModSummary,
+  getModUpdates as getGameBananaModUpdates,
   getTasks as getGameBananaTasks,
   listMods as listGameBananaMods,
   setTaskBroadcaster
@@ -251,6 +253,8 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('gamebanana:list', (_event, page: number) => listGameBananaMods(page))
   ipcMain.handle('gamebanana:detail', (_event, modId: number) => getGameBananaMod(modId))
+  ipcMain.handle('gamebanana:updates', (_event, modId: number) => getGameBananaModUpdates(modId))
+  ipcMain.handle('gamebanana:comments', (_event, modId: number) => getGameBananaModComments(modId))
   ipcMain.handle('youdao:credentialsStatus', () => getYoudaoCredentialsStatus())
   ipcMain.handle('youdao:saveCredentials', (_event, input: YoudaoCredentialsInput) => {
     if (!input || typeof input.appId !== 'string' || typeof input.appSecret !== 'string') {

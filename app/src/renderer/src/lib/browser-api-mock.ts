@@ -8,9 +8,11 @@ import {
   type AppConfigData,
   type BackgroundRect,
   type BackgroundState,
+  type GameBananaComment,
   type GameBananaDownloadTask,
   type GameBananaFile,
   type GameBananaMod,
+  type GameBananaUpdate,
   type LogEntry,
   type ModFileEntry,
   type ModInfo,
@@ -324,7 +326,7 @@ const gameBananaFiles: GameBananaFile[] = [
   }
 ]
 
-const gameBananaMods: GameBananaMod[] = [
+const gameBananaMods: (GameBananaMod & { updates: GameBananaUpdate[]; commentItems: GameBananaComment[] })[] = [
   {
     id: 727079,
     name: 'Zero Collection Upscale',
@@ -385,6 +387,16 @@ const gameBananaMods: GameBananaMod[] = [
     files: gameBananaFiles.map((file) => ({ ...file, id: 'mock-file-2', name: 'wardrobe.7z' }))
   }
 ]
+
+function findGameBananaMod(modId: number) {
+  const mod = gameBananaMods.find((item) => item.id === modId)
+  if (!mod) throw new Error(`未找到 GameBanana 模组 ${modId}`)
+  return mod
+}
+
+function mockGameBananaProfile({ updates, commentItems, ...mod }: (typeof gameBananaMods)[number]): GameBananaMod {
+  return { ...mod, files: mod.files.map((file) => ({ ...file })) }
+}
 
 function cloneMods(): ModInfo[] {
   return mods.map((mod) => ({ ...mod, subMods: bundleChildren(mod.files,
@@ -508,13 +520,19 @@ const api: Api = {
 
   async listGameBananaMods(page = 1) {
     const mod = gameBananaMods[page - 1]
-    return mod ? [{ ...mod, files: mod.files.map((file) => ({ ...file })) }] : []
+    return mod ? [mockGameBananaProfile(mod)] : []
   },
 
   async getGameBananaMod(modId) {
-    const mod = gameBananaMods.find((item) => item.id === modId)
-    if (!mod) throw new Error(`未找到 GameBanana 模组 ${modId}`)
-    return { ...mod, files: mod.files.map((file) => ({ ...file })) }
+    return mockGameBananaProfile(findGameBananaMod(modId))
+  },
+
+  async getGameBananaModUpdates(modId) {
+    return findGameBananaMod(modId).updates
+  },
+
+  async getGameBananaModComments(modId) {
+    return findGameBananaMod(modId).commentItems
   },
 
   async getGameBananaTasks() {

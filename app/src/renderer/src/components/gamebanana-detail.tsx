@@ -63,6 +63,44 @@ function Comments({ modId, comments }: { modId: number; comments: GameBananaComm
   </GameBananaTranslation>)}</div>
 }
 
+type PendingDetailRequest = { status: 'loading' } | { status: 'error'; message: string }
+type DetailRequest<T> = PendingDetailRequest | { status: 'ready'; data: T }
+
+function useDetailRequest<T>(modId: number, load: (modId: number) => Promise<T>) {
+  const [request, setRequest] = useState<DetailRequest<T>>({ status: 'loading' })
+  const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    void load(modId).then((data) => {
+      if (active) setRequest({ status: 'ready', data })
+    }).catch((failure) => {
+      if (active) setRequest({ status: 'error', message: failure instanceof Error ? failure.message : String(failure) })
+    })
+    return () => { active = false }
+  }, [modId, load, attempt])
+
+  const retry = () => {
+    setRequest({ status: 'loading' })
+    setAttempt((current) => current + 1)
+  }
+
+  return { request, retry }
+}
+
+function DetailSectionStatus({ label, request, retry }: {
+  label: string
+  request: PendingDetailRequest
+  retry: () => void
+}) {
+  return <div>
+    <p className="gamebanana-empty break-words" role="status">
+      {request.status === 'error' ? `${label}加载失败：${request.message}` : `正在加载${label}……`}
+    </p>
+    {request.status === 'error' && <Button variant="outline" size="sm" onClick={retry}>重试{label}</Button>}
+  </div>
+}
+
 export default function GameBananaDetail({
   initial,
   open,
@@ -74,23 +112,13 @@ export default function GameBananaDetail({
   onOpenChange: (open: boolean) => void
   onDownload: (mod: GameBananaMod, file: GameBananaFile) => void
 }) {
-  const [mod, setMod] = useState<GameBananaMod | null>(null)
-  const [error, setError] = useState('')
-  const [attempt, setAttempt] = useState(0)
+  const profile = useDetailRequest(initial.id, window.api.getGameBananaMod)
+  const updates = useDetailRequest(initial.id, window.api.getGameBananaModUpdates)
+  const comments = useDetailRequest(initial.id, window.api.getGameBananaModComments)
+  const mod = profile.request.status === 'ready' ? profile.request.data : null
+  const updateItems = updates.request.status === 'ready' ? updates.request.data : null
   const [imageIndex, setImageIndex] = useState<number | null>(null)
   const [originalSize, setOriginalSize] = useState(false)
-
-  useEffect(() => {
-    let active = true
-    setError('')
-    setMod(null)
-    void window.api.getGameBananaMod(initial.id).then((detail) => {
-      if (active) setMod(detail)
-    }).catch((failure) => {
-      if (active) setError(failure instanceof Error ? failure.message : String(failure))
-    })
-    return () => { active = false }
-  }, [initial.id, attempt])
 
   return (
     <>
@@ -111,17 +139,17 @@ export default function GameBananaDetail({
       >
         {!mod ? (
           <div className="gamebanana-detail-state" role="status">
-            {error ? (
+            {profile.request.status === 'error' ? (
               <>
                 <TriangleAlert />
                 <strong>详情加载失败</strong>
-                <p>{error}</p>
-                <Button onClick={() => setAttempt(attempt + 1)}>重试</Button>
+                <p>{profile.request.message}</p>
+                <Button onClick={profile.retry}>重试</Button>
               </>
             ) : (
               <>
                 <LoaderCircle className="animate-spin" />
-                <span>正在加载完整模组页面……</span>
+                <span>正在加载模组资料……</span>
               </>
             )}
           </div>
@@ -135,7 +163,7 @@ export default function GameBananaDetail({
               <dl className="gamebanana-dates">
                 <div><dt>上传时间</dt><dd>{date(mod.uploadedAt)}</dd></div>
                 {mod.modifiedAt > 0 && mod.modifiedAt !== mod.uploadedAt && <div><dt>修改时间</dt><dd>{date(mod.modifiedAt)}</dd></div>}
-                {mod.updates.length > 0 && <div><dt>更新时间</dt><dd>{date(mod.updatedAt)}</dd></div>}
+                {updateItems && updateItems.length > 0 && <div><dt>更新时间</dt><dd>{date(mod.updatedAt)}</dd></div>}
               </dl>
             </section>
             <section className="gamebanana-detail-section" aria-label="模组截图">
@@ -146,10 +174,12 @@ export default function GameBananaDetail({
                 </button>)}
               </div>}
             </section>
-            {mod.updates.length > 0 && <section className="gamebanana-detail-section" aria-label="更新信息">
-              <h3 className="section-heading">更新信息 <small>{mod.updates.length}</small></h3>
-              <div className="gamebanana-updates">
-                {mod.updates.map((update, index) => {
+            {updateItems?.length !== 0 && <section className="gamebanana-detail-section" aria-label="更新信息">
+              <h3 className="section-heading">更新信息 {updateItems && <small>{updateItems.length}</small>}</h3>
+              {updates.request.status !== 'ready' ? (
+                <DetailSectionStatus label="更新信息" request={updates.request} retry={updates.retry} />
+              ) : <div className="gamebanana-updates">
+                {updates.request.data.map((update, index) => {
                   const translationHtml = updateTranslationHtml(update)
                   return <GameBananaTranslation
                     key={update.id}
@@ -170,7 +200,7 @@ export default function GameBananaDetail({
                     </details>}
                   </GameBananaTranslation>
                 })}
-              </div>
+              </div>}
             </section>}
             <section className="gamebanana-detail-section" aria-label="模组介绍">
               {mod.description ? <GameBananaTranslation
@@ -208,7 +238,11 @@ export default function GameBananaDetail({
             </section>
             <section className="gamebanana-detail-section" aria-label="用户评论">
               <h3 className="section-heading">用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>
-              {mod.commentItems.length === 0 ? <p className="gamebanana-empty">暂无评论。</p> : <Comments modId={mod.id} comments={mod.commentItems} />}
+              {comments.request.status !== 'ready' ? (
+                <DetailSectionStatus label="评论" request={comments.request} retry={comments.retry} />
+              ) : comments.request.data.length === 0 ? (
+                <p className="gamebanana-empty">暂无评论。</p>
+              ) : <Comments modId={mod.id} comments={comments.request.data} />}
             </section>
           </>
         )}

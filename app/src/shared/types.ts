@@ -207,8 +207,6 @@ export interface GameBananaMod {
   files: GameBananaFile[]
   archivedFiles: GameBananaFile[]
   screenshots: GameBananaScreenshot[]
-  updates: GameBananaUpdate[]
-  commentItems: GameBananaComment[]
 }
 
 export type GameBananaDownloadStatus =

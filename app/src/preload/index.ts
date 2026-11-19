@@ -5,9 +5,11 @@ import type {
   AyakaModsDownloadRequest,
   BackgroundState,
   BatchModAction,
+  GameBananaComment,
   GameBananaDownloadTask,
   GameBananaMod,
   GameBananaTranslationRequest,
+  GameBananaUpdate,
   ImportResult,
   LogEntry,
   ModInfo,
@@ -136,6 +138,10 @@ const api = {
     ipcRenderer.invoke('gamebanana:list', page),
   getGameBananaMod: (modId: number): Promise<GameBananaMod> =>
     ipcRenderer.invoke('gamebanana:detail', modId),
+  getGameBananaModUpdates: (modId: number): Promise<GameBananaUpdate[]> =>
+    ipcRenderer.invoke('gamebanana:updates', modId),
+  getGameBananaModComments: (modId: number): Promise<GameBananaComment[]> =>
+    ipcRenderer.invoke('gamebanana:comments', modId),
   getYoudaoCredentialsStatus: (): Promise<YoudaoCredentialsStatus> =>
     ipcRenderer.invoke('youdao:credentialsStatus'),
   saveYoudaoCredentials: (input: YoudaoCredentialsInput): Promise<YoudaoCredentialsStatus> =>

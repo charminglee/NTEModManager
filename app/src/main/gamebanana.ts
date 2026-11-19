@@ -243,9 +243,7 @@ function parseMod(id: number, value: Record<string, unknown>): GameBananaMod {
     modifiedAt: 0,
     version: '',
     archivedFiles: [],
-    screenshots: [],
-    updates: [],
-    commentItems: []
+    screenshots: []
   }
 }
 
@@ -279,18 +277,12 @@ export async function getModSummary(id: number): Promise<GameBananaMod> {
     modifiedAt: mod.updatedAt,
     version: '',
     archivedFiles: parseFiles(value['Files().aFiles()']).filter((file) => file.archived),
-    screenshots: mod.previewUrl ? [{ url: mod.previewUrl, thumbnailUrl: mod.previewUrl, width: 0, height: 0 }] : [],
-    updates: [],
-    commentItems: []
+    screenshots: mod.previewUrl ? [{ url: mod.previewUrl, thumbnailUrl: mod.previewUrl, width: 0, height: 0 }] : []
   }
 }
 
 export async function getMod(id: number): Promise<GameBananaMod> {
-  const [value, updateRecords, commentRecords] = await Promise.all([
-    requestJson<Record<string, unknown>>(`/Mod/${id}/ProfilePage`, {}),
-    getAllRecords<Record<string, unknown>>(`/Mod/${id}/Updates`),
-    getAllRecords<Record<string, unknown>>(`/Mod/${id}/Posts`)
-  ])
+  const value = await requestJson<Record<string, unknown>>(`/Mod/${id}/ProfilePage`, {})
   const files = Array.isArray(value._aFiles) ? value._aFiles : []
   const archivedFiles = Array.isArray(value._aArchivedFiles) ? value._aArchivedFiles : []
   const screenshots = parseScreenshots(value._aPreviewMedia)
@@ -327,10 +319,18 @@ export async function getMod(id: number): Promise<GameBananaMod> {
       ...archivedFiles,
       ...files.filter((file) => (file as Record<string, unknown>)._bIsArchived)
     ]),
-    screenshots,
-    updates: parseUpdates(updateRecords).sort((a, b) => b.uploadedAt - a.uploadedAt),
-    commentItems: await parseComments(commentRecords)
+    screenshots
   }
+}
+
+export async function getModUpdates(id: number): Promise<GameBananaUpdate[]> {
+  const records = await getAllRecords<Record<string, unknown>>(`/Mod/${id}/Updates`)
+  return parseUpdates(records).sort((a, b) => b.uploadedAt - a.uploadedAt)
+}
+
+export async function getModComments(id: number): Promise<GameBananaComment[]> {
+  const records = await getAllRecords<Record<string, unknown>>(`/Mod/${id}/Posts`)
+  return parseComments(records)
 }
 
 function validCustomName(name: string): boolean {
