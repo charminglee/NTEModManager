@@ -134,6 +134,6 @@ src/renderer/     React 界面
 
 Python 资源(解释器、识别脚本、模型)**不打包进应用**:运行时优先解析程序所在目录旁的 `python/`,找不到则从 exe 目录向上逐级找含 `visual_region_detector.py` 的 `python/`(开发模式即仓库根的 `python/`)。部署打包版时把仓库 `python/` 目录整个复制到 exe 旁边即可;该目录需可用 `python/requirements.txt` 装好依赖(torch/ultralytics/torchvision/Pillow),即 `python/.venv`。设置界面不再提供 Python 路径项,上述 `Paths/*` INI 键保留作手动兜底。
 
-傻瓜打包器随应用构建到 `resources/packager`，开发模式直接使用仓库根目录的 `傻瓜打包器/`。设置界面不再提供打包器目录，旧版 `Paths/packager_directory` 键会在下次修改设置时清理。
+傻瓜打包器随应用构建到 `resources/libs/packager`，开发模式直接使用仓库根目录的 `libs/packager`。设置界面不再提供打包器目录，旧版 `Paths/packager_directory` 键会在下次修改设置时清理。
 
 安全:modelContextIsolation 开启、nodeIntegration 关闭;图片通过自定义 `media://` 协议按扩展名白名单提供。

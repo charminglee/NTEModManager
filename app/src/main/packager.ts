@@ -1,8 +1,8 @@
-import { app } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import iconv from 'iconv-lite'
+import { bundledToolsDirectory } from './bundled-tools'
 import { logger } from './logger'
 import type { OperationResult } from '../shared/types'
 
@@ -11,9 +11,7 @@ export const PACKAGER_CANCELLED_EXIT_CODE = 2
 
 /** 内置打包器在开发环境使用仓库目录，打包后使用应用 resources 目录。 */
 export function builtInPackagerDirectory(): string {
-  return app.isPackaged
-    ? path.join(process.resourcesPath, 'packager')
-    : path.join(app.getAppPath(), '..', '傻瓜打包器')
+  return path.join(bundledToolsDirectory(), 'packager')
 }
 
 export interface PackageOptions {

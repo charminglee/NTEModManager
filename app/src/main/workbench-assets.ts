@@ -7,7 +7,7 @@ import { basename, extname, join, resolve } from 'node:path'
 import { getAppConfig } from './config'
 import { logger } from './logger'
 import { ntemmCacheDir } from './ntemm-paths'
-import { workbenchToolsDirectory } from './workbench-tools'
+import { bundledToolsDirectory } from './bundled-tools'
 import { assetResults, effectiveAssets } from '../shared/workbench-assets-filter'
 import type { AssetEntry, AssetFormat, AssetPreview, AssetQuery, AssetState } from '../shared/workbench-assets'
 
@@ -25,7 +25,7 @@ let baseline: { file: string; entries: Map<string, AssetEntry> } | undefined
 const current = (ctx: Context) => index?.paks === ctx.paks && index.key === ctx.config.workbenchAesKey ? index : undefined
 
 async function parse(ctx: Context, action: AssetFormat | 'index', output: string, entry?: { path: string; archive?: string }, preview = false) {
-  const tools = workbenchToolsDirectory()
+  const tools = bundledToolsDirectory()
   const parser = join(tools, 'cue4parse')
   const tool = join(parser, 'win-x64', 'WorkbenchAssets.exe')
   if (!existsSync(tool)) throw new Error(`缺少工作台资源解析器：${tool}`)

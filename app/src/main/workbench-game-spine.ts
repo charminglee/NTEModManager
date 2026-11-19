@@ -5,7 +5,7 @@ import { basename, join, posix, relative, sep } from 'node:path'
 import type { SpineFile } from '../shared/workbench-spine'
 import { getAppConfig } from './config'
 import { decodeGameTexture } from './workbench-assets'
-import { workbenchToolsDirectory } from './workbench-tools'
+import { bundledToolsDirectory } from './bundled-tools'
 
 async function stageContainers(content: string, staging: string): Promise<void> {
   const directories = await readdir(content)
@@ -26,7 +26,7 @@ async function stageContainers(content: string, staging: string): Promise<void> 
 }
 
 async function extract(filter: string, staging: string, output: string, key: string) {
-  const tools = join(workbenchToolsDirectory(), 'retoc')
+  const tools = join(bundledToolsDirectory(), 'retoc')
   const args = ['-a', key, 'to-legacy', '--version', 'UE5_6', '--no-shaders', '--no-script-objects',
     '--filter', filter, staging, output]
   await new Promise<void>((resolve, reject) => {

@@ -7,8 +7,8 @@ build/
 .zcode-frames/
 .zcode-tmp/
 .tmp/
-傻瓜打包器/xg/HT/Content/
-傻瓜打包器/LastImportFolder.txt
+libs/packager/xg/HT/Content/
+libs/packager/LastImportFolder.txt
 __pycache__/
 training/orientation/checkpoints/
 training/orientation/dataset/
