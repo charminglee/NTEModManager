@@ -23,7 +23,7 @@ function updateTranslationHtml(update: GameBananaUpdate): string {
   return document.documentElement.outerHTML
 }
 
-function Author({ author }: { author: GameBananaAuthor }) {
+function Author({ author, isModAuthor = false }: { author: GameBananaAuthor; isModAuthor?: boolean }) {
   return <div className="gamebanana-author">
     {author.avatarUrl
       ? <img src={author.avatarUrl} alt="" loading="lazy" />
@@ -31,6 +31,7 @@ function Author({ author }: { author: GameBananaAuthor }) {
     {author.profileUrl
       ? <button type="button" onClick={() => void window.api.openExternal(author.profileUrl)}>{author.name}</button>
       : <strong>{author.name}</strong>}
+    {isModAuthor && <span className="gamebanana-author-badge">作者</span>}
   </div>
 }
 
@@ -46,7 +47,11 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
   </article>)}</div>
 }
 
-function Comments({ modId, comments }: { modId: number; comments: GameBananaComment[] }) {
+function Comments({ modId, modAuthorUrl, comments }: {
+  modId: number
+  modAuthorUrl: string
+  comments: GameBananaComment[]
+}) {
   return <div className="gamebanana-comments">{comments.map((comment) => <GameBananaTranslation
     key={comment.id}
     modId={modId}
@@ -56,9 +61,13 @@ function Comments({ modId, comments }: { modId: number; comments: GameBananaComm
     html={comment.content}
   >
     {({ button, content }) => <article className="gamebanana-comment">
-      <header><Author author={comment.author} /><div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span>{comment.editedAt > 0 && <span>编辑于 {date(comment.editedAt)}</span>}</div>{button}</header>
+      <header>
+        <Author author={comment.author} isModAuthor={modAuthorUrl !== '' && comment.author.profileUrl === modAuthorUrl} />
+        <div className="gamebanana-comment-dates"><span>发布于 {date(comment.uploadedAt)}</span>{comment.editedAt > 0 && <span>编辑于 {date(comment.editedAt)}</span>}</div>
+        {button}
+      </header>
       {content}
-      {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments modId={modId} comments={comment.replies} /></div>}
+      {comment.replies.length > 0 && <div className="gamebanana-replies"><Comments modId={modId} modAuthorUrl={modAuthorUrl} comments={comment.replies} /></div>}
     </article>}
   </GameBananaTranslation>)}</div>
 }
@@ -287,7 +296,7 @@ export default function GameBananaDetail({
             </section>
             <section className="gamebanana-detail-section" aria-label="用户评论">
               <h3 className="section-heading">用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>
-              {commentPages.comments.length > 0 && <Comments modId={mod.id} comments={commentPages.comments} />}
+              {commentPages.comments.length > 0 && <Comments modId={mod.id} modAuthorUrl={mod.author.profileUrl} comments={commentPages.comments} />}
               {commentPages.error !== null ? (
                 <DetailSectionStatus
                   label={commentPages.comments.length > 0 ? '更多评论' : '评论'}

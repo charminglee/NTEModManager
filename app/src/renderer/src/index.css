@@ -704,8 +704,8 @@ input[type='checkbox'] {
 .gamebanana-update summary strong { font-size: 14px; overflow-wrap: anywhere; }
 .gamebanana-update summary time { margin-left: auto; font-size: 11px; color: #c2b29c; }
 .gamebanana-update summary > .gamebanana-translation-button { margin-left: 10px; }
-.gamebanana-version, .gamebanana-latest { font-size: 10px; padding: 2px 7px; border: 1px solid #76634b; border-radius: var(--radius-sm); color: #d7c1a3; white-space: nowrap; }
-.gamebanana-latest { color: #f1b59f; border-color: #99664e; background: #a957351a; }
+.gamebanana-version, .gamebanana-latest, .gamebanana-author-badge { font-size: 10px; padding: 2px 7px; border: 1px solid #76634b; border-radius: var(--radius-sm); color: #d7c1a3; white-space: nowrap; }
+.gamebanana-latest, .gamebanana-author-badge { color: #f1b59f; border-color: #99664e; background: #a957351a; }
 .gamebanana-update-content { padding: 18px; border-top: 1px solid #5b5042; }
 .gamebanana-change { min-width: 0; }
 .gamebanana-change + .gamebanana-change { margin-top: 12px; }
