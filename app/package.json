@@ -6,8 +6,8 @@
   "author": "Nuoyan",
   "private": true,
   "scripts": {
-    "predev:electron": "pwsh -NoProfile -File tools/workbench-assets/build.ps1",
     "dist": "node scripts/test-images.mjs off && node scripts/dist.mjs",
+    "predev:electron": "pwsh -NoProfile -File tools/workbench-assets/build.ps1",
     "dev": "node scripts/test-images.mjs on && vite --config web.vite.config.ts --open",
     "dev:electron": "node scripts/test-images.mjs on && electron-vite dev",
     "build": "node scripts/test-images.mjs on && electron-vite build",
