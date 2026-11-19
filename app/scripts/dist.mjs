@@ -42,7 +42,8 @@ function runNpx(args) {
   return result.status ?? 1
 }
 
-let failed = runNpx(['electron-vite', 'build']) !== 0
+let failed = runStep('pwsh', ['-NoProfile', '-File', 'tools/workbench-assets/build.ps1']) !== 0
+if (!failed) failed = runNpx(['electron-vite', 'build']) !== 0
 if (!failed) {
   failed = runNpx(['electron-builder', '--dir']) !== 0
 }
