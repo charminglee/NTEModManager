@@ -1,4 +1,8 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { workbenchAssetsApi } from './workbench-assets'
+import { workbenchProjectsApi } from './workbench-projects'
+import { workbenchSpineApi } from './workbench-spine'
+import type { SpineFile } from '../shared/workbench-spine'
 import type {
   AppConfigData,
   AppConfigPatch,
@@ -32,6 +36,10 @@ export interface BootstrapPayload {
 }
 
 const api = {
+  ...workbenchAssetsApi,
+  ...workbenchProjectsApi,
+  ...workbenchSpineApi,
+  loadGameSpine: (name: string): Promise<SpineFile[]> => ipcRenderer.invoke('workbench-spine:load-game', name),
   getWindowState: (): Promise<WindowState> => ipcRenderer.invoke('window:state'),
   controlWindow: (action: WindowAction): Promise<OperationResult> =>
     ipcRenderer.invoke('window:control', action),

@@ -22,6 +22,7 @@ type ToggleKey =
 const SAVE_DEBOUNCE_MS = 500
 const settingsSections = [
   { id: 'paths', label: '通用', icon: <SlidersHorizontal size={20} /> },
+  { id: 'workbench', label: '工作台', icon: <Wrench size={20} /> },
   { id: 'preferences', label: '操作偏好', icon: <Settings size={20} /> },
   { id: 'translation', label: '有道翻译', icon: <Globe size={20} /> },
   { id: 'advanced', label: '高级', icon: <Wrench size={20} /> }
@@ -40,6 +41,11 @@ const pathFields = [
   }
 ] as const
 const normalizePath = (path: string) => path.trim().replace(/\\/g, '/').replace(/\/+$/, '')
+const workbenchFields = [
+  { key: 'workbenchAesKey', label: 'AES 密钥', help: '用于读取游戏的加密容器。' },
+  { key: 'workbenchMapping', label: '属性映射文件', help: '默认使用内置打包器的 .usmap 文件。' },
+  { key: 'workbenchExportDirectory', label: '资源导出目录', help: '保存从游戏资源浏览器导出的文件。' }
+] as const
 const parseGroups = (groupsText: string) =>
   groupsText
     .split(/[,，、\n]/)
@@ -185,10 +191,44 @@ export default function SettingsView({ config, onSaved }: Props) {
       <div className="settings-page">
         <div className="workspace-page-heading">
           <h1>
-            {section === 'paths' ? '通用' : section === 'preferences' ? '操作偏好' : section === 'translation' ? '有道翻译' : '高级'}
+            {settingsSections.find(item => item.id === section)?.label}
           </h1>
         </div>
         <div className="settings-content" key={section} hidden={section === 'advanced'}>
+          {section === 'workbench' && workbenchFields.map(({ key, label, help }) => {
+            const save = (value: string) => {
+              if (key === 'workbenchAesKey' && value.trim() && !/^(?:0x)?[0-9a-f]{64}$/i.test(value.trim())) {
+                toast.error('AES 密钥需要 64 位十六进制字符。')
+                return
+              }
+              pendingPatchRef.current[key] = value.trim()
+              flush()
+            }
+            return (
+              <div className="settings-field" key={key}>
+                <label htmlFor={key}>{label}</label>
+                <div>
+                  <div className="settings-path-input">
+                    <Input id={key} type={key === 'workbenchAesKey' ? 'password' : 'text'}
+                      value={draft[key]} onChange={event => update(key, event.target.value)}
+                      onFocus={event => { event.currentTarget.dataset.previous = event.currentTarget.value }}
+                      onBlur={event => {
+                        if (event.currentTarget.dataset.previous !== event.currentTarget.value) save(event.currentTarget.value)
+                      }} />
+                    {key !== 'workbenchAesKey' && (
+                      <Button variant="outline" onClick={async () => {
+                        const selected = key === 'workbenchMapping'
+                          ? await window.api.pickFile({ title: label, extensions: ['usmap'], defaultPath: draft[key] })
+                          : await window.api.pickDirectory(draft[key])
+                        if (selected) { update(key, selected); save(selected) }
+                      }}><FolderOpen />浏览</Button>
+                    )}
+                  </div>
+                  <p>{help}</p>
+                </div>
+              </div>
+            )
+          })}
           {section === 'paths' && (
             <>
               {pathFields.map(({ key, label, help }) => (

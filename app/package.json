@@ -6,6 +6,7 @@
   "author": "Nuoyan",
   "private": true,
   "scripts": {
+    "predev:electron": "pwsh -NoProfile -File tools/workbench-assets/build.ps1",
     "dist": "node scripts/test-images.mjs off && node scripts/dist.mjs",
     "dev": "node scripts/test-images.mjs on && vite --config web.vite.config.ts --open",
     "dev:electron": "node scripts/test-images.mjs on && electron-vite dev",
@@ -26,6 +27,7 @@
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.15",
     "@lezer/highlight": "^1.2.5",
+    "@google/model-viewer": "^4.4.0",
     "@radix-ui/react-alert-dialog": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-dropdown-menu": "^2.1.4",

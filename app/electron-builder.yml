@@ -8,6 +8,18 @@ directories:
 files:
   - out/**
 extraResources:
+  - from: ../.tmp/assets/publish
+    to: workbench-assets
+  - from: tools/workbench-assets
+    to: licenses/workbench-assets
+    filter:
+      - "*.txt"
+  - from: node_modules/@google/model-viewer/LICENSE
+    to: licenses/model-viewer.txt
+  - from: src/renderer/src/components/workbench-spine-codec
+    to: licenses/workbench-spine
+    filter:
+      - "*.txt"
   - from: ../img/bg
     to: category-bg
   - from: ../img/nte-mod-manager.ico

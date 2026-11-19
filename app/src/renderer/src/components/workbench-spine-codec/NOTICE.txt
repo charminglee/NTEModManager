@@ -1,0 +1,6 @@
+converter.js and converter.wasm from cambacodes/spine-thing at 2ec7cf343ae6d54496f25713e3c5aea7ac458067.
+https://github.com/cambacodes/spine-thing
+Includes cambacodes/SpineSkeletonDataConverter at 3c33ec0cf1b97b5be6f67fb0819079efa1cbaa8d under PolyForm Noncommercial 1.0.0.
+https://github.com/cambacodes/SpineSkeletonDataConverter
+See LICENSE-converter.txt and LICENSE-spine-thing.txt.
+IceBone.ts from jwp72/icebones at 6015186ff26869d3c1fb9a9c7801b435d75b90ab, MIT (https://github.com/jwp72/icebones).

@@ -35,6 +35,7 @@ import FpsCounter from '@/components/fps-counter'
 import PromptDialog from '@/components/prompt-dialog'
 import ImportDialog, { type ImportSession } from '@/components/import-dialog'
 import SettingsView from '@/components/settings-view'
+import Workbench from '@/components/workbench'
 import GameBananaPage from '@/components/gamebanana-page'
 import AyakaModsPage from '@/components/ayakamods-page'
 import { AppDialog } from '@/components/ui/dialog'
@@ -129,6 +130,7 @@ export default function App() {
   const [mods, setMods] = useState<ModInfo[]>([])
   const [currentCategory, setCurrentCategory] = useState<string>(ALL_CATEGORY)
   const [view, setView] = useState<AppView>('mods')
+  const [openedWorkbench, setOpenedWorkbench] = useState(false)
   const [mountedCommunityViews] = useState<Set<'gamebanana' | 'ayakamods'>>(
     () => new Set(['gamebanana', 'ayakamods'])
   )
@@ -367,7 +369,10 @@ export default function App() {
     setFocusedName(name)
     setDetailsOpen(true)
   }, [])
-  const requestView = useCallback((next: AppView) => setView(next), [])
+  const requestView = useCallback((next: AppView) => {
+    if (next === 'workbench') setOpenedWorkbench(true)
+    setView(next)
+  }, [])
   const handleGameBananaModsChanged = useCallback(() => {
     void refreshMods()
   }, [refreshMods])
@@ -842,7 +847,7 @@ export default function App() {
   // 多选快捷键让位弹层:任一对话框/确认层打开时不抢 Ctrl+A / Esc
   useEffect(() => {
     modalOpenRef.current =
-      view === 'settings' ||
+      view === 'settings' || view === 'workbench' ||
       importSession !== null ||
       prompt !== null ||
       pendingConfirm !== null ||
@@ -903,6 +908,7 @@ export default function App() {
       }
       if (
         event.key === 'ArrowDown' &&
+        !target?.closest('.workbench') &&
         !inEditable &&
         !target?.closest('.app-drawer') &&
         event.altKey === false &&
@@ -934,6 +940,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (view === 'workbench') return
     const onDragEnter = (event: DragEvent) => {
       if (!event.dataTransfer?.types.includes('Files')) {
         return
@@ -983,7 +990,7 @@ export default function App() {
       window.removeEventListener('dragleave', onDragLeave)
       window.removeEventListener('drop', onDrop)
     }
-  }, [busy, handleImportArchives, isArchiveFile])
+  }, [view, busy, handleImportArchives, isArchiveFile])
 
   // ============ 渲染 ============
   if (!config) {
@@ -1097,6 +1104,7 @@ export default function App() {
           onImport={handleImportAction}
           onPackageMod={handlePackageModAction}
         />
+        {openedWorkbench && <Workbench visible={view === 'workbench'} />}
         {view === 'mods' ? (
           <div className="mod-workspace">
             <Sidebar

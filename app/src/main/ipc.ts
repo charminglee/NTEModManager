@@ -1,4 +1,8 @@
 import { app, dialog, ipcMain, shell, webContents } from 'electron'
+import { registerWorkbenchAssets } from './workbench-assets'
+import { registerWorkbenchProjects } from './workbench-projects'
+import { registerWorkbenchSpine } from './workbench-spine'
+import { loadGameSpine } from './workbench-game-spine'
 import { existsSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
@@ -220,6 +224,10 @@ async function pickFileWithDialog(options: Electron.OpenDialogOptions): Promise<
 }
 
 export function registerIpcHandlers(categoryImageBase: string, appIconPath: string | null): void {
+  registerWorkbenchAssets()
+  registerWorkbenchProjects()
+  registerWorkbenchSpine()
+  ipcMain.handle('workbench-spine:load-game', (_event, name: string) => loadGameSpine(name))
   setTaskBroadcaster((task) => {
     for (const contents of webContents.getAllWebContents()) {
       if (!contents.isDestroyed()) {

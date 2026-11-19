@@ -1,5 +1,5 @@
 import { Fragment } from 'react'
-import { FileText, LoaderCircle, Package, Play, Settings } from 'lucide-react'
+import { FileText, LoaderCircle, Package, Play, Settings, Wrench } from 'lucide-react'
 import { HeaderModActions } from './header-mod-actions'
 import NavSelectionHighlight from './nav-selection-highlight'
 import gamebananaIcon from '@/assets/gamebanana.png'
@@ -29,7 +29,7 @@ function AyakaModsLogo({ size = 19 }: { size?: number }) {
     />
   )
 }
-export type AppView = 'mods' | 'gamebanana' | 'ayakamods' | 'logs' | 'settings'
+export type AppView = 'mods' | 'workbench' | 'gamebanana' | 'ayakamods' | 'logs' | 'settings'
 interface Props {
   view: AppView
   busy: boolean
@@ -68,6 +68,7 @@ export default function AppHeader({
           {(
             [
               { id: 'mods', label: '模组库', Icon: Package },
+              { id: 'workbench', label: '工作台', Icon: Wrench },
               { id: 'gamebanana', label: 'GameBanana', Icon: GameBananaLogo },
               { id: 'ayakamods', label: 'AyakaMods', Icon: AyakaModsLogo },
               { id: 'logs', label: '运行日志', Icon: FileText },

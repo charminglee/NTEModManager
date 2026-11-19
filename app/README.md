@@ -31,6 +31,14 @@ Python 服务通过 stderr 的 JSON Lines 日志通道传递级别、时间和�
 
 ## 开发
 
+工作台的资源浏览器使用 CUE4Parse 的异环版本配置，模型预览使用 model-viewer。先在「设置 → 工作台」填写 AES 密钥，按需选择游戏版本对应的 `.usmap`，再到「工作台 → 原生资源」建立索引。在游戏更新前保存快照，更新后可比对新增和已修改资源。
+
+「模组项目」将独立目录绑定至本机 UE 5.6 和已有的 `.uproject`。把需要覆盖或新增的工程资源加入清单后，点击烘焙打包，产物保存在该项目的 `Builds` 目录。开发或打包桌面版需要 .NET 10 SDK 和 PowerShell 7，以构建随应用分发的 Windows x64 资源解析器。发布版自带该解析器所需的 .NET 运行时。
+
+「Spine 编辑器」可以按资源名从游戏载入骨架、图集和分页贴图，也可以打开本地文件。以曳尔沐觉醒界面为例，原版控件引用 `SP_YEMJX` 图集和 `SP_YEMJX_Data` 骨架，角色层和特效层通过 `SetAnimation` 选择轨道，再由 `Tick` 推进动画。在工作台切换 `idle1`、`idle2` 可以分别检查动画。编辑骨骼、权重和关键帧后可导出 JSON、SKEL，或写回载入的 UE 原生资源对。单骨架预览与游戏内分级贴图、升级演出和物理约束的最终合成效果分别验证。
+
+Spine 骨架转换器按 PolyForm Noncommercial 许可用于非商业用途。分发版的 `resources/licenses` 目录随附工作台组件的许可及来源说明。
+
 ```powershell
 cd app
 npm install
