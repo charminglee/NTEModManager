@@ -1573,6 +1573,17 @@ select {
   flex-direction: column;
   background: var(--surface-paper);
 }
+.workbench > main {
+  padding: 24px clamp(16px, 2vw, 32px);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+}
+.workbench > main > section,
+.workbench > main > fieldset {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding: 0;
+}
 .workspace-page-heading {
   display: flex;
   align-items: center;

@@ -1,4 +1,7 @@
 import type { Api } from '../../../preload/index'
+import { workbenchAssetsMock } from './workbench-assets-mock'
+import { workbenchProjectsMock } from './workbench-projects-mock'
+import { workbenchSpineMock } from './workbench-spine-mock'
 import { bundleChildren } from '@shared/mod-bundle'
 import {
   ALL_CATEGORY,
@@ -418,6 +421,9 @@ const unavailable = (what: string) => ({
 })
 
 const config: AppConfigData = {
+  workbenchAesKey: '',
+  workbenchMapping: '傻瓜打包器/Mappings/HT-5.6.1-0+UE5-0196ef29.usmap',
+  workbenchExportDirectory: 'Documents/NTEMM/Exports',
   configPath: 'C:\\Users\\mock\\AppData\\Roaming\\NteModManager\\NteModManager.ini',
   gameDirectory: 'D:/Games/NTE',
   modsDirectory: 'D:/Games/NTE/mods',
@@ -478,6 +484,12 @@ let previewWindowState: WindowState = { isMaximized: false, isFullScreen: false 
 const windowStateListeners = new Set<(state: WindowState) => void>()
 
 const api: Api = {
+  ...workbenchAssetsMock,
+  ...workbenchProjectsMock,
+  ...workbenchSpineMock,
+  async loadGameSpine() {
+    throw new Error('请在桌面应用中读取游戏容器，或选择本地 Spine 文件。')
+  },
   async getWindowState() {
     return { ...previewWindowState }
   },
