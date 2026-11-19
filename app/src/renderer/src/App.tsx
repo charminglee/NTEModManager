@@ -1079,7 +1079,13 @@ export default function App() {
         onToggleFullScreen={toggleFullScreen}
       />
       <BackgroundLayer masked={!chromeHidden} maskOpacity={config.backgroundMaskOpacity} />
-      <div className={cn('app-shell', chromeHidden && 'is-ui-hidden')}>
+      <div
+        className={cn(
+          'app-shell',
+          chromeHidden && 'is-ui-hidden',
+          config.fpsCounterEnabled && 'has-fps-counter'
+        )}
+      >
         <AppHeader
           view={view}
           busy={busy}

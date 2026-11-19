@@ -74,6 +74,7 @@
   --mod-card-border: #886b50;
   --window-titlebar-height: 35px;
   --window-controls-width: 276px;
+  --fps-counter-width: 60px;
   --surface-ink: rgb(32 32 30 / 65%);
   --surface-paper: rgb(243 239 230 / 40%);
   --surface-cream: rgb(255 252 246 / 60%);
@@ -1815,14 +1816,24 @@ select {
 .fps-counter {
   position: fixed;
   top: 2px;
-  right: 4px;
+  left: 4px;
   z-index: 45;
+  width: var(--fps-counter-width);
+  pointer-events: none;
   background: var(--cream);
   color: var(--ink);
   padding: 4px 8px;
   font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
   border: 1px solid var(--ink);
   border-radius: var(--radius-sm);
+}
+.has-fps-counter .brand-strip {
+  padding-left: calc(var(--fps-counter-width) + 12px);
+}
+.has-fps-counter .global-toolbar:first-child {
+  padding-top: 30px;
 }
 .import-drag-overlay {
   pointer-events: none;
