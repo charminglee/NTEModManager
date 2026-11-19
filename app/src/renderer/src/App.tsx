@@ -616,7 +616,12 @@ export default function App() {
     async (activity: string, action: BatchModAction, names: string[]) => {
       const result = await runOperation(activity, () => window.api.batchModAction(action, names))
       if (result) {
-        await refreshMods()
+        if (action === 'remove' && result.success) setDetailsOpen(false)
+        const remaining = await refreshMods()
+        if (action === 'remove' && !result.success) {
+          const remainingNames = new Set(remaining.map((mod) => mod.name))
+          if (names.some((name) => !remainingNames.has(name))) setDetailsOpen(false)
+        }
       }
     },
     [runOperation, refreshMods]
@@ -1018,6 +1023,7 @@ export default function App() {
         const modName = confirm.modName
         void runOperation(`正在删除 ${modName}...`, () => window.api.removeMod(modName)).then(
           (result) => {
+            if (result?.success) setDetailsOpen(false)
             if (result) {
               void refreshMods()
             }
