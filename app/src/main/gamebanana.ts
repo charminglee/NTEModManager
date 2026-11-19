@@ -2,6 +2,7 @@ import { createWriteStream, existsSync, rmSync } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { net } from 'electron'
 import type {
   GameBananaDownloadTask,
   GameBananaComment,
@@ -76,7 +77,7 @@ async function requestJson<T>(path: string, params: Record<string, string>): Pro
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value)
   }
-  const response = await fetch(url)
+  const response = await net.fetch(url.href)
   const text = await response.text()
   if (!response.ok) {
     throw new Error(`GameBanana API 请求失败（${response.status}）：${text.slice(0, 240)}`)
