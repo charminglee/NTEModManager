@@ -158,7 +158,7 @@ export default function ConfigFileEditor({ active, config, onSave }: Props) {
         {file && (
           <div className="settings-config-actions">
             {dirty && <span className="settings-config-status">未保存</span>}
-            <Button type="button" disabled={!dirty || saving || conflict} onClick={() => void save()}>
+            <Button type="button" variant="outline" disabled={!dirty || saving || conflict} onClick={() => void save()}>
               {saving ? '正在保存…' : '保存'}
             </Button>
           </div>
