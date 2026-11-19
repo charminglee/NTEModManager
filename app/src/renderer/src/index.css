@@ -1692,7 +1692,6 @@ select {
   flex-shrink: 0;
   border-color: var(--rule);
   box-shadow: none;
-  font-size: 13px;
   font-weight: 500;
 }
 .log-level-trigger:is(:hover, :focus-visible, [data-state='open']) {
