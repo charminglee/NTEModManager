@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { gameBananaImageSrc } from '@/lib/gamebanana-image'
 import { Download, LoaderCircle, RefreshCw, Search, TriangleAlert } from 'lucide-react'
 import type {
   AppConfigData,
@@ -238,7 +239,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
                     setSelected(mod)
                   }}
                 >
-                  {mod.previewUrl ? <img src={mod.previewUrl} alt="" draggable={false} /> : <div className="gamebanana-card-placeholder"><Download /></div>}
+                  {mod.previewUrl ? <img src={gameBananaImageSrc(mod.previewUrl)} alt="" draggable={false} /> : <div className="gamebanana-card-placeholder"><Download /></div>}
                   <div className="gamebanana-card-copy">
                     <strong>{mod.name}</strong>
                     <span>{mod.authors}</span>

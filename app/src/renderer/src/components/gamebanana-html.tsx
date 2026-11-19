@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import DOMPurify from 'dompurify'
+import { gameBananaImageSrc } from '@/lib/gamebanana-image'
 import { getYouTubeWatchUrl, parseYouTubeEmbedUrl } from '@shared/youtube'
 import { toast } from './toast-card'
 
@@ -72,6 +73,18 @@ export default function GameBananaHtml({ html, title, updateCategories }: { html
       FORBID_ATTR: ['ping', 'srcdoc']
     })
     replaceEmbeddedFrames(content)
+    for (const image of content.querySelectorAll('img[src]')) {
+      const src = image.getAttribute('src')!
+      image.setAttribute('src', gameBananaImageSrc(src))
+    }
+    for (const image of content.querySelectorAll('img[srcset], picture source[srcset]')) {
+      const srcset = image.getAttribute('srcset')!
+      const cachedSrcset = srcset.replace(
+        /(^\s*|,\s*)((?:(?:https:)?\/\/(?:images\.)?gamebanana\.com\/|\/img\/)[^\s,]+)/gi,
+        (_match, prefix: string, url: string) => prefix + gameBananaImageSrc(url)
+      )
+      image.setAttribute('srcset', cachedSrcset)
+    }
     if (updateCategories?.length) {
       content.querySelectorAll<HTMLElement>('[data-ntemm-update-change]').forEach((block) => {
         const category = updateCategories[Number(block.dataset.ntemmUpdateChange)]

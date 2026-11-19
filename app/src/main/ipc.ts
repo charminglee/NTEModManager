@@ -14,6 +14,7 @@ import { builtInPackagerDirectory, runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { describeError, logger } from './logger'
+import { gameBananaImageSession } from './gamebanana-image-cache'
 import {
   createDownloadTask,
   executeDownloadTask,
@@ -278,8 +279,14 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   })
   ipcMain.handle('youdao:clearCredentials', () => clearYoudaoCredentials())
   ipcMain.handle('gamebanana:translate', (_event, request: GameBananaTranslationRequest) => translateGameBanana(request))
-  ipcMain.handle('gamebanana:translationCacheSize', () => getGameBananaTranslationCacheSize())
-  ipcMain.handle('gamebanana:clearTranslationCache', () => clearGameBananaTranslationCache())
+  ipcMain.handle('gamebanana:translationCacheSize', async () => {
+    const imageCacheSize = await gameBananaImageSession().getCacheSize()
+    return imageCacheSize + getGameBananaTranslationCacheSize()
+  })
+  ipcMain.handle('gamebanana:clearTranslationCache', async () => {
+    await gameBananaImageSession().clearCache()
+    clearGameBananaTranslationCache()
+  })
   ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))
   ipcMain.handle('ayakamods:pendingDownloads', () => getPendingDownloads())
   ipcMain.handle('ayakamods:tasks', () => getGameBananaTasks().filter((task) => task.source === 'ayakamods'))

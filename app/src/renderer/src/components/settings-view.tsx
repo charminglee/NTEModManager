@@ -179,9 +179,9 @@ export default function SettingsView({ config, onSaved }: Props) {
     setClearingCache(true)
     try {
       await window.api.clearGameBananaTranslationCache()
-      toast.success('已清除 GameBanana 翻译缓存')
+      toast.success('已清除应用缓存')
     } catch (error) {
-      toast.error('清除翻译缓存失败', {
+      toast.error('清除应用缓存失败', {
         description: error instanceof Error ? error.message : String(error)
       })
     } finally {

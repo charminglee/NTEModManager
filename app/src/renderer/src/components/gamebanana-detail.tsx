@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { AppDialog } from './ui/dialog'
 import GameBananaTranslation from './gamebanana-translation'
 import { formatFileSize } from '@/lib/format'
+import { gameBananaImageSrc } from '@/lib/gamebanana-image'
 
 function date(timestamp: number): string {
   return timestamp ? new Date(timestamp * 1000).toLocaleString('zh-CN', { hour12: false }) : '未提供'
@@ -26,7 +27,7 @@ function updateTranslationHtml(update: GameBananaUpdate): string {
 function Author({ author, isModAuthor = false }: { author: GameBananaAuthor; isModAuthor?: boolean }) {
   return <div className="gamebanana-author">
     {author.avatarUrl
-      ? <img src={author.avatarUrl} alt="" loading="lazy" />
+      ? <img src={gameBananaImageSrc(author.avatarUrl)} alt="" loading="lazy" />
       : <span className="gamebanana-avatar-placeholder">{author.name.slice(0, 1)}</span>}
     {author.profileUrl
       ? <button type="button" onClick={() => void window.api.openExternal(author.profileUrl)}>{author.name}</button>
@@ -239,7 +240,7 @@ export default function GameBananaDetail({
               <h3 className="section-heading">模组截图 <small>{mod.screenshots.length}</small></h3>
               {mod.screenshots.length === 0 ? <p className="gamebanana-empty">作者没有提供截图。</p> : <div className="gamebanana-screenshots">
                 {mod.screenshots.map((image, index) => <button type="button" key={image.url} onClick={() => { setOriginalSize(false); setImageIndex(index) }} aria-label={`放大截图 ${index + 1}`}>
-                  <img src={image.url} alt={`${mod.name} 截图 ${index + 1}`} loading="lazy" />
+                  <img src={gameBananaImageSrc(image.url)} alt={`${mod.name} 截图 ${index + 1}`} loading="lazy" />
                 </button>)}
               </div>}
             </section>
@@ -354,7 +355,7 @@ export default function GameBananaDetail({
         }}
       >
         {mod && imageIndex !== null && (
-          <div className={`gamebanana-lightbox-canvas ${originalSize ? 'is-original' : ''}`}><button type="button" onClick={() => setOriginalSize(!originalSize)} aria-label={originalSize ? '适应窗口' : '原始尺寸'}><img src={mod.screenshots[imageIndex].url} alt={`${mod.name} 截图 ${imageIndex + 1}`} /></button></div>
+          <div className={`gamebanana-lightbox-canvas ${originalSize ? 'is-original' : ''}`}><button type="button" onClick={() => setOriginalSize(!originalSize)} aria-label={originalSize ? '适应窗口' : '原始尺寸'}><img src={gameBananaImageSrc(mod.screenshots[imageIndex].url)} alt={`${mod.name} 截图 ${imageIndex + 1}`} /></button></div>
         )}
       </AppDialog>
     </>

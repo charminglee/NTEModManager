@@ -14,6 +14,8 @@ import {
 import { TEST_IMAGES_ROOT, decodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
 import { registerIpcHandlers, setMainWindowProvider } from './ipc'
+import { gameBananaImageSession, serveGameBananaImage } from './gamebanana-image-cache'
+import { GAMEBANANA_IMAGE_PROTOCOL_URL } from '../shared/gamebanana-image'
 import { builtInPackagerDirectory } from './packager'
 import { registerWindowLifecycle } from './window-lifecycle'
 import { registerWindowControls } from './window-controls'
@@ -325,6 +327,7 @@ function isPathInsideRoot(child: string, root: string): boolean {
 
 function registerMediaProtocol(): void {
   protocol.handle('media', async (request) => {
+    if (request.url.startsWith(GAMEBANANA_IMAGE_PROTOCOL_URL)) return serveGameBananaImage(request)
     const path = decodeMediaPath(request.url)
     if (!path) {
       return new Response('Bad Request', { status: 400 })
@@ -404,7 +407,8 @@ if (!gotSingleInstanceLock) {
     const ayakaModsSession = session.fromPartition('persist:ayakamods')
     await Promise.all([
       session.defaultSession.setProxy({ mode: 'system' }),
-      ayakaModsSession.setProxy({ mode: 'system' })
+      ayakaModsSession.setProxy({ mode: 'system' }),
+      gameBananaImageSession().setProxy({ mode: 'system' })
     ])
     Menu.setApplicationMenu(null)
     registerAyakaModsDownloads(ayakaModsSession, () => mainWindow?.webContents)
