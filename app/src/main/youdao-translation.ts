@@ -1,4 +1,4 @@
-import { app, safeStorage } from 'electron'
+import { app, net, safeStorage } from 'electron'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -94,7 +94,7 @@ export async function translateYoudaoHtml(html: string): Promise<string> {
   const curtime = String(Math.floor(Date.now() / 1000))
   const input = html.length <= 20 ? html : `${html.slice(0, 10)}${html.length}${html.slice(-10)}`
   const sign = createHash('sha256').update(`${credentials.appId}${input}${salt}${curtime}${credentials.appSecret}`, 'utf8').digest('hex')
-  const response = await fetch(TRANSLATION_URL, {
+  const response = await net.fetch(TRANSLATION_URL, {
     method: 'POST',
     headers: { Accept: 'text/event-stream', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({

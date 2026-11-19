@@ -386,7 +386,7 @@ async function downloadArchive(
   if (!/^https?:\/\//i.test(url)) {
     throw new Error('下载地址不是 HTTP 或 HTTPS 地址。')
   }
-  const response = await fetch(url)
+  const response = await net.fetch(url)
   if (!response.ok || !response.body) {
     throw new Error(`下载文件失败（${response.status}）。`)
   }

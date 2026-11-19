@@ -400,9 +400,14 @@ if (!gotSingleInstanceLock) {
     }
   })
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    const ayakaModsSession = session.fromPartition('persist:ayakamods')
+    await Promise.all([
+      session.defaultSession.setProxy({ mode: 'system' }),
+      ayakaModsSession.setProxy({ mode: 'system' })
+    ])
     Menu.setApplicationMenu(null)
-    registerAyakaModsDownloads(session.fromPartition('persist:ayakamods'), () => mainWindow?.webContents)
+    registerAyakaModsDownloads(ayakaModsSession, () => mainWindow?.webContents)
     registerYouTubeReferrer()
     registerMediaProtocol()
     logger.addBroadcaster(() => mainWindow)
