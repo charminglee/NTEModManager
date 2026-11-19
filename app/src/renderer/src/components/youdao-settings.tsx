@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import type { YoudaoCredentialsStatus } from '@shared/types'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -127,6 +128,7 @@ export default function YoudaoSettings() {
             />
             {status.configured && (
               <Button type="button" variant="outline" onClick={() => void clearCredentials()} disabled={saving}>
+                <Trash2 aria-hidden="true" />
                 清除凭据
               </Button>
             )}

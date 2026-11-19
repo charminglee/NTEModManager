@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FolderOpen, Globe, Info, Settings, SlidersHorizontal, Wrench } from 'lucide-react'
+import { FolderOpen, Globe, Info, Settings, SlidersHorizontal, Trash2, Wrench } from 'lucide-react'
 import type { AppConfigData, AppConfigPatch } from '@shared/types'
 import { formatFileSize } from '@/lib/format'
 import { Button } from './ui/button'
@@ -270,6 +270,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                   </small>
                 </span>
                 <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => void clearTranslationCache()} disabled={clearingCache}>
+                  <Trash2 aria-hidden="true" />
                   {clearingCache ? '正在清除…' : '清除缓存'}
                 </Button>
               </div>
