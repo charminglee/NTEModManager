@@ -43,7 +43,9 @@ function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: 
       <span>上传时间：{date(file.uploadedAt)}</span>
       {file.description && <p>{file.description}</p>}
     </div>
-    <Button size="sm" onClick={() => onDownload(file)} aria-label={`下载 ${file.name}`}><Download />下载</Button>
+    <Button onClick={() => onDownload(file)} aria-label={`下载 ${file.name}`}>
+      <Download />下载
+    </Button>
   </article>)}</div>
 }
 
