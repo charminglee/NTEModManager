@@ -177,14 +177,12 @@ export interface GameBananaComment {
 }
 
 export type GameBananaTranslationSection = 'description' | 'instructions' | `update:${string}` | `comment:${string}`
-export type GameBananaTranslationLanguage = 'en' | 'ru'
 
 export interface GameBananaTranslationRequest {
   modId: number
   section: GameBananaTranslationSection
   updatedAt: number
   html: string
-  sourceLanguage: GameBananaTranslationLanguage
 }
 
 export interface GameBananaMod {

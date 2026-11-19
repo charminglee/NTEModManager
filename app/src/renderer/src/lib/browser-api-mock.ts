@@ -807,9 +807,9 @@ const api: Api = {
     return { ...mockYoudaoCredentialStatus }
   },
 
-  async translateGameBanana({ html, sourceLanguage }) {
+  async translateGameBanana({ html }) {
     const document = new DOMParser().parseFromString(html, 'text/html')
-    document.body.prepend(`【${sourceLanguage === 'en' ? '英语' : '俄语'}模拟译文】`)
+    document.body.prepend('【模拟译文】')
     return document.documentElement.outerHTML
   },
 

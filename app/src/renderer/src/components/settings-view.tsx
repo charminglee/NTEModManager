@@ -192,7 +192,7 @@ export default function SettingsView({ config, onSaved }: Props) {
               <div className="settings-toggle">
                 <span>
                   <strong>翻译缓存</strong>
-                  <small id="translation-cache-description">仅清除 GameBanana 翻译结果，下次翻译会重新请求有道。</small>
+                  <small id="translation-cache-description">仅清除 GameBanana 翻译结果，下次翻译会重新请求有道大模型。</small>
                 </span>
                 <Button type="button" variant="outline" aria-describedby="translation-cache-description" onClick={() => void clearTranslationCache()} disabled={clearingCache}>
                   {clearingCache ? '正在清除…' : '清除缓存'}

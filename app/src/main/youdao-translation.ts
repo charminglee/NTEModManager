@@ -2,21 +2,22 @@ import { app, safeStorage } from 'electron'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { GameBananaTranslationLanguage, YoudaoCredentialsInput, YoudaoCredentialsStatus } from '../shared/types'
+import type { YoudaoCredentialsInput, YoudaoCredentialsStatus } from '../shared/types'
 import { logger } from './logger'
 
-const TRANSLATION_URL = 'https://openapi.youdao.com/translate_html'
-const MAX_HTML_LENGTH = 1_000_000
+const TRANSLATION_URL = 'https://openapi.youdao.com/proxy/http/llm-trans'
+const MAX_HTML_LENGTH = 5000
 
 interface StoredCredentials {
   appId: string
   appSecret: string
 }
 
-interface YoudaoHtmlResponse {
-  errorCode?: string
-  errorMessage?: string | number
-  data?: { translation?: unknown }
+interface YoudaoTranslationMessage {
+  code: string
+  message: string
+  successful: boolean
+  data?: { transFull?: string }
 }
 
 function credentialsPath(): string {
@@ -84,10 +85,10 @@ export function clearYoudaoCredentials(): YoudaoCredentialsStatus {
   return { configured: false, appId: '' }
 }
 
-export async function translateYoudaoHtml(html: string, sourceLanguage: GameBananaTranslationLanguage): Promise<string> {
-  if (html.length > MAX_HTML_LENGTH) throw new Error('原文 HTML 超过有道网页翻译的单次长度上限，未拆分提交。')
+export async function translateYoudaoHtml(html: string): Promise<string> {
+  if (html.length > MAX_HTML_LENGTH) throw new Error(`原文 HTML 超过有道大模型翻译的单次上限（${MAX_HTML_LENGTH} 字符）。`)
   const credentials = readCredentials()
-  if (!credentials) throw new Error('请先在设置中的「有道翻译」填写已绑定网页翻译服务的应用 ID 和应用密钥。')
+  if (!credentials) throw new Error('请先在设置中的「有道翻译」填写已开通大模型翻译服务的应用 ID 和应用密钥。')
 
   const salt = randomUUID()
   const curtime = String(Math.floor(Date.now() / 1000))
@@ -95,28 +96,37 @@ export async function translateYoudaoHtml(html: string, sourceLanguage: GameBana
   const sign = createHash('sha256').update(`${credentials.appId}${input}${salt}${curtime}${credentials.appSecret}`, 'utf8').digest('hex')
   const response = await fetch(TRANSLATION_URL, {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: { Accept: 'text/event-stream', 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       appKey: credentials.appId,
       salt,
       curtime,
       signType: 'v3',
       sign,
-      q: html,
-      from: sourceLanguage,
-      to: 'zh-CHS'
+      i: html,
+      from: 'auto',
+      to: 'zh-CHS',
+      streamType: 'full',
+      handleOption: '0',
+      prompt: '只翻译 HTML 中的可见正文。原样保留标签、属性、链接、图片、样式、代码及标记为不翻译的内容。仅输出译后的 HTML，不添加说明或 Markdown 代码围栏。'
     }),
     signal: AbortSignal.timeout(30_000)
   })
-  if (!response.ok) throw new Error(`有道网页翻译请求失败（HTTP ${response.status}）。`)
+  if (!response.ok) throw new Error(`有道大模型翻译请求失败（HTTP ${response.status}）。`)
 
-  const result = await response.json() as YoudaoHtmlResponse
-  if (result.errorCode === '110') throw new Error('当前有道应用未绑定网页翻译服务，请在有道智云控制台绑定后再试。')
-  if (String(result.errorMessage) === '31') throw new Error('有道只翻译了部分内容，已保留原文。')
-  if (result.errorCode !== '0' || String(result.errorMessage) === '30') {
-    throw new Error(`有道网页翻译失败（${result.errorCode ?? '未知错误'}）：${result.errorMessage ?? '服务未返回错误详情'}。`)
+  let translation = ''
+  for (const line of (await response.text()).split(/\r?\n/u)) {
+    const event = line.trim()
+    const payload = event.startsWith('data:') ? event.slice(5).trim() : event
+    if (!payload.startsWith('{')) continue
+
+    const message = JSON.parse(payload) as YoudaoTranslationMessage
+    if (message.code === '110') throw new Error('当前有道应用未开通大模型翻译服务，请在有道智云控制台开通后再试。')
+    if (message.code !== '0' || message.successful === false) {
+      throw new Error(`有道大模型翻译失败（${message.code}）：${message.message}`)
+    }
+    if (typeof message.data?.transFull === 'string') translation = message.data.transFull
   }
-  const translation = result.data?.translation
-  if (typeof translation !== 'string' || !translation.trim()) throw new Error('有道网页翻译未返回有效的 HTML 译文。')
+  if (!translation.trim()) throw new Error('有道大模型翻译未返回有效的译文。')
   return translation
 }
