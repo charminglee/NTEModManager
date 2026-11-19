@@ -1345,7 +1345,8 @@ select {
 }
 .mod-row-copy strong,
 .settings-field > label,
-.settings-toggle strong {
+.settings-toggle strong,
+.settings-config-header h2 {
   font-size: 15px;
 }
 .mod-row-copy strong {
@@ -1601,10 +1602,12 @@ select {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  padding: 32px 28px;
+}
+.settings-content:not([hidden]) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 32px 28px;
 }
 .settings-content > * {
   flex-shrink: 0;
@@ -1670,6 +1673,66 @@ select {
   width: 320px;
   max-width: 100%;
   margin-left: auto;
+}
+.settings-config-file {
+  padding: 10px 0 24px;
+}
+.settings-config-header,
+.settings-config-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.settings-config-header {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.settings-config-header h2 {
+  font-weight: 750;
+  margin: 0 0 6px;
+}
+.settings-config-file p,
+.settings-config-status {
+  font-size: 12px;
+  color: #514a42;
+}
+.settings-config-file p.settings-config-error {
+  margin: 10px 0;
+  color: hsl(var(--destructive));
+}
+.settings-ini-editor {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--cream);
+}
+.settings-ini-editor:focus-within {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 1px;
+}
+.settings-ini-editor .cm-editor {
+  height: clamp(220px, 48vh, 460px);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.settings-ini-editor .cm-focused {
+  outline: none;
+}
+.settings-ini-editor .cm-scroller {
+  font-family: Consolas, 'SFMono-Regular', monospace;
+  scrollbar-width: thin;
+}
+.settings-ini-editor .cm-gutters {
+  background: var(--paper);
+  border-right-color: var(--rule);
+  color: #625b51;
+}
+.settings-ini-editor .cm-content {
+  padding-block: 8px;
+}
+.settings-ini-editor .cm-line {
+  padding-inline: 10px;
 }
 .logs-workspace {
   flex: 1;
@@ -2107,7 +2170,8 @@ select {
   }
   .mod-row-copy strong,
   .settings-field > label,
-  .settings-toggle strong {
+  .settings-toggle strong,
+  .settings-config-header h2 {
     font-size: 13px;
   }
   .mod-row-copy small {

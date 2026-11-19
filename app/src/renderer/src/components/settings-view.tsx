@@ -7,6 +7,7 @@ import Switch from './ui/switch'
 import Sidebar from './sidebar'
 import { toast } from './toast-card'
 import YoudaoSettings from './youdao-settings'
+import ConfigFileEditor from './config-file-editor'
 interface Props {
   config: AppConfigData
   onSaved: (config: AppConfigData, refresh: boolean) => void
@@ -60,6 +61,14 @@ export default function SettingsView({ config, onSaved }: Props) {
     draftRef.current = next
     setDraft(next)
   }
+  const reportSaved = (next: AppConfigData) => {
+    const before = configRef.current
+    configRef.current = next
+    onSaved(
+      next,
+      next.modsDirectory !== before.modsDirectory || next.backupsDirectory !== before.backupsDirectory
+    )
+  }
   const flush = () => {
     if (saveTimeoutRef.current !== null) {
       window.clearTimeout(saveTimeoutRef.current)
@@ -69,15 +78,8 @@ export default function SettingsView({ config, onSaved }: Props) {
     if (!Object.keys(patch).length) return
     pendingPatchRef.current = {}
     saveQueueRef.current = saveQueueRef.current.then(async () => {
-      const before = configRef.current
       try {
-        const next = await window.api.updateConfig(patch)
-        configRef.current = next
-        onSaved(
-          next,
-          next.modsDirectory !== before.modsDirectory ||
-            next.backupsDirectory !== before.backupsDirectory
-        )
+        reportSaved(await window.api.updateConfig(patch))
       } catch (error) {
         toast.error('设置保存失败', {
           description: error instanceof Error ? error.message : String(error)
@@ -88,6 +90,24 @@ export default function SettingsView({ config, onSaved }: Props) {
   const flushRef = useRef(flush)
   flushRef.current = flush
   useEffect(() => () => flushRef.current(), [])
+  const saveConfigFile = (original: string, content: string) => {
+    flush()
+    const before = draftRef.current
+    const save = saveQueueRef.current.then(async () => {
+      const next = await window.api.saveConfigFile(original, content)
+      if (!next) return false
+      const editsSinceSave = Object.fromEntries(Object.entries(draftRef.current).filter(
+        ([key, value]) => before[key as keyof SettingsDraft] !== value
+      ))
+      const draft = { ...next, groupsText: next.exclusiveInstallExemptGroups.join('，'), ...editsSinceSave }
+      draftRef.current = draft
+      setDraft(draft)
+      reportSaved(next)
+      return true
+    })
+    saveQueueRef.current = save.then(() => undefined, () => undefined)
+    return save
+  }
   const updateText = (key: (typeof pathFields)[number]['key'] | 'groupsText', value: string) => {
     update(key, value)
     if (key === 'groupsText') {
@@ -155,7 +175,7 @@ export default function SettingsView({ config, onSaved }: Props) {
             {section === 'paths' ? '通用' : section === 'preferences' ? '操作偏好' : section === 'translation' ? '有道翻译' : '高级'}
           </h1>
         </div>
-        <div className="settings-content" key={section}>
+        <div className="settings-content" key={section} hidden={section === 'advanced'}>
           {section === 'paths' && (
             <>
               {pathFields.map(({ key, label, help }) => (
@@ -235,21 +255,11 @@ export default function SettingsView({ config, onSaved }: Props) {
             </>
           )}
           {section === 'translation' && <YoudaoSettings />}
-          {section === 'advanced' && (
-            <>
-              {toggle('testImagesEnabled', '使用测试背景图', '调试时使用固定的测试图片目录。')}
-              {toggle('fpsCounterEnabled', '显示帧率', '仅用于性能诊断。')}
-              <div className="settings-toggle">
-                <span>
-                  <strong>配置文件路径</strong>
-                  <small id="config-file-path" className="select-text wrap-anywhere">{config.configPath}</small>
-                </span>
-                <Button type="button" variant="outline" aria-describedby="config-file-path" onClick={() => void window.api.openConfigFile()}>
-                  打开配置文件
-                </Button>
-              </div>
-            </>
-          )}
+        </div>
+        <div className="settings-content" hidden={section !== 'advanced'}>
+          {toggle('testImagesEnabled', '使用测试背景图', '调试时使用固定的测试图片目录。')}
+          {toggle('fpsCounterEnabled', '显示帧率', '仅用于性能诊断。')}
+          <ConfigFileEditor active={section === 'advanced'} config={config} onSave={saveConfigFile} />
         </div>
       </div>
     </section>

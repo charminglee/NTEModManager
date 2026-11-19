@@ -1,4 +1,5 @@
 import type { Api } from '../../../preload/index'
+import { parseIni, splitList, unquote, updateIniText } from '@shared/ini'
 import { bundleChildren } from '@shared/mod-bundle'
 import {
   ALL_CATEGORY,
@@ -418,7 +419,7 @@ const unavailable = (what: string) => ({
 })
 
 const config: AppConfigData = {
-  configPath: 'C:\\Users\\mock\\AppData\\Roaming\\NteModManager\\NteModManager.ini',
+  configPath: 'C:\\Users\\mock\\.ntemm\\NteModManager.ini',
   gameDirectory: 'D:/Games/NTE',
   modsDirectory: 'D:/Games/NTE/mods',
   backupsDirectory: 'D:/Games/NTE/mods.bak',
@@ -434,6 +435,54 @@ const config: AppConfigData = {
   uiCornerRadius: UI_CORNER_RADIUS_DEFAULT,
   backgroundMaskOpacity: BACKGROUND_MASK_OPACITY_DEFAULT,
   gameBananaInstallAfterDownload: false
+}
+
+const defaultConfig = { ...config }
+const configFileFields = {
+  Paths: {
+    mods_directory: 'modsDirectory',
+    backups_directory: 'backupsDirectory',
+    background_images_directory: 'backgroundImagesDirectory',
+    game_launcher: 'gameLauncher'
+  },
+  Categories: { names: 'categories' },
+  Preferences: {
+    mod_category_order: 'categoryOrder',
+    auto_use_last_packaging_path: 'autoUseLastPackagingPath',
+    exclusive_install_exempt_groups: 'exclusiveInstallExemptGroups',
+    restore_last_category: 'restoreLastCategory',
+    ui_corner_radius: 'uiCornerRadius',
+    background_mask_opacity: 'backgroundMaskOpacity',
+    gamebanana_install_after_download: 'gameBananaInstallAfterDownload'
+  },
+  Debug: { test_images: 'testImagesEnabled', fps_counter: 'fpsCounterEnabled' }
+} as const satisfies Record<string, Record<string, keyof AppConfigData>>
+
+let mockConfigFile = ''
+
+function updateMockConfigFile(patch: Partial<AppConfigData>): void {
+  const ini = parseIni(mockConfigFile)
+  for (const [section, fields] of Object.entries(configFileFields)) {
+    for (const [key, field] of Object.entries(fields)) {
+      const value = patch[field as keyof AppConfigData]
+      if (value === undefined) continue
+      ini[section] ??= {}
+      ini[section][key] = typeof value === 'boolean' ? String(Number(value)) : String(value)
+    }
+  }
+  mockConfigFile = updateIniText(mockConfigFile, ini)
+}
+updateMockConfigFile(config)
+mockConfigFile = `; 浏览器预览配置\n${mockConfigFile}`
+
+function applyMockConfig(patch: Partial<AppConfigData>): void {
+  const testImagesBefore = config.testImagesEnabled
+  Object.assign(config, patch)
+  if (config.testImagesEnabled !== testImagesBefore) {
+    backgroundGeneration++
+    backgroundIndex++
+    backgroundListener?.(makeBackgroundState())
+  }
 }
 
 let mockYoudaoCredentialStatus: YoudaoCredentialsStatus = { configured: false, appId: '' }
@@ -838,23 +887,54 @@ const api: Api = {
   clearGameBananaTranslationCache: () => Promise.resolve(),
 
   async updateConfig(patch) {
-    const testImagesBefore = config.testImagesEnabled
-    Object.assign(config, patch)
-    // 切换「使用测试背景图」后立即推送新的背景状态(与 Electron 端 reloadImages 对应)
-    if (config.testImagesEnabled !== testImagesBefore) {
-      backgroundGeneration++
-      backgroundIndex++
-      backgroundListener?.(makeBackgroundState())
+    const changes = { ...patch }
+    if (changes.gameDirectory) {
+      changes.modsDirectory ??= `${changes.gameDirectory}/mods`
+      changes.gameLauncher ??= `${changes.gameDirectory}/NTE.exe`
     }
+    applyMockConfig(changes)
+    updateMockConfigFile(changes)
     return { ...config }
   },
 
-  async openConfigFile() {
-    return unavailable('打开配置文件')
+  async readConfigFile() {
+    return mockConfigFile
+  },
+
+  async saveConfigFile(original, content) {
+    if (original !== mockConfigFile) return null
+    const ini = parseIni(content, true)
+    const next = { ...config }
+    for (const [section, fields] of Object.entries(configFileFields)) {
+      for (const [key, field] of Object.entries(fields)) {
+        const fallback = defaultConfig[field as keyof AppConfigData]
+        const text = ini[section]?.[key]
+        let value = fallback
+        if (text !== undefined) {
+          if (Array.isArray(fallback)) value = splitList(unquote(text))
+          else if (typeof fallback === 'boolean') value = text === '1' || text.toLowerCase() === 'true'
+          else if (typeof fallback === 'number') {
+            const number = Number.parseInt(text, 10)
+            value = Number.isNaN(number) ? fallback : number
+          }
+          else value = text.replace(/\\/g, '/')
+        }
+        Object.assign(next, { [field]: value })
+      }
+    }
+    if (next.modsDirectory !== config.modsDirectory || next.gameLauncher !== config.gameLauncher) {
+      next.gameDirectory = next.modsDirectory.endsWith('/mods')
+        ? next.modsDirectory.slice(0, -'/mods'.length)
+        : next.gameLauncher.slice(0, next.gameLauncher.lastIndexOf('/') + 1).replace(/\/$/, '')
+    }
+    mockConfigFile = content
+    applyMockConfig(next)
+    return { ...config }
   },
 
   async setCategoryOrder(order) {
     config.categoryOrder = [...order]
+    updateMockConfigFile({ categoryOrder: config.categoryOrder })
     return { success: true, message: '' }
   },
 

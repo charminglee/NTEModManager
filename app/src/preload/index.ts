@@ -85,7 +85,9 @@ const api = {
   getConfig: (): Promise<AppConfigData> => ipcRenderer.invoke('config:get'),
   updateConfig: (patch: AppConfigPatch): Promise<AppConfigData> =>
     ipcRenderer.invoke('config:update', patch),
-  openConfigFile: (): Promise<OperationResult> => ipcRenderer.invoke('config:open'),
+  readConfigFile: (): Promise<string> => ipcRenderer.invoke('config:readFile'),
+  saveConfigFile: (original: string, content: string): Promise<AppConfigData | null> =>
+    ipcRenderer.invoke('config:saveFile', original, content),
   setCategoryOrder: (order: string[]): Promise<OperationResult> =>
     ipcRenderer.invoke('config:setCategoryOrder', order),
   setLastCategory: (category: string): Promise<OperationResult> =>

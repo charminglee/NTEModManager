@@ -3,7 +3,9 @@ import { existsSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
 import { changeInstallationForAll, installModExclusively, runBatchModAction } from './operations'
-import { getAppConfig, getLastCategory, setCategoryOrder, setLastCategory, updateAppConfig } from './config'
+import {
+  getAppConfig, getLastCategory, readConfigFile, saveConfigFile, setCategoryOrder, setLastCategory, updateAppConfig
+} from './config'
 import { builtInPackagerDirectory, runPackager } from './packager'
 import { encodeMediaPath } from './background'
 import { backgroundCarousel } from './background-carousel'
@@ -512,15 +514,16 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   )
 
   ipcMain.handle('config:get', () => getAppConfig())
-  ipcMain.handle('config:open', async () => {
-    const path = getAppConfig().configPath
-    const error = await shell.openPath(path)
-    if (error) {
-      logger.warning(`无法使用系统默认方式打开配置文件：${path}`)
-      return failure('无法打开配置文件')
+  ipcMain.handle('config:readFile', () => readConfigFile())
+  ipcMain.handle('config:saveFile', (_event, original: string, content: string) => {
+    const before = getAppConfig()
+    if (!saveConfigFile(original, content)) return null
+    const next = getAppConfig()
+    if (before.testImagesEnabled !== next.testImagesEnabled ||
+        before.backgroundImagesDirectory !== next.backgroundImagesDirectory) {
+      backgroundCarousel.reloadImages(true)
     }
-    logger.info(`已使用系统默认方式打开配置文件：${path}`)
-    return { success: true, message: '已打开配置文件' }
+    return next
   })
   ipcMain.handle('config:update', (_event, patch: AppConfigPatch) => {
     const before = getAppConfig()

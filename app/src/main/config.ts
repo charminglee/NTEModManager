@@ -1,9 +1,12 @@
 import { app } from 'electron'
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import {
+  copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync
+} from 'node:fs'
 import { dirname, join } from 'node:path'
 import { describeError, logger } from './logger'
 import { ntemmConfigFile } from './ntemm-paths'
-import { parseIni, serializeIni, splitList, unquote } from './ini'
+import { parseIni, serializeIni, splitList, unquote, updateIniText } from '../shared/ini'
 import type { AppConfigData, AppConfigPatch } from '../shared/types'
 import {
   BACKGROUND_MASK_OPACITY_DEFAULT,
@@ -109,6 +112,48 @@ export function configFilePath(): string {
   return cachedConfigPath
 }
 
+export function readConfigFile(): string {
+  const filePath = configFilePath()
+  try {
+    if (!existsSync(filePath)) createDefaultConfig(filePath)
+    return readFileSync(filePath, 'utf-8')
+  } catch (error) {
+    logger.error(`配置文件读取失败：${filePath}：${describeError(error)}`)
+    throw error
+  }
+}
+
+export function saveConfigFile(original: string, content: string): boolean {
+  const filePath = configFilePath()
+  let temporaryPath: string | undefined
+  try {
+    if (typeof original !== 'string' || typeof content !== 'string') {
+      throw new Error('配置文件内容必须为文本。')
+    }
+    if (readConfigFile() !== original) {
+      logger.warning(`配置文件已变更，已跳过写入：${filePath}`)
+      return false
+    }
+    parseIni(content, true)
+    const target = realpathSync(filePath)
+    temporaryPath = `${target}.${randomUUID()}.tmp`
+    writeFileSync(temporaryPath, content, { encoding: 'utf-8', mode: statSync(target).mode, flag: 'wx' })
+    renameSync(temporaryPath, target)
+    logger.info(`已保存配置文件：${filePath}`)
+    return true
+  } catch (error) {
+    if (temporaryPath) {
+      try {
+        rmSync(temporaryPath, { force: true })
+      } catch (cleanupError) {
+        logger.warning(`无法清理配置临时文件：${describeError(cleanupError)}`)
+      }
+    }
+    logger.error(`配置文件写入失败：${filePath}：${describeError(error)}`)
+    throw error
+  }
+}
+
 function readIni(): ReturnType<typeof parseIni> {
   const filePath = configFilePath()
   if (!existsSync(filePath)) {
@@ -124,10 +169,11 @@ function readIni(): ReturnType<typeof parseIni> {
 }
 
 function writeSection(section: string, entries: Record<string, string>): void {
-  const ini = readIni()
+  const content = readConfigFile()
+  const ini = parseIni(content)
   ini[section] = entries
   try {
-    writeFileSync(configFilePath(), serializeIni(ini), 'utf-8')
+    writeFileSync(configFilePath(), updateIniText(content, ini), 'utf-8')
   } catch (error) {
     logger.error(`配置文件写入失败：${configFilePath()}：${describeError(error)}`)
     throw error
@@ -357,7 +403,8 @@ const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
 
 /** 设置界面保存:将补丁写入配置文件,未指定的字段保持原值。 */
 export function updateAppConfig(patch: AppConfigPatch): void {
-  const ini = readIni()
+  const content = readConfigFile()
+  const ini = parseIni(content)
 
   // 打包器已随应用内置，保存设置时清理旧版可配置路径。
   if (ini.Paths) {
@@ -420,7 +467,7 @@ export function updateAppConfig(patch: AppConfigPatch): void {
   delete ini.LiquidGlass
 
   try {
-    writeFileSync(configFilePath(), serializeIni(ini), 'utf-8')
+    writeFileSync(configFilePath(), updateIniText(content, ini), 'utf-8')
   } catch (error) {
     logger.error(`配置文件写入失败：${configFilePath()}：${describeError(error)}`)
     throw error
