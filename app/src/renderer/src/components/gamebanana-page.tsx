@@ -153,7 +153,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
 
   const activeTaskCount = tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length
 
-  const openDownload = (mod: GameBananaMod, file = mod.files[0]) => {
+  const openDownload = (mod: GameBananaMod, file = mod.files[0] ?? mod.archivedFiles[0]) => {
     if (!file) {
       toast.warning('这个模组没有可下载文件')
       return

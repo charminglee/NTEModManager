@@ -176,6 +176,7 @@ export default function GameBananaDetail({
   const updates = useDetailRequest(initial.id, window.api.getGameBananaModUpdates)
   const commentPages = useCommentPages(initial.id, open)
   const mod = profile.request.status === 'ready' ? profile.request.data : null
+  const fileCount = mod ? mod.files.length + mod.archivedFiles.length : 0
   // 评论加载时复用更新内容的参数，避免重建正在播放的 iframe。
   const updateItems = useMemo(() => {
     if (updates.request.status !== 'ready') return null
@@ -299,7 +300,7 @@ export default function GameBananaDetail({
               </GameBananaTranslation>}
             </section>
             <section className="gamebanana-detail-section" aria-label="模组文件">
-              <h3 className="section-heading">模组文件 <small>{mod.files.length}</small></h3>
+              <h3 className="section-heading">模组文件 <small>{fileCount}</small></h3>
               {mod.files.length === 0 ? <p className="gamebanana-empty">暂无可下载文件。</p> : <FileList files={mod.files} onDownload={(file) => onDownload(mod, file)} />}
               {mod.archivedFiles.length > 0 && <details className="gamebanana-archives"><summary><ChevronDown />归档文件 <small>{mod.archivedFiles.length}</small></summary><FileList files={mod.archivedFiles} onDownload={(file) => onDownload(mod, file)} /></details>}
             </section>
