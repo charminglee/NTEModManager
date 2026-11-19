@@ -706,12 +706,14 @@ input[type='checkbox'] {
   block-size: 0;
   interpolate-size: allow-keywords;
   overflow: clip;
-  transition-property: block-size, content-visibility;
+  /* 收起时仍布局，内嵌更新说明可在展开前完成高度测量。 */
+  content-visibility: visible;
+  visibility: hidden;
+  transition-property: block-size, visibility;
   transition-duration: var(--motion-normal);
   transition-timing-function: var(--motion-out);
-  transition-behavior: allow-discrete;
 }
-.gamebanana-update[open]::details-content { block-size: auto; }
+.gamebanana-update[open]::details-content { block-size: auto; visibility: visible; }
 .gamebanana-update summary, .gamebanana-archives summary { display: flex; align-items: center; gap: 9px; padding: 15px 16px; cursor: pointer; list-style: none; }
 .gamebanana-update summary::-webkit-details-marker, .gamebanana-archives summary::-webkit-details-marker { display: none; }
 .gamebanana-update summary > svg, .gamebanana-archives summary > svg { width: 15px; height: 15px; flex-shrink: 0; color: #c2b39d; }
