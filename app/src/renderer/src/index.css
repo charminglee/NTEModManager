@@ -1632,6 +1632,7 @@ select {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 27px;
 }
 .settings-content > * {
   flex-shrink: 0;
@@ -1642,10 +1643,6 @@ select {
   grid-template-columns: minmax(0, 1fr) max(240px, calc(100% - 400px));
   align-items: center;
   gap: 20px;
-  padding: 0 0 27px;
-}
-.settings-field:last-child {
-  padding-bottom: 0;
 }
 .settings-field label {
   font-weight: 750;
@@ -1656,6 +1653,9 @@ select {
 }
 .settings-field p {
   margin: 8px 0 0;
+}
+.settings-field p,
+.settings-toggle small {
   font-size: 11px;
   line-height: 1.7;
   color: #514a42;
@@ -1665,23 +1665,14 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 30px;
-  padding: 20px 0;
-  margin-bottom: 14px;
-}
-.settings-toggle:last-child {
-  margin-bottom: 0;
 }
 .settings-toggle > span {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.settings-toggle small {
-  font-size: 11px;
-  color: #514a42;
-}
 .settings-config-file {
-  padding: 10px 0 24px;
+  padding-bottom: 24px;
 }
 .settings-config-header,
 .settings-config-actions {
