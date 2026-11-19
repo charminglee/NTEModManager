@@ -61,6 +61,7 @@
   --destructive: 4 61% 45%;
   --destructive-foreground: 40 100% 98%;
   --border: 38 14% 70%;
+  --primary-button-border: hsl(var(--border));
   --input: 60 3% 22%;
   --ring: 4 61% 51%;
   --success: 158 31% 29%;
@@ -105,6 +106,9 @@ select {
 }
 button {
   cursor: pointer;
+}
+.button-primary {
+  border-color: var(--primary-button-border);
 }
 button:disabled {
   cursor: default;
