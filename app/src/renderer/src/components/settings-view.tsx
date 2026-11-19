@@ -208,7 +208,7 @@ export default function SettingsView({ config, onSaved }: Props) {
               <div className="settings-field" key={key}>
                 <label htmlFor={key}>{label}</label>
                 <div>
-                  <div className="settings-path-input">
+                  <div className="settings-input-row">
                     <Input id={key} type={key === 'workbenchAesKey' ? 'password' : 'text'}
                       value={draft[key]} onChange={event => update(key, event.target.value)}
                       onFocus={event => { event.currentTarget.dataset.previous = event.currentTarget.value }}
