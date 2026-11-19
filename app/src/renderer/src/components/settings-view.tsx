@@ -231,7 +231,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                   <p id={`${key}-help`}>{help}</p>
                 </div>
                 <div className="settings-input-row">
-                  <Input id={key} type={key === 'workbenchAesKey' ? 'password' : 'text'}
+                  <Input id={key} type="text"
                     aria-describedby={`${key}-help`}
                     placeholder={key === 'workbenchMapping' ? '留空则使用内置映射文件。' : undefined}
                     value={draft[key]} onChange={event => update(key, event.target.value)}
