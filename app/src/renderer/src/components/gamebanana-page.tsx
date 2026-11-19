@@ -271,7 +271,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
         )}
 
         <div className="gamebanana-page-footer">
-          <Button variant="secondary" onClick={() => setDrawerOpen(true)}>
+          <Button variant="outline" onClick={() => setDrawerOpen(true)}>
             <Download />下载列表{activeTaskCount > 0 ? `  ·  ${activeTaskCount}` : ''}
           </Button>
         </div>
