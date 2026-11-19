@@ -206,25 +206,26 @@ export default function SettingsView({ config, onSaved }: Props) {
             }
             return (
               <div className="settings-field" key={key}>
-                <label htmlFor={key}>{label}</label>
                 <div>
-                  <div className="settings-input-row">
-                    <Input id={key} type={key === 'workbenchAesKey' ? 'password' : 'text'}
-                      value={draft[key]} onChange={event => update(key, event.target.value)}
-                      onFocus={event => { event.currentTarget.dataset.previous = event.currentTarget.value }}
-                      onBlur={event => {
-                        if (event.currentTarget.dataset.previous !== event.currentTarget.value) save(event.currentTarget.value)
-                      }} />
-                    {key !== 'workbenchAesKey' && (
-                      <Button variant="outline" onClick={async () => {
-                        const selected = key === 'workbenchMapping'
-                          ? await window.api.pickFile({ title: label, extensions: ['usmap'], defaultPath: draft[key] })
-                          : await window.api.pickDirectory(draft[key])
-                        if (selected) { update(key, selected); save(selected) }
-                      }}><FolderOpen />浏览</Button>
-                    )}
-                  </div>
-                  <p>{help}</p>
+                  <label htmlFor={key}>{label}</label>
+                  <p id={`${key}-help`}>{help}</p>
+                </div>
+                <div className="settings-input-row">
+                  <Input id={key} type={key === 'workbenchAesKey' ? 'password' : 'text'}
+                    aria-describedby={`${key}-help`}
+                    value={draft[key]} onChange={event => update(key, event.target.value)}
+                    onFocus={event => { event.currentTarget.dataset.previous = event.currentTarget.value }}
+                    onBlur={event => {
+                      if (event.currentTarget.dataset.previous !== event.currentTarget.value) save(event.currentTarget.value)
+                    }} />
+                  {key !== 'workbenchAesKey' && (
+                    <Button variant="outline" onClick={async () => {
+                      const selected = key === 'workbenchMapping'
+                        ? await window.api.pickFile({ title: label, extensions: ['usmap'], defaultPath: draft[key] })
+                        : await window.api.pickDirectory(draft[key])
+                      if (selected) { update(key, selected); save(selected) }
+                    }}><FolderOpen />浏览</Button>
+                  )}
                 </div>
               </div>
             )
@@ -233,28 +234,29 @@ export default function SettingsView({ config, onSaved }: Props) {
             <>
               {pathFields.map(({ key, label, help }) => (
                 <div className="settings-field" key={key}>
-                  <label htmlFor={key}>{label}</label>
                   <div>
-                    <div className="settings-input-row">
-                      <Input
-                        id={key}
-                        value={draft[key]}
-                        onChange={(event) => {
-                          updateText(key, event.target.value)
-                        }}
-                        onBlur={() => {
-                          if (key !== 'backgroundImagesDirectory' && !normalizePath(draftRef.current[key])) {
-                            toast.warning('以下设置不能为空', { description: label })
-                          }
-                          flush()
-                        }}
-                      />
-                      <Button type="button" variant="outline" onClick={() => void browse(key)}>
-                        <FolderOpen />
-                        浏览
-                      </Button>
-                    </div>
-                    <p>{help}</p>
+                    <label htmlFor={key}>{label}</label>
+                    <p id={`${key}-help`}>{help}</p>
+                  </div>
+                  <div className="settings-input-row">
+                    <Input
+                      id={key}
+                      aria-describedby={`${key}-help`}
+                      value={draft[key]}
+                      onChange={(event) => {
+                        updateText(key, event.target.value)
+                      }}
+                      onBlur={() => {
+                        if (key !== 'backgroundImagesDirectory' && !normalizePath(draftRef.current[key])) {
+                          toast.warning('以下设置不能为空', { description: label })
+                        }
+                        flush()
+                      }}
+                    />
+                    <Button type="button" variant="outline" onClick={() => void browse(key)}>
+                      <FolderOpen />
+                      浏览
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -289,8 +291,13 @@ export default function SettingsView({ config, onSaved }: Props) {
                 '关闭后，启动时显示全部模组。'
               )}
               <div className="settings-field">
-                <label htmlFor="exempt-groups">独占安装豁免分组</label>
                 <div>
+                  <label htmlFor="exempt-groups">独占安装豁免分组</label>
+                  <p id="exempt-groups-help">
+                    这些分组内允许同时安装多个模组，使用逗号分隔。
+                  </p>
+                </div>
+                <div className="settings-input-row">
                   <Input
                     id="exempt-groups"
                     aria-describedby="exempt-groups-help"
@@ -301,9 +308,6 @@ export default function SettingsView({ config, onSaved }: Props) {
                     onBlur={flush}
                     placeholder="例如：UI，特效"
                   />
-                  <p id="exempt-groups-help">
-                    这些分组内允许同时安装多个模组，使用逗号分隔。
-                  </p>
                 </div>
               </div>
             </>

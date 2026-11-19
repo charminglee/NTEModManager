@@ -1357,7 +1357,7 @@ select {
   gap: 4px;
 }
 .mod-row-copy strong,
-.settings-field > label,
+.settings-field label,
 .settings-toggle strong,
 .settings-config-header h2 {
   font-size: 15px;
@@ -1639,21 +1639,16 @@ select {
 }
 .settings-field {
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) max(240px, calc(100% - 400px));
+  align-items: center;
   gap: 20px;
   padding: 0 0 27px;
 }
 .settings-field:last-child {
   padding-bottom: 0;
 }
-.settings-field > label {
+.settings-field label {
   font-weight: 750;
-  padding-top: 7px;
-}
-.settings-field > div > input,
-.settings-input-row {
-  width: calc(100% - 250px);
 }
 .settings-input-row {
   display: flex;
@@ -1704,9 +1699,16 @@ select {
   gap: 12px;
 }
 .settings-config-header {
-  justify-content: space-between;
   flex-wrap: wrap;
   margin-bottom: 12px;
+}
+.settings-config-actions,
+.settings-config-file > button {
+  margin-inline-start: auto;
+}
+.settings-config-file > button {
+  display: flex;
+  width: fit-content;
 }
 .settings-config-header h2 {
   font-weight: 750;
@@ -2189,7 +2191,7 @@ select {
     display: none;
   }
   .mod-row-copy strong,
-  .settings-field > label,
+  .settings-field label,
   .settings-toggle strong,
   .settings-config-header h2 {
     font-size: 13px;
@@ -2209,8 +2211,12 @@ select {
     padding: 20px 16px;
   }
   .settings-field {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
+  }
+  .settings-input-row {
+    justify-self: end;
+    width: max(min(100%, 240px), calc(100% - 250px));
   }
   .batch-surface {
     flex-wrap: wrap;

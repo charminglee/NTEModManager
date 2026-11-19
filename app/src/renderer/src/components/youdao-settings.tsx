@@ -90,10 +90,14 @@ export default function YoudaoSettings() {
   return (
     <>
       <div className="settings-field">
-        <label htmlFor="youdao-app-id">应用 ID</label>
         <div>
+          <label htmlFor="youdao-app-id">应用 ID</label>
+          <p id="youdao-app-id-help">请填写已开通有道大模型翻译服务的应用 ID。</p>
+        </div>
+        <div className="settings-input-row">
           <Input
             id="youdao-app-id"
+            aria-describedby="youdao-app-id-help"
             autoComplete="off"
             value={appId}
             onChange={(event) => {
@@ -105,35 +109,35 @@ export default function YoudaoSettings() {
             placeholder="请输入有道应用 ID"
             disabled={loading || saving}
           />
-          <p>请填写已开通有道大模型翻译服务的应用 ID。</p>
         </div>
       </div>
       <div className="settings-field">
-        <label htmlFor="youdao-app-secret">应用密钥</label>
         <div>
-          <div className="settings-input-row">
-            <Input
-              id="youdao-app-secret"
-              type="password"
-              autoComplete="new-password"
-              value={appSecret}
-              onChange={(event) => {
-                const value = event.target.value
-                setAppSecret(value)
-                scheduleSave(appId, value)
-              }}
-              onBlur={() => void saveCredentials()}
-              placeholder={status.configured ? '留空以保留已保存的密钥' : '请输入有道应用密钥'}
-              disabled={loading || saving}
-            />
-            {status.configured && (
-              <Button type="button" variant="outline" onClick={() => void clearCredentials()} disabled={saving}>
-                <Trash2 aria-hidden="true" />
-                清除凭据
-              </Button>
-            )}
-          </div>
-          <p>{loading ? '正在读取凭据状态……' : saving ? '正在自动保存……' : status.configured ? '凭据已配置。' : '填写 ID 和密钥后自动保存。'}</p>
+          <label htmlFor="youdao-app-secret">应用密钥</label>
+          <p id="youdao-app-secret-help">{loading ? '正在读取凭据状态……' : saving ? '正在自动保存……' : status.configured ? '凭据已配置。' : '填写 ID 和密钥后自动保存。'}</p>
+        </div>
+        <div className="settings-input-row">
+          <Input
+            id="youdao-app-secret"
+            aria-describedby="youdao-app-secret-help"
+            type="password"
+            autoComplete="new-password"
+            value={appSecret}
+            onChange={(event) => {
+              const value = event.target.value
+              setAppSecret(value)
+              scheduleSave(appId, value)
+            }}
+            onBlur={() => void saveCredentials()}
+            placeholder={status.configured ? '留空以保留已保存的密钥' : '请输入有道应用密钥'}
+            disabled={loading || saving}
+          />
+          {status.configured && (
+            <Button type="button" variant="outline" onClick={() => void clearCredentials()} disabled={saving}>
+              <Trash2 aria-hidden="true" />
+              清除凭据
+            </Button>
+          )}
         </div>
       </div>
     </>
