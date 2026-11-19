@@ -211,7 +211,7 @@ async function parseComments(records: Record<string, unknown>[]): Promise<GameBa
     const replies = Number(record._nReplyCount ?? 0) > 0
       ? await parseComments(await getAllRecords<Record<string, unknown>>(`/Post/${record._idRow}/Posts`))
       : []
-    if (record._nStatus === POST_STATUS_TRASHED) return replies
+    if (Number(record._nStatus) === POST_STATUS_TRASHED) return replies
     return [{
       id: String(record._idRow ?? ''),
       author: parseAuthor(record._aPoster),
