@@ -180,7 +180,6 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
         name,
         config.gameBananaInstallAfterDownload
       )
-      setDrawerOpen(true)
     } catch (downloadError) {
       toast.error('下载任务创建失败', { description: downloadError instanceof Error ? downloadError.message : String(downloadError) })
     }

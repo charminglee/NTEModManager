@@ -74,7 +74,6 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
     try {
       await window.api.startAyakaModsDownload(target.id, name, config.gameBananaInstallAfterDownload)
       setRequests((current) => current.filter((item) => item.id !== target.id))
-      setDrawerOpen(true)
     } catch (downloadError) {
       toast.error('下载任务创建失败', { description: String(downloadError) })
     } finally {
