@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import type {
   GameBananaDownloadTask,
   GameBananaComment,
+  GameBananaCommentsPage,
   GameBananaAuthor,
   GameBananaFile,
   GameBananaMod,
@@ -172,13 +173,17 @@ function parseScreenshots(value: unknown): GameBananaScreenshot[] {
   })
 }
 
+function getRecordsPage<T>(path: string, page: number) {
+  return requestJson<{ _aRecords: T[]; _aMetadata: { _bIsComplete: boolean } }>(path, {
+    _nPage: String(page),
+    _nPerpage: '50'
+  })
+}
+
 async function getAllRecords<T>(path: string): Promise<T[]> {
   const records: T[] = []
   for (let page = 1; ; page += 1) {
-    const result = await requestJson<{ _aRecords: T[]; _aMetadata: { _bIsComplete: boolean } }>(path, {
-      _nPage: String(page),
-      _nPerpage: '50'
-    })
+    const result = await getRecordsPage<T>(path, page)
     records.push(...result._aRecords)
     if (result._aRecords.length === 0 || result._aMetadata._bIsComplete) return records
   }
@@ -334,9 +339,12 @@ export async function getModUpdates(id: number): Promise<GameBananaUpdate[]> {
   return parseUpdates(records).sort((a, b) => b.uploadedAt - a.uploadedAt)
 }
 
-export async function getModComments(id: number): Promise<GameBananaComment[]> {
-  const records = await getAllRecords<Record<string, unknown>>(`/Mod/${id}/Posts`)
-  return parseComments(records)
+export async function getModComments(id: number, page: number): Promise<GameBananaCommentsPage> {
+  const result = await getRecordsPage<Record<string, unknown>>(`/Mod/${id}/Posts`, page)
+  return {
+    comments: await parseComments(result._aRecords),
+    nextPage: result._aRecords.length === 0 || result._aMetadata._bIsComplete ? null : page + 1
+  }
 }
 
 function validCustomName(name: string): boolean {

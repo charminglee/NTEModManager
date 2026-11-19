@@ -531,8 +531,12 @@ const api: Api = {
     return findGameBananaMod(modId).updates
   },
 
-  async getGameBananaModComments(modId) {
-    return findGameBananaMod(modId).commentItems
+  async getGameBananaModComments(modId, page) {
+    const items = findGameBananaMod(modId).commentItems
+    return {
+      comments: items.slice(page - 1, page),
+      nextPage: page < items.length ? page + 1 : null
+    }
   },
 
   async getGameBananaTasks() {

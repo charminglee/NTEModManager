@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, Download, ExternalLink, LoaderCircle, TriangleAlert } from 'lucide-react'
-import type { GameBananaAuthor, GameBananaComment, GameBananaFile, GameBananaMod, GameBananaUpdate } from '@shared/types'
+import type { GameBananaAuthor, GameBananaComment, GameBananaCommentsPage, GameBananaFile, GameBananaMod, GameBananaUpdate } from '@shared/types'
 import { Button } from './ui/button'
 import { AppDialog } from './ui/dialog'
 import GameBananaTranslation from './gamebanana-translation'
@@ -88,6 +88,55 @@ function useDetailRequest<T>(modId: number, load: (modId: number) => Promise<T>)
   return { request, retry }
 }
 
+function useCommentPages(modId: number, open: boolean) {
+  const [{ comments, nextPage }, setPage] = useState<GameBananaCommentsPage>({ comments: [], nextPage: 1 })
+  const [requestedPage, setRequestedPage] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loadMarker, setLoadMarker] = useState<HTMLDivElement | null>(null)
+
+  const loadNextPage = useCallback(() => {
+    if (!open || nextPage === null || requestedPage !== null) return
+    setError(null)
+    setRequestedPage(nextPage)
+  }, [open, nextPage, requestedPage])
+
+  useEffect(() => {
+    if (requestedPage === null) return
+    let active = true
+    void window.api.getGameBananaModComments(modId, requestedPage).then((page) => {
+      if (!active) return
+      setPage((current) => {
+        const byId = new Map(current.comments.map((comment) => [comment.id, comment]))
+        for (const comment of page.comments) {
+          if (!byId.has(comment.id)) byId.set(comment.id, comment)
+        }
+        return { comments: [...byId.values()], nextPage: page.nextPage }
+      })
+    }).catch((failure) => {
+      if (active) setError(failure instanceof Error ? failure.message : String(failure))
+    }).finally(() => {
+      if (active) setRequestedPage(null)
+    })
+    return () => { active = false }
+  }, [modId, requestedPage])
+
+  useEffect(() => {
+    if (!open || error !== null || nextPage === null || requestedPage !== null) return
+    if (nextPage === 1) {
+      loadNextPage()
+      return
+    }
+    if (!loadMarker) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) loadNextPage()
+    }, { root: loadMarker.closest('.gamebanana-detail-body'), rootMargin: '0px 0px 240px' })
+    observer.observe(loadMarker)
+    return () => observer.disconnect()
+  }, [open, error, nextPage, requestedPage, loadMarker, loadNextPage])
+
+  return { comments, nextPage, loading: requestedPage !== null, error, loadNextPage, setLoadMarker }
+}
+
 function DetailSectionStatus({ label, request, retry }: {
   label: string
   request: PendingDetailRequest
@@ -114,7 +163,7 @@ export default function GameBananaDetail({
 }) {
   const profile = useDetailRequest(initial.id, window.api.getGameBananaMod)
   const updates = useDetailRequest(initial.id, window.api.getGameBananaModUpdates)
-  const comments = useDetailRequest(initial.id, window.api.getGameBananaModComments)
+  const commentPages = useCommentPages(initial.id, open)
   const mod = profile.request.status === 'ready' ? profile.request.data : null
   const updateItems = updates.request.status === 'ready' ? updates.request.data : null
   const [imageIndex, setImageIndex] = useState<number | null>(null)
@@ -238,11 +287,22 @@ export default function GameBananaDetail({
             </section>
             <section className="gamebanana-detail-section" aria-label="用户评论">
               <h3 className="section-heading">用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>
-              {comments.request.status !== 'ready' ? (
-                <DetailSectionStatus label="评论" request={comments.request} retry={comments.retry} />
-              ) : comments.request.data.length === 0 ? (
-                <p className="gamebanana-empty">暂无评论。</p>
-              ) : <Comments modId={mod.id} comments={comments.request.data} />}
+              {commentPages.comments.length > 0 && <Comments modId={mod.id} comments={commentPages.comments} />}
+              {commentPages.error !== null ? (
+                <DetailSectionStatus
+                  label={commentPages.comments.length > 0 ? '更多评论' : '评论'}
+                  request={{ status: 'error', message: commentPages.error }}
+                  retry={commentPages.loadNextPage}
+                />
+              ) : commentPages.nextPage === null ? (
+                <p className="gamebanana-empty">
+                  {commentPages.comments.length === 0 ? '暂无评论。' : '已加载全部评论。'}
+                </p>
+              ) : (
+                <div ref={commentPages.setLoadMarker} className="gamebanana-load-more gamebanana-empty" role="status">
+                  {commentPages.nextPage === 1 ? '正在加载评论……' : commentPages.loading ? '正在加载更多评论……' : '继续下滑加载更多评论'}
+                </div>
+              )}
             </section>
           </>
         )}

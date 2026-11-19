@@ -176,6 +176,11 @@ export interface GameBananaComment {
   replies: GameBananaComment[]
 }
 
+export interface GameBananaCommentsPage {
+  comments: GameBananaComment[]
+  nextPage: number | null
+}
+
 export type GameBananaTranslationSection = 'description' | 'instructions' | `update:${string}` | `comment:${string}`
 
 export interface GameBananaTranslationRequest {
