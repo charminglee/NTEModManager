@@ -311,9 +311,7 @@ export default function GameBananaDetail({
                   retry={commentPages.loadNextPage}
                 />
               ) : commentPages.nextPage === null ? (
-                <p className="gamebanana-empty">
-                  {commentPages.comments.length === 0 ? '暂无评论。' : '已加载全部评论。'}
-                </p>
+                commentPages.comments.length === 0 && <p className="gamebanana-empty">暂无评论。</p>
               ) : (
                 <div ref={commentPages.setLoadMarker} className="gamebanana-load-more gamebanana-empty" role="status">
                   {commentPages.nextPage === 1 ? '正在加载评论……' : commentPages.loading ? '正在加载更多评论……' : '继续下滑加载更多评论'}
