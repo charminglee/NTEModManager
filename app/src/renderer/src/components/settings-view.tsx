@@ -43,7 +43,7 @@ const pathFields = [
 const normalizePath = (path: string) => path.trim().replace(/\\/g, '/').replace(/\/+$/, '')
 const workbenchFields = [
   { key: 'workbenchAesKey', label: 'AES 密钥', help: '用于读取游戏的加密容器。' },
-  { key: 'workbenchMapping', label: '属性映射文件', help: '默认使用内置打包器的 .usmap 文件。' },
+  { key: 'workbenchMapping', label: '属性映射文件', help: '留空则使用内置映射文件。' },
   { key: 'workbenchExportDirectory', label: '资源导出目录', help: '保存从游戏资源浏览器导出的文件。' }
 ] as const
 const parseGroups = (groupsText: string) =>

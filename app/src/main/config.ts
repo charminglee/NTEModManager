@@ -7,7 +7,6 @@ import { dirname, join } from 'node:path'
 import { describeError, logger } from './logger'
 import { ntemmConfigFile } from './ntemm-paths'
 import { parseIni, serializeIni, splitList, unquote, updateIniText } from '../shared/ini'
-import { builtInPackagerDirectory } from './packager'
 import type { AppConfigData, AppConfigPatch } from '../shared/types'
 import {
   BACKGROUND_MASK_OPACITY_DEFAULT,
@@ -265,7 +264,7 @@ export function getAppConfig(): AppConfigData {
   return {
     configPath: configFilePath(),
     workbenchAesKey: readIni().Workbench?.aes_key || '',
-    workbenchMapping: getPath('workbench_mapping', join(builtInPackagerDirectory(), 'Mappings', 'HT-5.6.1-0+UE5-0196ef29.usmap')),
+    workbenchMapping: getPath('workbench_mapping', '', true),
     workbenchExportDirectory: getPath('workbench_exports', join(app.getPath('documents'), 'NTEMM', 'Exports')),
     gameDirectory: deriveGameDirectory(modsDirectory, gameLauncher),
     modsDirectory,

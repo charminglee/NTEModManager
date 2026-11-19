@@ -423,7 +423,7 @@ const unavailable = (what: string) => ({
 
 const config: AppConfigData = {
   workbenchAesKey: '',
-  workbenchMapping: '傻瓜打包器/Mappings/HT-5.6.1-0+UE5-0196ef29.usmap',
+  workbenchMapping: '',
   workbenchExportDirectory: 'Documents/NTEMM/Exports',
   configPath: 'C:\\Users\\mock\\.ntemm\\NteModManager.ini',
   gameDirectory: 'D:/Games/NTE',

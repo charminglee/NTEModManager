@@ -28,9 +28,11 @@ async function parse(ctx: Context, action: AssetFormat | 'index', output: string
   const tool = app.isPackaged ? join(process.resourcesPath, 'workbench-assets', 'WorkbenchAssets.exe')
     : join(app.getAppPath(), '..', '.tmp', 'assets', 'publish', 'WorkbenchAssets.exe')
   if (!existsSync(tool)) throw new Error('缺少资源解析器，请先构建 WorkbenchAssets。')
+  const packagerDirectory = builtInPackagerDirectory()
+  const mapping = ctx.config.workbenchMapping || join(packagerDirectory, 'Mappings', 'HT-5.6.1-0+UE5-0196ef29.usmap')
   const request = {
-    action, preview, paks: ctx.paks, output, key: ctx.config.workbenchAesKey, mapping: ctx.config.workbenchMapping,
-    oodle: join(builtInPackagerDirectory(), 'oo2core_9_win64.dll'), path: entry?.path, archive: entry?.archive
+    action, preview, paks: ctx.paks, output, key: ctx.config.workbenchAesKey, mapping,
+    oodle: join(packagerDirectory, 'oo2core_9_win64.dll'), path: entry?.path, archive: entry?.archive
   }
   await new Promise<void>((done, fail) => {
     const proc = spawn(tool, [], { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] })
