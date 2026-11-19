@@ -884,6 +884,7 @@ const api: Api = {
     return document.documentElement.outerHTML
   },
 
+  getGameBananaTranslationCacheSize: () => Promise.resolve(0),
   clearGameBananaTranslationCache: () => Promise.resolve(),
 
   async updateConfig(patch) {

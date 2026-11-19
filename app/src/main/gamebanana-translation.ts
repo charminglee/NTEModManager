@@ -18,6 +18,16 @@ interface CachedTranslation {
 const pending = new Map<string, { revision: string; result: Promise<string> }>()
 const cacheDirectory = () => join(app.getPath('userData'), 'gamebanana-translations')
 
+function listCachePaths(): string[] {
+  const directory = cacheDirectory()
+  const entry = lstatSync(directory, { throwIfNoEntry: false })
+  if (!entry) return []
+  if (!entry.isDirectory()) throw new Error('翻译缓存路径不是普通目录。')
+  return readdirSync(directory)
+    .filter((name) => /^[a-f0-9]{64}\.json(?:\.[a-f0-9-]{36}\.tmp)?$/u.test(name))
+    .map((name) => join(directory, name))
+}
+
 function readCache(path: string, updatedAt: number, sourceHash: string): string | null {
   try {
     const entry = JSON.parse(readFileSync(path, 'utf8')) as CachedTranslation | null
@@ -49,17 +59,22 @@ function writeCache(path: string, entry: CachedTranslation): void {
   }
 }
 
-export function clearGameBananaTranslationCache(): void {
-  const directory = cacheDirectory()
+export function getGameBananaTranslationCacheSize(): number {
   try {
-    const entry = lstatSync(directory, { throwIfNoEntry: false })
-    if (entry) {
-      if (!entry.isDirectory()) throw new Error('翻译缓存路径不是普通目录。')
-      for (const name of readdirSync(directory)) {
-        if (/^[a-f0-9]{64}\.json(?:\.[a-f0-9-]{36}\.tmp)?$/u.test(name)) {
-          rmSync(join(directory, name), { force: true })
-        }
-      }
+    return listCachePaths().reduce((total, path) => {
+      const entry = lstatSync(path, { throwIfNoEntry: false })
+      return entry?.isFile() ? total + entry.size : total
+    }, 0)
+  } catch (error) {
+    logger.warning(`读取 GameBanana 翻译缓存大小失败：${describeError(error)}`)
+    throw error
+  }
+}
+
+export function clearGameBananaTranslationCache(): void {
+  try {
+    for (const path of listCachePaths()) {
+      rmSync(path, { force: true })
     }
     pending.clear()
   } catch (error) {

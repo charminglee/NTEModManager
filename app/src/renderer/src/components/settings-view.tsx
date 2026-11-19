@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { FolderOpen, Globe, Info, Settings, SlidersHorizontal, Wrench } from 'lucide-react'
 import type { AppConfigData, AppConfigPatch } from '@shared/types'
+import { formatFileSize } from '@/lib/format'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import Switch from './ui/switch'
@@ -47,6 +48,18 @@ const parseGroups = (groupsText: string) =>
 export default function SettingsView({ config, onSaved }: Props) {
   const [section, setSection] = useState<(typeof settingsSections)[number]['id']>('paths')
   const [clearingCache, setClearingCache] = useState(false)
+  const [cacheSize, setCacheSize] = useState<number | '读取中…' | '无法读取'>('读取中…')
+  useEffect(() => {
+    if (section !== 'paths' || clearingCache) return
+    let cancelled = false
+    setCacheSize('读取中…')
+    void window.api.getGameBananaTranslationCacheSize().then((size) => {
+      if (!cancelled) setCacheSize(size)
+    }).catch(() => {
+      if (!cancelled) setCacheSize('无法读取')
+    })
+    return () => { cancelled = true }
+  }, [section, clearingCache])
   const [draft, setDraft] = useState<SettingsDraft>(() => ({
     ...config,
     groupsText: config.exclusiveInstallExemptGroups.join('，')
@@ -211,10 +224,12 @@ export default function SettingsView({ config, onSaved }: Props) {
               </div>
               <div className="settings-toggle">
                 <span>
-                  <strong>翻译缓存</strong>
-                  <small id="translation-cache-description">仅清除 GameBanana 翻译结果，下次翻译会重新请求有道大模型。</small>
+                  <strong>应用缓存</strong>
+                  <small id="application-cache-size" aria-live="polite">
+                    当前缓存大小：{typeof cacheSize === 'number' ? formatFileSize(cacheSize) : cacheSize}
+                  </small>
                 </span>
-                <Button type="button" variant="outline" aria-describedby="translation-cache-description" onClick={() => void clearTranslationCache()} disabled={clearingCache}>
+                <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => void clearTranslationCache()} disabled={clearingCache}>
                   {clearingCache ? '正在清除…' : '清除缓存'}
                 </Button>
               </div>

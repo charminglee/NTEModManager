@@ -21,7 +21,11 @@ import {
   listMods as listGameBananaMods,
   setTaskBroadcaster
 } from './gamebanana'
-import { clearGameBananaTranslationCache, translateGameBanana } from './gamebanana-translation'
+import {
+  clearGameBananaTranslationCache,
+  getGameBananaTranslationCacheSize,
+  translateGameBanana
+} from './gamebanana-translation'
 import {
   clearYoudaoCredentials,
   getYoudaoCredentialsStatus,
@@ -266,6 +270,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   })
   ipcMain.handle('youdao:clearCredentials', () => clearYoudaoCredentials())
   ipcMain.handle('gamebanana:translate', (_event, request: GameBananaTranslationRequest) => translateGameBanana(request))
+  ipcMain.handle('gamebanana:translationCacheSize', () => getGameBananaTranslationCacheSize())
   ipcMain.handle('gamebanana:clearTranslationCache', () => clearGameBananaTranslationCache())
   ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))
   ipcMain.handle('ayakamods:pendingDownloads', () => getPendingDownloads())
