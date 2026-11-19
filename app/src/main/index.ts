@@ -182,6 +182,8 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true,
+      // 网页播放器全屏时填满内容区，保持原生窗口的大小与状态。
+      disableHtmlFullscreenWindowResize: true,
       spellcheck: false
     }
   })

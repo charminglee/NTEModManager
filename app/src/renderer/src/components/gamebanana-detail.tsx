@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Download, ExternalLink, LoaderCircle, TriangleAlert } from 'lucide-react'
 import type { GameBananaAuthor, GameBananaComment, GameBananaCommentsPage, GameBananaFile, GameBananaMod, GameBananaUpdate } from '@shared/types'
 import { Button } from './ui/button'
@@ -174,7 +174,15 @@ export default function GameBananaDetail({
   const updates = useDetailRequest(initial.id, window.api.getGameBananaModUpdates)
   const commentPages = useCommentPages(initial.id, open)
   const mod = profile.request.status === 'ready' ? profile.request.data : null
-  const updateItems = updates.request.status === 'ready' ? updates.request.data : null
+  // 评论加载时复用更新内容的参数，避免重建正在播放的 iframe。
+  const updateItems = useMemo(() => {
+    if (updates.request.status !== 'ready') return null
+    return updates.request.data.map((update) => ({
+      update,
+      html: updateTranslationHtml(update),
+      categories: update.changes.map((change) => change.category)
+    }))
+  }, [updates.request])
   const [imageIndex, setImageIndex] = useState<number | null>(null)
   const [originalSize, setOriginalSize] = useState(false)
 
@@ -237,15 +245,14 @@ export default function GameBananaDetail({
               {updates.request.status !== 'ready' ? (
                 <DetailSectionStatus label="更新信息" request={updates.request} retry={updates.retry} />
               ) : <div className="gamebanana-updates">
-                {updates.request.data.map((update, index) => {
-                  const translationHtml = updateTranslationHtml(update)
-                  return <GameBananaTranslation
+                {updateItems?.map(({ update, html, categories }, index) => (
+                  <GameBananaTranslation
                     key={update.id}
                     modId={mod.id}
                     section={`update:${update.id}`}
                     updatedAt={Math.max(update.uploadedAt, update.modifiedAt)}
-                    html={translationHtml}
-                    updateCategories={update.changes.map((change) => change.category)}
+                    html={html}
+                    updateCategories={categories}
                     title={`更新 ${update.name || update.version || ''}`}
                   >
                     {({ button, content }) => <details className="gamebanana-update" open={index === 0}>
@@ -257,7 +264,7 @@ export default function GameBananaDetail({
                       </div>
                     </details>}
                   </GameBananaTranslation>
-                })}
+                ))}
               </div>}
             </section>}
             <section className="gamebanana-detail-section" aria-label="模组介绍">
