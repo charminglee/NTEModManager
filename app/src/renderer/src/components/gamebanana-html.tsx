@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { toast } from './toast-card'
 
-export default function GameBananaHtml({ html, title }: { html: string; title: string }) {
+export default function GameBananaHtml({ html, title, updateCategories }: { html: string; title: string; updateCategories?: string[] }) {
   const frameRef = useRef<HTMLIFrameElement>(null)
   const cleanupRef = useRef<() => void>(() => {})
   const documentHtml = useMemo(() => {
@@ -12,6 +12,17 @@ export default function GameBananaHtml({ html, title }: { html: string; title: s
         if (/^on/i.test(attribute.name) || attribute.name === 'srcdoc') element.removeAttribute(attribute.name)
       }
     })
+    if (updateCategories?.length) {
+      document.querySelectorAll<HTMLElement>('[data-ntemm-update-change]').forEach((block) => {
+        const category = updateCategories[Number(block.dataset.ntemmUpdateChange)]
+        if (!category) return
+        const heading = document.createElement('div')
+        heading.className = 'ntemm-update-change-heading'
+        heading.translate = false
+        heading.textContent = category
+        block.prepend(heading)
+      })
+    }
     document.head.insertAdjacentHTML('afterbegin', `<meta charset="utf-8">
       <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' https: data:; media-src 'self' https:; style-src 'unsafe-inline'; frame-src 'none'; form-action 'none'; base-uri https://gamebanana.com;">
       <base href="https://gamebanana.com/">
@@ -29,9 +40,11 @@ export default function GameBananaHtml({ html, title }: { html: string; title: s
         blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid #c27b64; color: #c9c0b3; }
         ul, ol { padding-left: 24px; } h1, h2, h3, h4 { line-height: 1.4; } hr { border: 0; border-top: 1px solid #625c52; }
         .spoiler { background: #555; } .spoiler:hover { background: transparent; }
+        [data-ntemm-update-change] + [data-ntemm-update-change] { margin-top: 12px; }
+        .ntemm-update-change-heading { color: #dcb893; font-size: 11px; }
       </style>`)
     return `<!doctype html>${document.documentElement.outerHTML}`
-  }, [html])
+  }, [html, updateCategories])
 
   useEffect(() => () => cleanupRef.current(), [])
 

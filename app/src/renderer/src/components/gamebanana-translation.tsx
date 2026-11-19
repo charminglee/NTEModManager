@@ -15,6 +15,7 @@ export default function GameBananaTranslation({
   section,
   updatedAt,
   html,
+  updateCategories,
   title,
   children
 }: {
@@ -22,6 +23,7 @@ export default function GameBananaTranslation({
   section: GameBananaTranslationSection
   updatedAt: number
   html: string
+  updateCategories?: string[]
   title: string
   children: (parts: TranslationParts) => ReactNode
 }) {
@@ -71,7 +73,7 @@ export default function GameBananaTranslation({
   const content = (
     <div className="gamebanana-translation-content">
       {error && <div className="gamebanana-translation-error" role="alert">{error}</div>}
-      <GameBananaHtml html={isTranslated ? translatedHtml : html} title={title} />
+      <GameBananaHtml html={isTranslated ? translatedHtml : html} title={title} updateCategories={updateCategories} />
     </div>
   )
 

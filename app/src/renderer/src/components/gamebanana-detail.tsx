@@ -12,27 +12,14 @@ function date(timestamp: number): string {
 
 function updateTranslationHtml(update: GameBananaUpdate): string {
   const document = new DOMParser().parseFromString(update.description, 'text/html')
-  if (update.changes.length > 0) {
-    const style = document.createElement('style')
-    style.textContent = '.ntemm-update-change + .ntemm-update-change { margin-top: 12px; } .ntemm-update-change-heading { color: #dcb893; font-size: 11px; }'
-    document.head.append(style)
-
-    for (const change of update.changes) {
-      const block = document.createElement('div')
-      block.className = 'ntemm-update-change'
-      if (change.category) {
-        const heading = document.createElement('div')
-        heading.className = 'ntemm-update-change-heading'
-        heading.setAttribute('translate', 'no')
-        heading.textContent = change.category
-        block.append(heading)
-      }
-      const content = document.createElement('div')
-      content.innerHTML = change.text
-      block.append(content)
-      document.body.append(block)
-    }
-  }
+  update.changes.forEach((change, index) => {
+    const block = document.createElement('div')
+    block.setAttribute('data-ntemm-update-change', String(index))
+    const content = document.createElement('div')
+    content.innerHTML = change.text
+    block.append(content)
+    document.body.append(block)
+  })
   return document.documentElement.outerHTML
 }
 
@@ -170,6 +157,7 @@ export default function GameBananaDetail({
                     section={`update:${update.id}`}
                     updatedAt={Math.max(update.uploadedAt, update.modifiedAt)}
                     html={translationHtml}
+                    updateCategories={update.changes.map((change) => change.category)}
                     title={`更新 ${update.name || update.version || ''}`}
                   >
                     {({ button, content }) => <details className="gamebanana-update" open={index === 0}>
