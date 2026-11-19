@@ -1,4 +1,4 @@
-import { app, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import { spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
@@ -7,7 +7,7 @@ import { basename, extname, join, resolve } from 'node:path'
 import { getAppConfig } from './config'
 import { logger } from './logger'
 import { ntemmCacheDir } from './ntemm-paths'
-import { builtInPackagerDirectory } from './packager'
+import { workbenchToolsDirectory } from './workbench-tools'
 import { assetResults, effectiveAssets } from '../shared/workbench-assets-filter'
 import type { AssetEntry, AssetFormat, AssetPreview, AssetQuery, AssetState } from '../shared/workbench-assets'
 
@@ -25,14 +25,14 @@ let baseline: { file: string; entries: Map<string, AssetEntry> } | undefined
 const current = (ctx: Context) => index?.paks === ctx.paks && index.key === ctx.config.workbenchAesKey ? index : undefined
 
 async function parse(ctx: Context, action: AssetFormat | 'index', output: string, entry?: { path: string; archive?: string }, preview = false) {
-  const tool = app.isPackaged ? join(process.resourcesPath, 'workbench-assets', 'WorkbenchAssets.exe')
-    : join(app.getAppPath(), '..', '.tmp', 'assets', 'publish', 'WorkbenchAssets.exe')
-  if (!existsSync(tool)) throw new Error('缺少资源解析器，请先构建 WorkbenchAssets。')
-  const packagerDirectory = builtInPackagerDirectory()
-  const mapping = ctx.config.workbenchMapping || join(packagerDirectory, 'Mappings', 'HT-5.6.1-0+UE5-0196ef29.usmap')
+  const tools = workbenchToolsDirectory()
+  const parser = join(tools, 'cue4parse')
+  const tool = join(parser, 'win-x64', 'WorkbenchAssets.exe')
+  if (!existsSync(tool)) throw new Error(`缺少工作台资源解析器：${tool}`)
+  const mapping = ctx.config.workbenchMapping || join(parser, 'Mappings', 'HT-5.6.1-0+UE5-0196ef29.usmap')
   const request = {
     action, preview, paks: ctx.paks, output, key: ctx.config.workbenchAesKey, mapping,
-    oodle: join(packagerDirectory, 'oo2core_9_win64.dll'), path: entry?.path, archive: entry?.archive
+    oodle: join(tools, 'retoc', 'oo2core_9_win64.dll'), path: entry?.path, archive: entry?.archive
   }
   await new Promise<void>((done, fail) => {
     const proc = spawn(tool, [], { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] })

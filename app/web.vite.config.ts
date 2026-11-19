@@ -1,6 +1,6 @@
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { extname, resolve, sep } from 'node:path'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, searchForWorkspaceRoot, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -46,11 +46,17 @@ export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   publicDir: resolve(__dirname, '../img/bg'),
   plugins: [react(), tailwindcss(), serveTestImages()],
+  server: {
+    fs: {
+      allow: [searchForWorkspaceRoot(__dirname), resolve(__dirname, '../libs/spine-thing'), resolve(__dirname, '../libs/icebones')]
+    }
+  },
   resolve: {
     // 与 electron.vite.config.ts 保持一致:裸包名 `lucide-react` 指向图标转出表,
     // 深路径 lucide-react/dist/esm/icons/*.js 保持解析到真实包(见 src/renderer/src/lib/icons.ts)
     alias: [
       { find: '@shared', replacement: resolve(__dirname, 'src/shared') },
+      { find: '@libs', replacement: resolve(__dirname, '../libs') },
       { find: '@', replacement: resolve(__dirname, 'src/renderer/src') },
       { find: /^lucide-react$/, replacement: resolve(__dirname, 'src/renderer/src/lib/icons.ts') }
     ]

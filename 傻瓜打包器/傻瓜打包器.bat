@@ -13,8 +13,8 @@ set "FINAL_NAME=Mod_P"
 :: ======================================================
 
 :: 自动定位工具路径
-set "REPAK_EXE=%~dp0repak.exe"
-set "RETOC_EXE=%~dp0retoc.exe"
+set "REPAK_EXE=%~dp0..\libs\repak\repak.exe"
+set "RETOC_EXE=%~dp0..\libs\retoc\retoc.exe"
 set "MORPH_PATCH_EXE=%~dp0NteMorphTargetPatch.exe"
 set "IMPORT_SCRIPT=%~dp0ImportContentFolder.ps1"
 set "CONTENT_FOLDER=%~dp0%SOURCE_FOLDER%\HT\Content"

@@ -4,8 +4,8 @@ import { link, mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { basename, join, posix, relative, sep } from 'node:path'
 import type { SpineFile } from '../shared/workbench-spine'
 import { getAppConfig } from './config'
-import { builtInPackagerDirectory } from './packager'
 import { decodeGameTexture } from './workbench-assets'
+import { workbenchToolsDirectory } from './workbench-tools'
 
 async function stageContainers(content: string, staging: string): Promise<void> {
   const directories = await readdir(content)
@@ -26,13 +26,13 @@ async function stageContainers(content: string, staging: string): Promise<void> 
 }
 
 async function extract(filter: string, staging: string, output: string, key: string) {
-  const tools = builtInPackagerDirectory()
+  const tools = join(workbenchToolsDirectory(), 'retoc')
   const args = ['-a', key, 'to-legacy', '--version', 'UE5_6', '--no-shaders', '--no-script-objects',
     '--filter', filter, staging, output]
   await new Promise<void>((resolve, reject) => {
     // 进程的命令行含 AES。只报告退出状态，避免错误对象或工具输出回显参数。
     const child = spawn(join(tools, 'retoc.exe'), args, { cwd: tools, windowsHide: true, stdio: 'ignore' })
-    child.once('error', () => reject(new Error('无法启动内置 retoc，请检查打包器目录。')))
+    child.once('error', () => reject(new Error('无法启动内置 retoc，请检查 libs/retoc 目录。')))
     child.once('close', code => {
       if (code === 0) resolve()
       else reject(new Error(`retoc 读取游戏资源失败（退出码 ${code}），请检查工作台的 AES 密钥及游戏容器。`))

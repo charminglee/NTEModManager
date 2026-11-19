@@ -8,16 +8,25 @@ directories:
 files:
   - out/**
 extraResources:
-  - from: ../.tmp/assets/publish
-    to: workbench-assets
-  - from: tools/workbench-assets
-    to: licenses/workbench-assets
+  - from: ../libs
+    to: libs
+    filter:
+      - cue4parse/win-x64/**
+      - cue4parse/Mappings/**
+      - retoc/**
+      - repak/**
+  - from: ../libs/cue4parse
+    to: licenses/cue4parse
     filter:
       - "*.txt"
   - from: node_modules/@google/model-viewer/LICENSE
     to: licenses/model-viewer.txt
-  - from: src/renderer/src/components/workbench-spine-codec
-    to: licenses/workbench-spine
+  - from: ../libs/spine-thing
+    to: licenses/spine-thing
+    filter:
+      - "*.txt"
+  - from: ../libs/icebones
+    to: licenses/icebones
     filter:
       - "*.txt"
   - from: ../img/bg

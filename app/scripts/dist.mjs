@@ -13,22 +13,19 @@ import { fileURLToPath } from 'node:url'
 const appDir = dirname(dirname(fileURLToPath(import.meta.url)))
 const unpackedDir = join(appDir, 'dist', 'win-unpacked')
 const exeName = 'NteModManager.exe'
+const workbenchTool = join(appDir, '..', 'libs', 'cue4parse', 'win-x64', 'WorkbenchAssets.exe')
+
+if (!existsSync(workbenchTool)) {
+  console.error(`缺少工作台资源解析器：${workbenchTool}`)
+  process.exit(1)
+}
 
 // Electron 压缩包镜像:与 install-electron 共享 %LOCALAPPDATA%\electron\Cache
 // (缓存键=下载 URL 哈希,镜像不同则每次打包都重新下载);yml 里的 electronDownload.mirror
 // 已配置同一镜像,这里兜底覆盖 @electron/get 的环境变量检查
 process.env.ELECTRON_MIRROR ??= 'https://npmmirror.com/mirrors/electron/'
 
-function runStep(command, args, { cwd = appDir } = {}) {
-  const result = spawnSync(command, args, { stdio: 'inherit', cwd, shell: false })
-  if (result.error) {
-    console.error(`无法启动 ${command}:${result.error.message}`)
-    return 1
-  }
-  return result.status ?? 1
-}
-
-/** npx 在 Windows 上是 .cmd,须走 shell;其余步骤直接 spawn。 */
+/** npx 在 Windows 上是 .cmd，须走 shell。 */
 function runNpx(args) {
   const result = spawnSync(`npx ${args.join(' ')}`, {
     stdio: 'inherit',
@@ -42,13 +39,7 @@ function runNpx(args) {
   return result.status ?? 1
 }
 
-let failed = runStep('pwsh', ['-NoProfile', '-File', 'tools/workbench-assets/build.ps1']) !== 0
-if (!failed) failed = runNpx(['electron-vite', 'build']) !== 0
-if (!failed) {
-  failed = runNpx(['electron-builder', '--dir']) !== 0
-}
-
-if (failed) {
+if (runNpx(['electron-vite', 'build']) !== 0 || runNpx(['electron-builder', '--dir']) !== 0) {
   process.exit(1)
 }
 

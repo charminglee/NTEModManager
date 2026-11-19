@@ -1,4 +1,4 @@
-import { Bone } from './workbench-spine-codec/IceBone'
+import { Bone } from '@libs/icebones/IceBone'
 import type { AtlasRegion } from './workbench-spine-atlas'
 import type { Attachment, Keyframe, SpineModel } from './workbench-spine-model'
 

@@ -3,7 +3,7 @@ import path from 'node:path'
 import * as fs from 'node:fs/promises'
 import { constants, existsSync } from 'node:fs'
 import { createHash, randomUUID } from 'node:crypto'
-import { builtInPackagerDirectory } from './packager'
+import { workbenchToolsDirectory } from './workbench-tools'
 import { describeError, logger } from './logger'
 import { buildProject, editorCommand, validateAsset } from './workbench-projects-build'
 import type { ProjectCommand, WorkbenchProject } from '../shared/workbench-projects'
@@ -169,7 +169,7 @@ export function registerWorkbenchProjects(): void {
     if (error) throw new Error(error)
   })
   ipcMain.handle('workbench-projects:build', () => exclusive(async () => {
-    const result = await buildProject(active(), builtInPackagerDirectory(), message => logger.info(message))
+    const result = await buildProject(active(), workbenchToolsDirectory(), message => logger.info(message))
     logger.info(`模组已烘焙并完成容器校验：${result}`)
     return result
   }))

@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { searchForWorkspaceRoot } from 'vite'
 
 /**
  * 渲染层 alias 用数组 + 正则:只替换裸包名 `lucide-react` 本身,
@@ -10,6 +11,7 @@ import tailwindcss from '@tailwindcss/vite'
  */
 const rendererAlias = [
   { find: '@shared', replacement: resolve(__dirname, 'src/shared') },
+  { find: '@libs', replacement: resolve(__dirname, '../libs') },
   { find: '@', replacement: resolve(__dirname, 'src/renderer/src') },
   { find: /^lucide-react$/, replacement: resolve(__dirname, 'src/renderer/src/lib/icons.ts') }
 ]
@@ -45,6 +47,11 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react(), tailwindcss()],
+    server: {
+      fs: {
+        allow: [searchForWorkspaceRoot(__dirname), resolve(__dirname, '../libs/spine-thing'), resolve(__dirname, '../libs/icebones')]
+      }
+    },
     resolve: {
       alias: rendererAlias
     },

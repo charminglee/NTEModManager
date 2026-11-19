@@ -76,13 +76,14 @@ export async function buildProject(project: WorkbenchProject, tools: string, pro
     await fs.mkdir(result)
     const stem = path.join(result, path.basename(directory) + '_P')
     const utoc = stem + '.utoc'
-    const retoc = path.join(tools, 'retoc.exe')
-    const options = { cwd: tools, windowsHide: true, maxBuffer: 32 * 1024 * 1024 }
+    const retoc = path.join(tools, 'retoc', 'retoc.exe')
+    const repak = path.join(tools, 'repak', 'repak.exe')
+    const options = { windowsHide: true, maxBuffer: 32 * 1024 * 1024 }
     await execute(retoc, ['to-zen', '--version', 'UE5_6', input, utoc], options)
     for (const ext of ['.pak', '.ucas', '.utoc']) {
       if ((await fs.stat(stem + ext)).size === 0) throw new Error(`容器为空：${ext}`)
     }
-    const pak = await execute(path.join(tools, 'repak.exe'), ['list', stem + '.pak'], options)
+    const pak = await execute(repak, ['list', stem + '.pak'], options)
     if (pak.stdout.trim()) throw new Error('辅助 pak 中含有意外的文件。')
     await execute(retoc, ['verify', utoc], options)
     const { stdout } = await execute(retoc, ['list', '--path', utoc], options)

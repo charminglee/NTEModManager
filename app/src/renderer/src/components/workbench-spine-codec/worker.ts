@@ -1,5 +1,5 @@
-import create from './converter.js'
-import wasm from './converter.wasm?url'
+import create from '@libs/spine-thing/converter.js'
+import wasm from '@libs/spine-thing/converter.wasm?url'
 
 self.onmessage = async ({ data }: MessageEvent<{ input: Uint8Array; binary: boolean; version: string }>) => {
   try {
