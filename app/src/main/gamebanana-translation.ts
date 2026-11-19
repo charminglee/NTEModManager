@@ -69,14 +69,16 @@ export function clearGameBananaTranslationCache(): void {
   logger.info('已清除 GameBanana 翻译缓存。')
 }
 
-export async function translateGameBanana({ modId, section, html, updatedAt }: GameBananaTranslationRequest) {
+export async function translateGameBanana({ modId, section, html, updatedAt, bypassCache }: GameBananaTranslationRequest) {
   if (typeof html !== 'string' || !html.trim()) throw new Error('没有可翻译的原文 HTML。')
   const cacheKey = createHash('sha256').update(JSON.stringify([modId, section])).digest('hex')
   const path = join(cacheDirectory(), `${cacheKey}.json`)
   const sourceHash = createHash('sha256').update(html).digest('hex')
   const revision = `${updatedAt}:${sourceHash}`
-  const cached = readCache(path, updatedAt, sourceHash)
-  if (cached) return cached
+  if (!bypassCache) {
+    const cached = readCache(path, updatedAt, sourceHash)
+    if (cached && cached.trim() !== html.trim()) return cached
+  }
 
   const existing = pending.get(path)
   if (existing?.revision === revision) return existing.result

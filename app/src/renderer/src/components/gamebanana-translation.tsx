@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Globe, LoaderCircle } from 'lucide-react'
 import type { GameBananaTranslationSection } from '@shared/types'
-import { hasTranslatableText } from '@/lib/gamebanana-html-translation'
+import { getTranslatableText } from '@/lib/gamebanana-html-translation'
 import { Button } from './ui/button'
 import GameBananaHtml from './gamebanana-html'
 
@@ -28,8 +28,9 @@ export default function GameBananaTranslation({
   children: (parts: TranslationParts) => ReactNode
 }) {
   const source = useMemo(() => ({ modId, section, updatedAt, html }), [modId, section, updatedAt, html])
-  const hasText = useMemo(() => hasTranslatableText(html), [html])
+  const sourceText = useMemo(() => getTranslatableText(html), [html])
   const [translation, setTranslation] = useState<{ source: typeof source; html: string } | null>(null)
+  const [unchangedSource, setUnchangedSource] = useState<typeof source | null>(null)
   const [showTranslation, setShowTranslation] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -40,7 +41,13 @@ export default function GameBananaTranslation({
     setError('')
     setLoading(true)
     try {
-      const result = await window.api.translateGameBanana(source)
+      const result = await window.api.translateGameBanana({ ...source, bypassCache: unchangedSource === source })
+      const translatedText = getTranslatableText(result)
+      if (!translatedText || translatedText === sourceText) {
+        setUnchangedSource(source)
+        setError('译文没有改变正文，请重试翻译。')
+        return
+      }
       setTranslation({ source, html: result })
       setShowTranslation(true)
     } catch (failure) {
@@ -51,7 +58,7 @@ export default function GameBananaTranslation({
   }
 
   const buttonLabel = loading ? '正在翻译' : isTranslated ? '显示原文' : translatedHtml ? '显示译文' : '翻译'
-  const button = hasText ? (
+  const button = sourceText ? (
     <Button
       type="button"
       variant="ghost"

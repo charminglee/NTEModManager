@@ -108,7 +108,7 @@ export async function translateYoudaoHtml(html: string): Promise<string> {
       to: 'zh-CHS',
       streamType: 'full',
       handleOption: '0',
-      prompt: '只翻译 HTML 中的可见正文。原样保留标签、属性、链接、图片、样式、代码及标记为不翻译的内容。仅输出译后的 HTML，不添加说明或 Markdown 代码围栏。'
+      prompt: '将 HTML 的可见正文翻译为简体中文。遇到中外文混排时，保留现有中文，并翻译其中的外文段落、列表项和句子。原样保留标签、属性、链接、图片、样式、代码及标记为不翻译的内容。仅输出译后的 HTML，不添加说明或 Markdown 代码围栏。'
     }),
     signal: AbortSignal.timeout(30_000)
   })
@@ -128,5 +128,6 @@ export async function translateYoudaoHtml(html: string): Promise<string> {
     if (typeof message.data?.transFull === 'string') translation = message.data.transFull
   }
   if (!translation.trim()) throw new Error('有道大模型翻译未返回有效的译文。')
+  if (translation.trim() === html.trim()) throw new Error('有道返回了原文，请重试翻译。')
   return translation
 }

@@ -183,6 +183,7 @@ export interface GameBananaTranslationRequest {
   section: GameBananaTranslationSection
   updatedAt: number
   html: string
+  bypassCache?: boolean
 }
 
 export interface GameBananaMod {
