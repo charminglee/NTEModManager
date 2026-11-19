@@ -1638,7 +1638,6 @@ select {
   justify-content: space-between;
   gap: 30px;
   padding: 20px 0;
-  border-bottom: 1px solid var(--rule);
   margin-bottom: 14px;
   max-width: 1000px;
 }
