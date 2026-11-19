@@ -1690,7 +1690,7 @@ select {
   padding: 20px 0;
 }
 .log-level-trigger {
-  width: 128px;
+  width: 114px;
   flex-shrink: 0;
   border-color: var(--rule);
   box-shadow: none;
