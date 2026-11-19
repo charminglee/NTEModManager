@@ -1660,15 +1660,6 @@ select {
   line-height: 1.7;
   color: #514a42;
 }
-.settings-note {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 13px 16px;
-  background: rgb(231 223 209 / 80%);
-  border-radius: var(--radius-lg);
-  font-size: 12px;
-}
 .settings-toggle {
   display: flex;
   align-items: center;

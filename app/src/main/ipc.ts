@@ -528,19 +528,21 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('config:get', () => getAppConfig())
   ipcMain.handle('config:readFile', () => readConfigFile())
-  ipcMain.handle('config:saveFile', (_event, original: string, content: string) => {
+  ipcMain.handle('config:saveFile', (_event, original: string, content: string) =>
+    runExclusive('保存配置文件', async () => {
+      const before = getAppConfig()
+      if (!(await saveConfigFile(original, content))) return null
+      const next = getAppConfig()
+      if (before.testImagesEnabled !== next.testImagesEnabled ||
+          before.backgroundImagesDirectory !== next.backgroundImagesDirectory) {
+        backgroundCarousel.reloadImages(true)
+      }
+      return next
+    })
+  )
+  const updateConfig = async (patch: AppConfigPatch) => {
     const before = getAppConfig()
-    if (!saveConfigFile(original, content)) return null
-    const next = getAppConfig()
-    if (before.testImagesEnabled !== next.testImagesEnabled ||
-        before.backgroundImagesDirectory !== next.backgroundImagesDirectory) {
-      backgroundCarousel.reloadImages(true)
-    }
-    return next
-  })
-  ipcMain.handle('config:update', (_event, patch: AppConfigPatch) => {
-    const before = getAppConfig()
-    updateAppConfig(patch)
+    await updateAppConfig(patch)
     logger.info(
       `配置已更新：${Object.keys(patch)
         .filter((key) => patch[key as keyof AppConfigPatch] !== undefined)
@@ -557,7 +559,12 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
       backgroundCarousel.reloadImages(sourceChanged)
     }
     return next
-  })
+  }
+  ipcMain.handle('config:update', (_event, patch: AppConfigPatch) =>
+    patch.backupsDirectory === undefined
+      ? updateConfig(patch)
+      : runExclusive('保存模组备份目录', () => updateConfig(patch))
+  )
   ipcMain.handle('config:setCategoryOrder', (_event, order: string[]) => {
     setCategoryOrder(order)
     logger.debug(`分类顺序已保存：${order.join('、')}`)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FolderOpen, Globe, Info, Settings, SlidersHorizontal, Trash2, Wrench } from 'lucide-react'
+import { FolderOpen, Globe, Settings, SlidersHorizontal, Trash2, Wrench } from 'lucide-react'
 import type { AppConfigData, AppConfigPatch } from '@shared/types'
 import { formatFileSize } from '@/lib/format'
 import { Button } from './ui/button'
@@ -99,11 +99,15 @@ export default function SettingsView({ config, onSaved }: Props) {
     }
     const patch = pendingPatchRef.current
     if (!Object.keys(patch).length) return
+    const submittedBackups = draftRef.current.backupsDirectory
     pendingPatchRef.current = {}
     saveQueueRef.current = saveQueueRef.current.then(async () => {
       try {
         reportSaved(await window.api.updateConfig(patch))
       } catch (error) {
+        if (patch.backupsDirectory !== undefined && draftRef.current.backupsDirectory === submittedBackups) {
+          update('backupsDirectory', configRef.current.backupsDirectory)
+        }
         toast.error('设置保存失败', {
           description: error instanceof Error ? error.message : String(error)
         })
@@ -133,6 +137,7 @@ export default function SettingsView({ config, onSaved }: Props) {
   }
   const updateText = (key: (typeof pathFields)[number]['key'] | 'groupsText', value: string) => {
     update(key, value)
+    if (key === 'backupsDirectory') return
     if (key === 'groupsText') {
       pendingPatchRef.current.exclusiveInstallExemptGroups = parseGroups(value)
     } else {
@@ -146,12 +151,23 @@ export default function SettingsView({ config, onSaved }: Props) {
     if (saveTimeoutRef.current !== null) window.clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = window.setTimeout(flush, SAVE_DEBOUNCE_MS)
   }
+  const saveBackupsDirectory = (value: string) => {
+    const path = value.trim().replace(/\\/g, '/')
+    if (!path) {
+      toast.warning('模组备份目录不能为空')
+      update('backupsDirectory', configRef.current.backupsDirectory)
+      return
+    }
+    pendingPatchRef.current.backupsDirectory = path
+    flush()
+  }
   const browse = async (key: (typeof pathFields)[number]['key']) => {
     try {
       const selected = await window.api.pickDirectory(draftRef.current[key] || undefined)
       if (selected) {
         updateText(key, selected)
-        flush()
+        if (key === 'backupsDirectory') saveBackupsDirectory(selected)
+        else flush()
       }
     } catch (error) {
       toast.error('无法选择目录', {
@@ -251,7 +267,16 @@ export default function SettingsView({ config, onSaved }: Props) {
                       onChange={(event) => {
                         updateText(key, event.target.value)
                       }}
-                      onBlur={() => {
+                      onFocus={key === 'backupsDirectory' ? (event) => {
+                        event.currentTarget.dataset.previous = event.currentTarget.value
+                      } : undefined}
+                      onBlur={(event) => {
+                        if (key === 'backupsDirectory') {
+                          if (event.currentTarget.dataset.previous !== event.currentTarget.value) {
+                            saveBackupsDirectory(event.currentTarget.value)
+                          }
+                          return
+                        }
                         if (key !== 'backgroundImagesDirectory' && !normalizePath(draftRef.current[key])) {
                           toast.warning('以下设置不能为空', { description: label })
                         }
@@ -265,10 +290,6 @@ export default function SettingsView({ config, onSaved }: Props) {
                   </div>
                 </div>
               ))}
-              <div className="settings-note">
-                <Info size={17} />
-                修改备份目录不会搬移原目录中的文件。
-              </div>
               <div className="settings-toggle">
                 <span>
                   <strong>应用缓存</strong>

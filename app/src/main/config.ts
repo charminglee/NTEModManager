@@ -6,6 +6,7 @@ import {
 import { dirname, join } from 'node:path'
 import { describeError, logger } from './logger'
 import { ntemmConfigFile } from './ntemm-paths'
+import { migrateBackups } from './backup-migration'
 import { parseIni, serializeIni, splitList, unquote, updateIniText } from '../shared/ini'
 import type { AppConfigData, AppConfigPatch } from '../shared/types'
 import {
@@ -21,6 +22,7 @@ const CONFIG_FILE_NAME = 'NteModManager.ini'
 
 /** 游戏安装目录下的固定相对路径:模组安装目录与启动器 */
 const DEFAULT_GAME_DIRECTORY = 'E:/Neverness To Everness'
+const DEFAULT_BACKUPS_DIRECTORY = 'E:/NteMod/Backups'
 const GAME_MODS_SUBPATH = 'Client/WindowsNoEditor/HT/Content/Paks/~mods'
 const GAME_LAUNCHER_FILENAME = 'NTELauncher.exe'
 
@@ -123,9 +125,8 @@ export function readConfigFile(): string {
   }
 }
 
-export function saveConfigFile(original: string, content: string): boolean {
+export async function saveConfigFile(original: string, content: string): Promise<boolean> {
   const filePath = configFilePath()
-  let temporaryPath: string | undefined
   try {
     if (typeof original !== 'string' || typeof content !== 'string') {
       throw new Error('配置文件内容必须为文本。')
@@ -134,22 +135,30 @@ export function saveConfigFile(original: string, content: string): boolean {
       logger.warning(`配置文件已变更，已跳过写入：${filePath}`)
       return false
     }
-    parseIni(content, true)
-    const target = realpathSync(filePath)
-    temporaryPath = `${target}.${randomUUID()}.tmp`
-    writeFileSync(temporaryPath, content, { encoding: 'utf-8', mode: statSync(target).mode, flag: 'wx' })
-    renameSync(temporaryPath, target)
+    const next = parseIni(content, true)
+    await migrateBackups(backupsPath(parseIni(original)), backupsPath(next), filePath,
+      () => writeConfigAtomically(filePath, original, content))
     logger.info(`已保存配置文件：${filePath}`)
     return true
   } catch (error) {
-    if (temporaryPath) {
-      try {
-        rmSync(temporaryPath, { force: true })
-      } catch (cleanupError) {
-        logger.warning(`无法清理配置临时文件：${describeError(cleanupError)}`)
-      }
-    }
     logger.error(`配置文件写入失败：${filePath}：${describeError(error)}`)
+    throw error
+  }
+}
+
+function writeConfigAtomically(filePath: string, original: string, content: string): void {
+  if (readConfigFile() !== original) throw new Error('保存期间配置文件已变更，请重新保存。')
+  const target = realpathSync(filePath)
+  const temporaryPath = `${target}.${randomUUID()}.tmp`
+  try {
+    writeFileSync(temporaryPath, content, { encoding: 'utf-8', mode: statSync(target).mode, flag: 'wx' })
+    renameSync(temporaryPath, target)
+  } catch (error) {
+    try {
+      rmSync(temporaryPath, { force: true })
+    } catch (cleanupError) {
+      logger.warning(`无法清理配置临时文件：${describeError(cleanupError)}`)
+    }
     throw error
   }
 }
@@ -189,6 +198,11 @@ function getPath(key: string, fallback: string, allowEmpty = false): string {
   return raw.replace(/\\/g, '/')
 }
 
+function backupsPath(ini: ReturnType<typeof parseIni>): string {
+  const configured = unquote(ini.Paths?.backups_directory ?? '').trim()
+  return (configured || DEFAULT_BACKUPS_DIRECTORY).replace(/\\/g, '/')
+}
+
 function getBool(section: string, key: string, fallback: boolean): boolean {
   const raw = readIni()[section]?.[key]?.trim()
   if (raw === undefined || raw === '') {
@@ -215,7 +229,7 @@ function createDefaultConfig(filePath: string): void {
   const ini = parseIni('')
   ini.Paths = {
     mods_directory: `${DEFAULT_GAME_DIRECTORY}/${GAME_MODS_SUBPATH}`,
-    backups_directory: 'E:/NteMod/Backups',
+    backups_directory: DEFAULT_BACKUPS_DIRECTORY,
     background_images_directory: 'D:/pictures/真人',
     game_launcher: `${DEFAULT_GAME_DIRECTORY}/${GAME_LAUNCHER_FILENAME}`
   }
@@ -268,7 +282,7 @@ export function getAppConfig(): AppConfigData {
     workbenchExportDirectory: getPath('workbench_exports', join(app.getPath('documents'), 'NTEMM', 'Exports')),
     gameDirectory: deriveGameDirectory(modsDirectory, gameLauncher),
     modsDirectory,
-    backupsDirectory: getPath('backups_directory', 'E:/NteMod/Backups'),
+    backupsDirectory: backupsPath(readIni()),
     backgroundImagesDirectory: getPath('background_images_directory', 'D:/pictures/真人', true),
     gameLauncher,
     autoUseLastPackagingPath: getBool('Preferences', 'auto_use_last_packaging_path', true),
@@ -407,9 +421,10 @@ const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
 }
 
 /** 设置界面保存:将补丁写入配置文件,未指定的字段保持原值。 */
-export function updateAppConfig(patch: AppConfigPatch): void {
+export async function updateAppConfig(patch: AppConfigPatch): Promise<void> {
   const content = readConfigFile()
   const ini = parseIni(content)
+  const previousBackups = backupsPath(ini)
   if (patch.workbenchAesKey !== undefined) {
     const key = patch.workbenchAesKey.trim()
     if (key && !/^(?:0x)?[0-9a-f]{64}$/i.test(key)) throw new Error('AES 密钥需要 64 位十六进制字符。')
@@ -477,7 +492,10 @@ export function updateAppConfig(patch: AppConfigPatch): void {
   delete ini.LiquidGlass
 
   try {
-    writeFileSync(configFilePath(), updateIniText(content, ini), 'utf-8')
+    const filePath = configFilePath()
+    const updated = updateIniText(content, ini)
+    await migrateBackups(previousBackups, backupsPath(parseIni(updated)), filePath,
+      () => writeConfigAtomically(filePath, content, updated))
   } catch (error) {
     logger.error(`配置文件写入失败：${configFilePath()}：${describeError(error)}`)
     throw error
