@@ -295,8 +295,12 @@ export async function getModSummary(id: number): Promise<GameBananaMod> {
 
 export async function getMod(id: number): Promise<GameBananaMod> {
   const value = await requestJson<Record<string, unknown>>(`/Mod/${id}/ProfilePage`, {})
-  const files = Array.isArray(value._aFiles) ? value._aFiles : []
-  const archivedFiles = Array.isArray(value._aArchivedFiles) ? value._aArchivedFiles : []
+  const files = parseFiles(value._aFiles)
+  const filesById = new Map(files.map((file) => [file.id, file]))
+  for (const file of parseFiles(value._aArchivedFiles)) {
+    filesById.set(file.id, { ...file, archived: true })
+  }
+  const uniqueFiles = [...filesById.values()]
   const screenshots = parseScreenshots(value._aPreviewMedia)
   const credits = Array.isArray(value._aCredits)
     ? value._aCredits.flatMap((entry) => {
@@ -326,11 +330,8 @@ export async function getMod(id: number): Promise<GameBananaMod> {
     profileUrl: String(value._sProfileUrl ?? `https://gamebanana.com/mods/${id}`),
     downloadUrl: typeof value._sDownloadUrl === 'string' ? value._sDownloadUrl : null,
     installInstructions: '',
-    files: parseFiles(files.filter((file) => !(file as Record<string, unknown>)._bIsArchived)),
-    archivedFiles: parseFiles([
-      ...archivedFiles,
-      ...files.filter((file) => (file as Record<string, unknown>)._bIsArchived)
-    ]),
+    files: uniqueFiles.filter((file) => !file.archived),
+    archivedFiles: uniqueFiles.filter((file) => file.archived),
     screenshots
   }
 }

@@ -27,6 +27,12 @@ import {
   setTaskBroadcaster
 } from './gamebanana'
 import {
+  clearGameBananaDownloadCache,
+  getGameBananaDownloadCacheSize,
+  getGameBananaDownloadMarks,
+  recordGameBananaDownload
+} from './gamebanana-download-cache'
+import {
   clearGameBananaTranslationCache,
   getGameBananaTranslationCacheSize,
   translateGameBanana
@@ -45,6 +51,11 @@ let mainWindowProvider: () => Electron.BrowserWindow | null = () => null
 
 export function setMainWindowProvider(provider: () => Electron.BrowserWindow | null): void {
   mainWindowProvider = provider
+}
+
+function sendGameBananaDownloadMarks(marks: Record<string, string>): void {
+  const window = mainWindowProvider()
+  if (window && !window.isDestroyed()) window.webContents.send('gamebanana:download-marks-changed', marks)
 }
 
 function sendProgress(message: string): void {
@@ -279,14 +290,17 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   })
   ipcMain.handle('youdao:clearCredentials', () => clearYoudaoCredentials())
   ipcMain.handle('gamebanana:translate', (_event, request: GameBananaTranslationRequest) => translateGameBanana(request))
-  ipcMain.handle('gamebanana:translationCacheSize', async () => {
+  ipcMain.handle('app:cacheSize', async () => {
     const imageCacheSize = await gameBananaImageSession().getCacheSize()
-    return imageCacheSize + getGameBananaTranslationCacheSize()
+    return imageCacheSize + getGameBananaTranslationCacheSize() + getGameBananaDownloadCacheSize()
   })
-  ipcMain.handle('gamebanana:clearTranslationCache', async () => {
+  ipcMain.handle('app:clearCache', async () => {
     await gameBananaImageSession().clearCache()
     clearGameBananaTranslationCache()
+    clearGameBananaDownloadCache()
+    sendGameBananaDownloadMarks({})
   })
+  ipcMain.handle('gamebanana:downloadMarks', () => getGameBananaDownloadMarks())
   ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))
   ipcMain.handle('ayakamods:pendingDownloads', () => getPendingDownloads())
   ipcMain.handle('ayakamods:tasks', () => getGameBananaTasks().filter((task) => task.source === 'ayakamods'))
@@ -310,13 +324,12 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
       const taskId = createDownloadTask(mod, file, customName)
       void runExclusive(`下载 GameBanana 模组 ${mod.name}`, async (report) => {
         report(`正在下载 ${mod.name}……`)
-        return executeDownloadTask(
-          taskId,
-          mod,
-          file,
-          installAfterDownload,
-          appDir()
-        )
+        const result = await executeDownloadTask(taskId, mod, file, installAfterDownload, appDir())
+        if (result.success) {
+          const marks = recordGameBananaDownload(mod.id, file.id)
+          if (marks) sendGameBananaDownloadMarks(marks)
+        }
+        return result
       })
       return taskId
     }

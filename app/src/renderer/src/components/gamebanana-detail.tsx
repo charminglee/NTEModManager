@@ -36,10 +36,17 @@ function Author({ author, isModAuthor = false }: { author: GameBananaAuthor; isM
   </div>
 }
 
-function FileList({ files, onDownload }: { files: GameBananaFile[]; onDownload: (file: GameBananaFile) => void }) {
+function FileList({ files, lastDownloadedFileId, onDownload }: {
+  files: GameBananaFile[]
+  lastDownloadedFileId: string | undefined
+  onDownload: (file: GameBananaFile) => void
+}) {
   return <div className="gamebanana-file-list">{files.map((file) => <article className="gamebanana-file-row" key={file.id}>
     <div>
-      <strong>{file.name}</strong>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <strong>{file.name}</strong>
+        {file.id === lastDownloadedFileId && <small className="gamebanana-latest">上次下载</small>}
+      </div>
       <span>{file.version && <>{file.version}  ·  </>}{formatFileSize(file.sizeBytes)}  ·  {file.downloadCount.toLocaleString('zh-CN')} 次下载</span>
       <span>上传时间：{date(file.uploadedAt)}</span>
       {file.description && <p>{file.description}</p>}
@@ -164,11 +171,13 @@ function DetailSectionStatus({ label, request, retry }: {
 
 export default function GameBananaDetail({
   initial,
+  lastDownloadedFileId,
   open,
   onOpenChange,
   onDownload
 }: {
   initial: GameBananaMod
+  lastDownloadedFileId: string | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
   onDownload: (mod: GameBananaMod, file: GameBananaFile) => void
@@ -302,8 +311,14 @@ export default function GameBananaDetail({
             </section>
             <section className="gamebanana-detail-section" aria-label="模组文件">
               <h3 className="section-heading">模组文件 <small>{fileCount}</small></h3>
-              {mod.files.length === 0 ? <p className="gamebanana-empty">暂无可下载文件。</p> : <FileList files={mod.files} onDownload={(file) => onDownload(mod, file)} />}
-              {mod.archivedFiles.length > 0 && <details className="gamebanana-archives"><summary><ChevronDown />归档文件 <small>{mod.archivedFiles.length}</small></summary><FileList files={mod.archivedFiles} onDownload={(file) => onDownload(mod, file)} /></details>}
+              {fileCount === 0 && <p className="gamebanana-empty">暂无可下载文件。</p>}
+              {mod.files.length > 0 && (
+                <FileList files={mod.files} lastDownloadedFileId={lastDownloadedFileId} onDownload={(file) => onDownload(mod, file)} />
+              )}
+              {mod.archivedFiles.length > 0 && <details className="gamebanana-archives">
+                <summary><ChevronDown />归档文件 <small>{mod.archivedFiles.length}</small></summary>
+                <FileList files={mod.archivedFiles} lastDownloadedFileId={lastDownloadedFileId} onDownload={(file) => onDownload(mod, file)} />
+              </details>}
             </section>
             <section className="gamebanana-detail-section" aria-label="用户评论">
               <h3 className="section-heading">用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>

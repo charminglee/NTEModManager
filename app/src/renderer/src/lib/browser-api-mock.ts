@@ -531,6 +531,8 @@ function makeBackgroundState(): BackgroundState | null {
 let mockLastCategory = ''
 let mockGameBananaTasks: GameBananaDownloadTask[] = []
 const gameBananaTaskListeners = new Set<(task: GameBananaDownloadTask) => void>()
+const MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY = 'ntemm-mock-gamebanana-download-marks'
+const gameBananaDownloadMarkListeners = new Set<(marks: Record<string, string>) => void>()
 
 let previewWindowState: WindowState = { isMaximized: false, isFullScreen: false }
 const windowStateListeners = new Set<(state: WindowState) => void>()
@@ -643,6 +645,10 @@ const api: Api = {
     window.setTimeout(() => {
       const completed = { ...task, status: 'completed' as const, downloadedBytes: file.sizeBytes, message: '浏览器测试模式：下载完成' }
       mockGameBananaTasks = mockGameBananaTasks.map((item) => item.id === task.id ? completed : item)
+      const savedMarks = window.localStorage.getItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)
+      const marks = { ...JSON.parse(savedMarks ?? '{}'), [modId]: fileId } as Record<string, string>
+      window.localStorage.setItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY, JSON.stringify(marks))
+      for (const listener of gameBananaDownloadMarkListeners) listener(marks)
       for (const listener of gameBananaTaskListeners) listener({ ...completed })
     }, 900)
     return task.id
@@ -899,8 +905,22 @@ const api: Api = {
     return document.documentElement.outerHTML
   },
 
-  getGameBananaTranslationCacheSize: () => Promise.resolve(0),
-  clearGameBananaTranslationCache: () => Promise.resolve(),
+  async getApplicationCacheSize() {
+    const savedMarks = window.localStorage.getItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)
+    return savedMarks === null ? 0 : new TextEncoder().encode(savedMarks).length
+  },
+  async clearApplicationCache() {
+    window.localStorage.removeItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)
+    for (const listener of gameBananaDownloadMarkListeners) listener({})
+  },
+  async getGameBananaDownloadMarks() {
+    const savedMarks = window.localStorage.getItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)
+    return JSON.parse(savedMarks ?? '{}') as Record<string, string>
+  },
+  onGameBananaDownloadMarksChanged(callback) {
+    gameBananaDownloadMarkListeners.add(callback)
+    return () => gameBananaDownloadMarkListeners.delete(callback)
+  },
 
   async updateConfig(patch) {
     const changes = { ...patch }

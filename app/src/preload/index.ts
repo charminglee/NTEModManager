@@ -160,10 +160,17 @@ const api = {
     ipcRenderer.invoke('youdao:clearCredentials'),
   translateGameBanana: (request: GameBananaTranslationRequest): Promise<string> =>
     ipcRenderer.invoke('gamebanana:translate', request),
-  getGameBananaTranslationCacheSize: (): Promise<number> =>
-    ipcRenderer.invoke('gamebanana:translationCacheSize'),
-  clearGameBananaTranslationCache: (): Promise<void> =>
-    ipcRenderer.invoke('gamebanana:clearTranslationCache'),
+  getApplicationCacheSize: (): Promise<number> =>
+    ipcRenderer.invoke('app:cacheSize'),
+  clearApplicationCache: (): Promise<void> =>
+    ipcRenderer.invoke('app:clearCache'),
+  getGameBananaDownloadMarks: (): Promise<Record<string, string>> =>
+    ipcRenderer.invoke('gamebanana:downloadMarks'),
+  onGameBananaDownloadMarksChanged: (callback: (marks: Record<string, string>) => void): (() => void) => {
+    const listener = (_event: unknown, marks: Record<string, string>) => callback(marks)
+    ipcRenderer.on('gamebanana:download-marks-changed', listener)
+    return () => ipcRenderer.removeListener('gamebanana:download-marks-changed', listener)
+  },
   getGameBananaTasks: (): Promise<GameBananaDownloadTask[]> =>
     ipcRenderer.invoke('gamebanana:tasks'),
   getAyakaModsTasks: (): Promise<GameBananaDownloadTask[]> =>

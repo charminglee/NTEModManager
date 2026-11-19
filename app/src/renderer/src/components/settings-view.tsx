@@ -63,7 +63,7 @@ export default function SettingsView({ config, onSaved }: Props) {
     if (section !== 'paths' || clearingCache) return
     let cancelled = false
     setCacheSize('读取中…')
-    void window.api.getGameBananaTranslationCacheSize().then((size) => {
+    void window.api.getApplicationCacheSize().then((size) => {
       if (!cancelled) setCacheSize(size)
     }).catch(() => {
       if (!cancelled) setCacheSize('无法读取')
@@ -175,10 +175,10 @@ export default function SettingsView({ config, onSaved }: Props) {
       })
     }
   }
-  const clearTranslationCache = async () => {
+  const clearApplicationCache = async () => {
     setClearingCache(true)
     try {
-      await window.api.clearGameBananaTranslationCache()
+      await window.api.clearApplicationCache()
       toast.success('已清除应用缓存')
     } catch (error) {
       toast.error('清除应用缓存失败', {
@@ -297,7 +297,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                     当前缓存大小：{typeof cacheSize === 'number' ? formatFileSize(cacheSize) : cacheSize}
                   </small>
                 </span>
-                <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => void clearTranslationCache()} disabled={clearingCache}>
+                <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => void clearApplicationCache()} disabled={clearingCache}>
                   <Trash2 aria-hidden="true" />
                   {clearingCache ? '正在清除…' : '清除缓存'}
                 </Button>

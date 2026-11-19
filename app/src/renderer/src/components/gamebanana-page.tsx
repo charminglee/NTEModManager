@@ -56,6 +56,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
   const [error, setError] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [tasks, setTasks] = useState<GameBananaDownloadTask[]>([])
+  const [downloadMarks, setDownloadMarks] = useState<Record<string, string>>({})
   const [downloadTarget, setDownloadTarget] = useState<DownloadTarget | null>(null)
   const [now, setNow] = useState(Date.now)
   const modGridRef = useRef<HTMLElement>(null)
@@ -125,6 +126,16 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
 
   useEffect(() => {
     let active = true
+    let downloadMarksChanged = false
+    const unsubscribeMarks = window.api.onGameBananaDownloadMarksChanged((marks) => {
+      downloadMarksChanged = true
+      setDownloadMarks(marks)
+    })
+    void window.api.getGameBananaDownloadMarks().then((marks) => {
+      if (active && !downloadMarksChanged) setDownloadMarks(marks)
+    }).catch((loadError) => {
+      if (active && !downloadMarksChanged) toast.error('读取下载标记失败', { description: String(loadError) })
+    })
     void window.api.getGameBananaTasks().then((initial) => {
       if (active) setTasks(initial)
     })
@@ -143,6 +154,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
     })
     return () => {
       active = false
+      unsubscribeMarks()
       unsubscribe()
     }
   }, [onModsChanged])
@@ -281,6 +293,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
         <GameBananaDetail
           key={lastSelectedRef.current.id}
           initial={lastSelectedRef.current}
+          lastDownloadedFileId={downloadMarks[lastSelectedRef.current.id]}
           open={active && selected !== null}
           onOpenChange={(open) => {
             if (!open) setSelected(null)
