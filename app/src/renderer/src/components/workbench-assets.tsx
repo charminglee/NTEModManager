@@ -95,7 +95,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             setSelection(undefined)
           }} />
       </label>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         {comparing && <WorkbenchSelect label="对比快照" className="w-auto max-w-56" disabled={!!busy}
           value={snapshot || 'none'}
           options={[
