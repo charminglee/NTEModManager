@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import './assets/fonts/jetbrains-mono/code-font.css';
 @theme inline {
   --font-sans: 'Segoe UI Variable Display', 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
   --color-background: hsl(var(--background));
@@ -1819,7 +1820,6 @@ select {
   outline: none;
 }
 .settings-ini-editor .cm-scroller {
-  font-family: Consolas, 'SFMono-Regular', monospace;
   scrollbar-width: thin;
 }
 .settings-ini-editor .cm-gutters {

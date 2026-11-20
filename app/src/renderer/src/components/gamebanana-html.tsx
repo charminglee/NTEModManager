@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import DOMPurify from 'dompurify'
+import codeFontStylesheet from '@/assets/fonts/jetbrains-mono/code-font.css?url'
 import { gameBananaImageSrc } from '@/lib/gamebanana-image'
 import { getYouTubeWatchUrl, parseYouTubeEmbedUrl } from '@shared/youtube'
 import { toast } from './toast-card'
 
+const codeFontHref = new URL(codeFontStylesheet, window.location.href).href.replaceAll('&', '&amp;')
+
 const FRAME_DOCUMENT = `<!doctype html>
   <html lang="zh-CN"><head><meta charset="utf-8">
   <base href="https://gamebanana.com/">
+  <link rel="stylesheet" href="${codeFontHref}">
   <style>
     * { scrollbar-width: none; }
     ::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -19,7 +23,7 @@ const FRAME_DOCUMENT = `<!doctype html>
     .ntemm-youtube, .ntemm-youtube-player { display: block; }
     .ntemm-youtube-player { max-width: 100%; min-height: 200px; height: auto; aspect-ratio: 16 / 9; border: 0; background: #1d1c1a; }
     table { border-collapse: collapse; max-width: 100%; } th, td { border: 1px solid #696358; padding: 8px 12px; }
-    pre { overflow-x: auto; padding: 12px; background: #ffffff0a; } code { font-family: Consolas, monospace; }
+    pre { overflow-x: auto; padding: 12px; background: #ffffff0a; }
     blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid #c27b64; color: #c9c0b3; }
     ul, ol { padding-left: 24px; } h1, h2, h3, h4 { line-height: 1.4; } hr { border: 0; border-top: 1px solid #625c52; }
     .spoiler { background: #555; } .spoiler:hover { background: transparent; }

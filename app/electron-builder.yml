@@ -25,6 +25,8 @@ extraResources:
       - "*.txt"
   - from: node_modules/@google/model-viewer/LICENSE
     to: licenses/model-viewer.txt
+  - from: src/renderer/src/assets/fonts/jetbrains-mono/OFL.txt
+    to: licenses/jetbrains-mono.txt
   - from: ../libs/spine-thing
     to: licenses/spine-thing
     filter:
