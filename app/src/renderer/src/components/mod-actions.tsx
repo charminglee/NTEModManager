@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import type { ModCardActions } from './mod-card'
+import { CardContextMenu, type CardMenuPosition } from './card-context-menu'
 import { Button } from './ui/button'
 import {
   DropdownMenu,
@@ -100,76 +101,55 @@ export function ModCardMenu({
   onActivate,
   onClose
 }: ModActionProps & {
-  position: { x: number; y: number; keyboardTrigger?: HTMLElement }
+  position: CardMenuPosition
   selected: boolean
   onActivate: (name: string) => void
   onClose: () => void
 }) {
   return (
-    <DropdownMenu open modal={false} onOpenChange={(open) => { if (!open) onClose() }}>
-      <DropdownMenuTrigger asChild>
-        <span
-          aria-hidden="true"
-          className="pointer-events-none fixed size-0"
-          style={{ left: position.x, top: position.y }}
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        aria-label={`模组操作：${mod.name}`}
-        aria-labelledby={undefined}
-        align="start"
-        sideOffset={0}
-        collisionPadding={8}
-        className="w-52 [&>.solid-popover]:max-h-[var(--radix-dropdown-menu-content-available-height)] [&>.solid-popover]:overflow-y-auto"
-        onContextMenu={(event) => event.preventDefault()}
-        onEscapeKeyDown={() => position.keyboardTrigger?.focus()}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown') event.stopPropagation()
-        }}
-      >
-        <DropdownMenuItem onSelect={() => onActivate(mod.name)}>
-          <Info />
-          查看详情
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => actions.onToggleSelect(mod, { shiftKey: false })}>
-          <ListChecks />
-          {selected ? '取消选中模组' : '选中模组'}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => actions.onToggleInstall(mod)}>
-          <PackageOpen />
-          {mod.installed ? '卸载' : mod.invalid ? '仍要安装' : '安装'}
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={!mod.installed} onSelect={() => actions.onReinstall(mod)}>
-          <RefreshCw />
-          重新安装
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => actions.onRename(mod)}>
-          <Pencil />
-          重命名模组
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => actions.onRepackage(mod)}>
-          <Package />
-          重新打包
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => actions.onAddArchive(mod)}>
-          <FolderInput />
-          添加
-        </DropdownMenuItem>
-        <ModArchiveActionItems mod={mod} actions={actions} />
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => actions.onOpenSource(mod)}>
-          <FolderOpen />
-          打开源目录
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={!mod.installed} onSelect={() => actions.onOpenInstall(mod)}>
-          <FolderOpen />
-          打开安装目录
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <ModFlagAndDeleteItems mod={mod} actions={actions} />
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <CardContextMenu label={`模组操作：${mod.name}`} position={position} onClose={onClose}>
+      <DropdownMenuItem onSelect={() => onActivate(mod.name)}>
+        <Info />
+        查看详情
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => actions.onToggleSelect(mod, { shiftKey: false })}>
+        <ListChecks />
+        {selected ? '取消选中模组' : '选中模组'}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => actions.onToggleInstall(mod)}>
+        <PackageOpen />
+        {mod.installed ? '卸载' : mod.invalid ? '仍要安装' : '安装'}
+      </DropdownMenuItem>
+      <DropdownMenuItem disabled={!mod.installed} onSelect={() => actions.onReinstall(mod)}>
+        <RefreshCw />
+        重新安装
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => actions.onRename(mod)}>
+        <Pencil />
+        重命名模组
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => actions.onRepackage(mod)}>
+        <Package />
+        重新打包
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => actions.onAddArchive(mod)}>
+        <FolderInput />
+        添加
+      </DropdownMenuItem>
+      <ModArchiveActionItems mod={mod} actions={actions} />
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => actions.onOpenSource(mod)}>
+        <FolderOpen />
+        打开源目录
+      </DropdownMenuItem>
+      <DropdownMenuItem disabled={!mod.installed} onSelect={() => actions.onOpenInstall(mod)}>
+        <FolderOpen />
+        打开安装目录
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <ModFlagAndDeleteItems mod={mod} actions={actions} />
+    </CardContextMenu>
   )
 }

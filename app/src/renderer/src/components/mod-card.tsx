@@ -1,9 +1,10 @@
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import { Check, Circle, Layers, Package, TriangleAlert } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
+import { useCardContextMenu } from './card-context-menu'
 import { ModCardMenu } from './mod-actions'
 
 export interface ModCardActions {
@@ -54,31 +55,15 @@ function ModCard({
   displayName,
   onActivate
 }: Props) {
-  const [menuPosition, setMenuPosition] = useState<{
-    x: number
-    y: number
-    keyboardTrigger?: HTMLElement
-  } | null>(null)
+  const menu = useCardContextMenu(!disabled)
 
   return (
     <>
       <article
         data-mod-name={mod.name}
         className={cn('mod-row', active && 'is-active', selected && 'is-selected')}
-        onContextMenu={(event) => {
-          event.preventDefault()
-          if (!disabled) setMenuPosition({ x: event.clientX, y: event.clientY })
-        }}
-        onKeyDown={(event) => {
-          const opensMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')
-          if (disabled || !opensMenu) return
-          if (!(event.target instanceof HTMLElement)) return
-
-          event.preventDefault()
-          event.stopPropagation()
-          const { left, bottom } = event.target.getBoundingClientRect()
-          setMenuPosition({ x: left, y: bottom, keyboardTrigger: event.target })
-        }}
+        onContextMenu={menu.onContextMenu}
+        onKeyDown={menu.onKeyDown}
       >
         <label className="mod-checkbox">
           <input
@@ -126,14 +111,14 @@ function ModCard({
           {mod.installed ? '卸载' : mod.invalid ? '仍要安装' : '安装'}
         </Button>
       </article>
-      {menuPosition && !disabled && (
+      {menu.position && (
         <ModCardMenu
           mod={mod}
           actions={actions}
-          position={menuPosition}
+          position={menu.position}
           selected={selected}
           onActivate={onActivate}
-          onClose={() => setMenuPosition(null)}
+          onClose={menu.close}
         />
       )}
     </>

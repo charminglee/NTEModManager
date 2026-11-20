@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { gameBananaImageSrc } from '@/lib/gamebanana-image'
 import { Download, LoaderCircle, RefreshCw, Search, TriangleAlert } from 'lucide-react'
 import type {
   AppConfigData,
@@ -10,6 +9,7 @@ import type {
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import PromptDialog from './prompt-dialog'
+import GameBananaCard from './gamebanana-card'
 import GameBananaDownloadDrawer from './gamebanana-download-drawer'
 import GameBananaDetail from './gamebanana-detail'
 import { toast } from './toast-card'
@@ -25,23 +25,6 @@ interface Props {
 interface DownloadTarget {
   mod: GameBananaMod
   file: GameBananaFile
-}
-
-function formatModDate(timestamp: number, now: number): string {
-  if (!timestamp) return '未知'
-  const difference = now - timestamp * 1000
-  const totalMinutes = Math.floor(Math.abs(difference) / 60_000)
-  if (totalMinutes === 0) return '刚刚'
-  const days = Math.floor(totalMinutes / 1440)
-  if (days >= 365) return `${Math.floor(days / 365)}y`
-  if (days >= 30) return `${Math.floor(days / 30)}mo`
-  const hours = Math.floor(totalMinutes / 60)
-  const duration = days > 0 ? `${days}d` : hours > 0 ? `${hours}h` : `${totalMinutes}m`
-  return `${duration}`
-}
-
-function shortNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value).toLowerCase()
 }
 
 export default function GameBananaPage({ active, visible, config, onConfigChange, onModsChanged }: Props) {
@@ -166,11 +149,12 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
 
   const activeTaskCount = tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length
 
-  const openDownload = (mod: GameBananaMod, file = mod.files[0] ?? mod.archivedFiles[0]) => {
-    if (!file) {
-      toast.warning('这个模组没有可下载文件')
-      return
-    }
+  const openDetail = (mod: GameBananaMod) => {
+    lastSelectedRef.current = mod
+    setSelected(mod)
+  }
+
+  const openDownload = (mod: GameBananaMod, file: GameBananaFile) => {
     setDownloadTarget({ mod, file })
   }
 
@@ -242,26 +226,15 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
               }}
             >
               {filteredMods.map((mod) => (
-                <button
-                  type="button"
-                  className={`gamebanana-mod-card ${selected?.id === mod.id ? 'is-selected' : ''}`}
+                <GameBananaCard
                   key={mod.id}
-                  onClick={() => {
-                    lastSelectedRef.current = mod
-                    setSelected(mod)
-                  }}
-                >
-                  {mod.previewUrl ? <img src={gameBananaImageSrc(mod.previewUrl)} alt="" draggable={false} /> : <div className="gamebanana-card-placeholder"><Download /></div>}
-                  <div className="gamebanana-card-copy">
-                    <strong>{mod.name}</strong>
-                    <span>{mod.authors}</span>
-                    <small>{shortNumber(mod.downloads)} 下载  ·  {shortNumber(mod.likes)} 喜欢  ·  {shortNumber(mod.views)} 浏览  ·  {shortNumber(mod.comments)} 评论</small>
-                    <small>
-                      上传 {formatModDate(mod.uploadedAt, now)}
-                      {mod.updatedAt !== mod.uploadedAt && `  ·  更新 ${formatModDate(mod.updatedAt, now)}`}
-                    </small>
-                  </div>
-                </button>
+                  mod={mod}
+                  selected={selected?.id === mod.id}
+                  active={active && visible}
+                  now={now}
+                  onOpen={openDetail}
+                  onDownload={openDownload}
+                />
               ))}
               <div className="gamebanana-load-more" role="status" aria-live="polite">
                 {loadMoreError ? (
