@@ -1,0 +1,60 @@
+.app-collapsible {
+  border: 1px solid #61574a;
+  border-radius: var(--radius-lg);
+  background: #ffffff03;
+}
+
+.app-collapsible > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  padding: 15px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.app-collapsible > summary::-webkit-details-marker { display: none; }
+.app-collapsible > summary:focus-visible { outline: 2px solid #e5b091; outline-offset: 3px; }
+
+.app-collapsible-heading,
+.app-collapsible-label,
+.app-collapsible-end {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.app-collapsible-heading { flex: 1 1 auto; min-width: 0; }
+.app-collapsible-label { flex-wrap: wrap; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.app-collapsible-end { margin-inline-start: auto; gap: 19px; }
+.app-collapsible-meta { font-size: 11px; color: #c2b29c; }
+
+.app-collapsible-chevron {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: #c2b39d;
+  transition: transform var(--motion-normal) var(--motion-out);
+}
+
+.app-collapsible[open] > summary .app-collapsible-chevron { transform: rotate(90deg); }
+
+.app-collapsible::details-content {
+  block-size: 0;
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  /* 收起时仍参与布局，内嵌内容可在展开前完成高度测量。 */
+  content-visibility: visible;
+  visibility: hidden;
+  transition: block-size var(--motion-normal) var(--motion-out),
+    visibility var(--motion-normal) var(--motion-out);
+}
+
+.app-collapsible[open]::details-content { block-size: auto; visibility: visible; }
+.app-collapsible-body { padding: 18px; border-top: 1px solid #5b5042; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-collapsible-chevron,
+  .app-collapsible::details-content { transition: none; }
+}

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Download, ExternalLink, LoaderCircle, TriangleAlert } from 'lucide-react'
+import { Download, ExternalLink, LoaderCircle, TriangleAlert } from 'lucide-react'
 import type { GameBananaAuthor, GameBananaComment, GameBananaCommentsPage, GameBananaFile, GameBananaMod, GameBananaUpdate } from '@shared/types'
 import { Button } from './ui/button'
+import { AppCollapsible } from './ui/collapsible'
 import { AppDialog } from './ui/dialog'
 import GameBananaTranslation from './gamebanana-translation'
 import { formatFileSize } from '@/lib/format'
@@ -257,7 +258,7 @@ export default function GameBananaDetail({
               <h3 className="section-heading">更新信息 {updateItems && <small>{updateItems.length}</small>}</h3>
               {updates.request.status !== 'ready' ? (
                 <DetailSectionStatus label="更新信息" request={updates.request} retry={updates.retry} />
-              ) : <div className="gamebanana-updates">
+              ) : <div className="grid gap-2.5">
                 {updateItems?.map(({ update, html, categories }, index) => (
                   <GameBananaTranslation
                     key={update.id}
@@ -268,14 +269,20 @@ export default function GameBananaDetail({
                     updateCategories={categories}
                     title={`更新 ${update.name || update.version || ''}`}
                   >
-                    {({ button, content }) => <details className="gamebanana-update" open={index === 0}>
-                      <summary><ChevronRight /><strong>{update.name || update.version || '模组更新'}</strong>{update.version && <span className="gamebanana-version">{update.version}</span>}{index === 0 && <span className="gamebanana-latest">最新</span>}<time>{date(update.uploadedAt)}</time>{button}</summary>
-                      <div className="gamebanana-update-content">
-                        {update.description || update.changes.length > 0
-                          ? content
-                          : <p className="gamebanana-empty">作者没有填写更新说明。</p>}
-                      </div>
-                    </details>}
+                    {({ button, content }) => <AppCollapsible
+                      title={update.name || update.version || '模组更新'}
+                      badges={<>
+                        {update.version && <span className="gamebanana-tag">{update.version}</span>}
+                        {index === 0 && <span className="gamebanana-latest">最新</span>}
+                      </>}
+                      meta={<time>{date(update.uploadedAt)}</time>}
+                      action={button}
+                      defaultOpen={index === 0}
+                    >
+                      {update.description || update.changes.length > 0
+                        ? content
+                        : <p className="gamebanana-empty">作者没有填写更新说明。</p>}
+                    </AppCollapsible>}
                   </GameBananaTranslation>
                 ))}
               </div>}
@@ -312,13 +319,14 @@ export default function GameBananaDetail({
             <section className="gamebanana-detail-section" aria-label="模组文件">
               <h3 className="section-heading">模组文件 <small>{fileCount}</small></h3>
               {fileCount === 0 && <p className="gamebanana-empty">暂无可下载文件。</p>}
-              {mod.files.length > 0 && (
-                <FileList files={mod.files} lastDownloadedFileId={lastDownloadedFileId} onDownload={(file) => onDownload(mod, file)} />
-              )}
-              {mod.archivedFiles.length > 0 && <details className="gamebanana-archives">
-                <summary><ChevronDown />归档文件 <small>{mod.archivedFiles.length}</small></summary>
-                <FileList files={mod.archivedFiles} lastDownloadedFileId={lastDownloadedFileId} onDownload={(file) => onDownload(mod, file)} />
-              </details>}
+              <div className="grid gap-[22px]">
+                {mod.files.length > 0 && (
+                  <FileList files={mod.files} lastDownloadedFileId={lastDownloadedFileId} onDownload={(file) => onDownload(mod, file)} />
+                )}
+                {mod.archivedFiles.length > 0 && <AppCollapsible title="归档文件" badges={<span className="gamebanana-tag">{mod.archivedFiles.length}</span>}>
+                  <FileList files={mod.archivedFiles} lastDownloadedFileId={lastDownloadedFileId} onDownload={(file) => onDownload(mod, file)} />
+                </AppCollapsible>}
+              </div>
             </section>
             <section className="gamebanana-detail-section" aria-label="用户评论">
               <h3 className="section-heading">用户评论 <small>{mod.comments.toLocaleString('zh-CN')}</small></h3>
