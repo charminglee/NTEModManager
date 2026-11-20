@@ -18,16 +18,17 @@ export function assetResults(rows: AssetEntry[], query: AssetQuery, baseline?: M
   const files: AssetEntry[] = []
   let count = 0
   for (const row of rows) {
-    if (!row.path.startsWith(prefix) || archives.size && !archives.has(row.archive)) continue
-    const path = row.path.toLowerCase()
+    const treePath = row.path.replace(/^\/+/, '')
+    if (!treePath.startsWith(prefix) || archives.size && !archives.has(row.archive)) continue
+    const path = treePath.toLowerCase()
     if ((query.onlyHtContent && !path.startsWith('ht/content/')) || !path.includes(term)) continue
     if (query.mode === 'modified' || query.mode === 'new') {
-      const old = baseline?.get(path)
+      const old = baseline?.get(row.path.toLowerCase())
       if (query.mode === 'modified' ? !old || old.size === row.size && old.encrypted === row.encrypted : old) continue
     }
-    const separator = row.path.indexOf('/', prefix.length)
+    const separator = treePath.indexOf('/', prefix.length)
     if (separator === -1) files.push(row)
-    else folders.add(row.path.slice(0, separator))
+    else folders.add(treePath.slice(0, separator))
     count++
   }
   return {
