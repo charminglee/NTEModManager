@@ -46,10 +46,15 @@ try
     if (archives.Count == 0) throw new InvalidDataException("未找到可读取的游戏容器。");
     if (request.Action == "index")
     {
+        var assetClasses = WorkbenchAssetClasses.Read(provider);
         var rows = archives.SelectMany(v => v.Files.Values.Where(f => !f.IsUePackagePayload)
-            .Select(f => new { path = f.Path, archive = ArchiveId(v.Path), size = f.Size, encrypted = f.IsEncrypted, order = v.ReadOrder }));
+            .Select(f => new
+            {
+                path = f.Path, archive = ArchiveId(v.Path), size = f.Size, encrypted = f.IsEncrypted, order = v.ReadOrder,
+                assetClass = f.IsUePackage ? assetClasses.GetValueOrDefault(f.Path) : null
+            }));
         using var output = File.CreateText(Path.Combine(request.Output, "index.json"));
-        JsonSerializer.CreateDefault().Serialize(output, rows);
+        JsonSerializer.CreateDefault(new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }).Serialize(output, rows);
         return 0;
     }
 

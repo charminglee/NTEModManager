@@ -7,6 +7,7 @@ export interface AssetEntry {
   size: number
   encrypted: boolean
   order: number
+  assetClass?: string
 }
 
 export interface AssetQuery {
