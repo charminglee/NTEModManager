@@ -311,7 +311,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                   </small>
                 </span>
                 <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => {
-                  setCacheSelection([])
+                  setCacheSelection(['image'])
                   setCacheDialogOpen(true)
                 }}>
                   <Trash2 aria-hidden="true" />
