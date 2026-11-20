@@ -1,5 +1,6 @@
 import { createElement, useEffect, useState } from 'react'
 import { Download, PackageOpen } from 'lucide-react'
+import { formatFileSize } from '@/lib/format'
 import { Button } from './ui/button'
 import WorkbenchSelect from './workbench-select'
 import type { AssetEntry, AssetFormat } from '@shared/workbench-assets'
@@ -79,7 +80,7 @@ export default function WorkbenchAssetPreview({ entry, autoOpen, disabled }: {
         <p className="truncate text-sm font-semibold" title={entry.path}>{name}</p>
         <p className="truncate text-xs text-muted-foreground select-text" title={entry.path}>{entry.path}</p>
         <p className="truncate text-xs text-muted-foreground select-text" title={entry.archive}>
-          {entry.archive} · {entry.size.toLocaleString()} B
+          {entry.archive} · {formatFileSize(entry.size)}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
