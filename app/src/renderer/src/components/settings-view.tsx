@@ -29,7 +29,7 @@ const settingsSections = [
   { id: 'advanced', label: '高级', icon: <Wrench size={20} /> }
 ] as const
 const cacheItems = [
-  { kind: 'runtime', label: '运行数据', description: '清除 GameBanana 文件的上次下载标记。' },
+  { kind: 'runtime', label: '运行数据' },
   { kind: 'translation', label: '翻译缓存' },
   { kind: 'image', label: '图片缓存' }
 ] as const
@@ -384,7 +384,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                 checked={cacheSelection.includes(item.kind)}
                 disabled={clearingCache}
                 aria-labelledby={`cache-label-${item.kind}`}
-                aria-describedby={item.kind === 'runtime' ? 'cache-size-runtime cache-runtime-description' : `cache-size-${item.kind}`}
+                aria-describedby={`cache-size-${item.kind}`}
                 onChange={(event) => {
                   const checked = event.currentTarget.checked
                   setCacheSelection((selection) => checked
@@ -392,10 +392,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                     : selection.filter((kind) => kind !== item.kind))
                 }}
               />
-              <span>
-                <strong id={`cache-label-${item.kind}`} className="text-sm font-medium">{item.label}</strong>
-                {'description' in item && <small id="cache-runtime-description" className="mt-1 block text-xs text-muted-foreground">{item.description}</small>}
-              </span>
+              <strong id={`cache-label-${item.kind}`} className="text-sm font-medium">{item.label}</strong>
               <span id={`cache-size-${item.kind}`} className="whitespace-nowrap text-sm tabular-nums text-muted-foreground" aria-live="polite">
                 {typeof cacheSizes === 'string' ? cacheSizes : formatFileSize(cacheSizes[item.kind])}
               </span>
