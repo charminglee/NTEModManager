@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Download, FolderOpen, PackageOpen, Search } from 'lucide-react'
+import { ChevronDown, FileOutput, FolderOpen, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
@@ -113,7 +113,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           setState(value)
           setSnapshot(value.snapshots[0])
           setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
-        })}><Download aria-hidden="true" />导出</Button>
+        })}><FileOutput aria-hidden="true" />导出</Button>
         <div className="inline-flex shrink-0" role="group" aria-label="加载资源">
           <Button className="rounded-r-none" disabled={comparing && !snapshot}
             onClick={() => run('正在加载游戏资源……', async () => {
