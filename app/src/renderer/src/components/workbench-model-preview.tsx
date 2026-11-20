@@ -1,11 +1,15 @@
 import { createElement, useEffect, useRef } from 'react'
 import '@google/model-viewer'
 import type { ModelViewerElement } from '@google/model-viewer'
+import { DEFAULT_MIN_FOV_DEG } from '@google/model-viewer/lib/features/controls.js'
 import { $scene } from '@google/model-viewer/lib/model-viewer-base.js'
 import type { ModelScene } from '@google/model-viewer/lib/three-components/ModelScene.js'
 import { GridHelper } from 'three'
 import modelLight from '../assets/workbench-model-light.hdr?url'
 import modelSky from '../assets/workbench-model-sky.jpg'
+
+// 透视放大倍率与半视野角的正切成反比。
+const minFieldOfView = Math.atan(Math.tan(DEFAULT_MIN_FOV_DEG * Math.PI / 360) / 6) * 360 / Math.PI
 
 export default function WorkbenchModelPreview({ src, name, onError }: { src: string; name: string; onError: () => void }) {
   const modelViewer = useRef<ModelViewerElement>(null)
@@ -51,7 +55,7 @@ export default function WorkbenchModelPreview({ src, name, onError }: { src: str
   return createElement('model-viewer', {
     ref: modelViewer, src, alt: name, 'camera-controls': true,
     'skybox-image': modelSky, 'skybox-height': '1m', 'environment-image': modelLight,
-    'camera-orbit': '0deg 82deg auto',
+    'camera-orbit': '0deg 82deg auto', 'min-field-of-view': `${minFieldOfView}deg`,
     onError, class: 'block min-h-0 w-full flex-1'
   })
 }

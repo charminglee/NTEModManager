@@ -205,7 +205,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.path, selection.archive])} entry={selection} />
             : <div className="workbench-assets-empty">
               <PackageOpen size={24} aria-hidden="true" />
-              <p>点击文件树中的文件加载预览。</p>
+              <p>选择文件以查看预览。</p>
             </div>}
         </div>
       </section>
