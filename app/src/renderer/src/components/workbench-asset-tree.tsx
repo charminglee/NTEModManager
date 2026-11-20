@@ -33,6 +33,7 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
   const [result, setResult] = useState<AssetDirectory>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const expandHtContent = query.onlyHtContent && (!directory || directory.toLowerCase() === 'ht')
 
   useEffect(() => {
     let active = true
@@ -51,7 +52,7 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
   return <div aria-busy={directory ? undefined : loading}>
     {result && result.count > 0 && <ul className={directory ? 'ml-3 border-l border-border pl-1' : 'p-1'}>
       {result.folders.map(path => <AssetFolder key={path} path={path}
-        expand={!!query.search.trim() && result.folders.length === 1 && !result.rows.length}
+        expand={expandHtContent || (!!query.search.trim() && result.folders.length === 1 && !result.rows.length)}
         query={query} selected={selected} onSelect={onSelect} onOpen={onOpen} />)}
       {result.rows.map(row => {
         const name = row.path.slice(row.path.lastIndexOf('/') + 1)

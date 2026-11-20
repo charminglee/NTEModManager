@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, FileOutput, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
+import { ChevronDown, FileOutput, Filter, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup,
+  DropdownMenuRadioGroup, DropdownMenuRadioItem,
   DropdownMenuSeparator, DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { Input } from './ui/input'
@@ -19,6 +20,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [state, setState] = useState<AssetState>({ count: 0, archives: [], snapshots: [] })
   const [search, setSearch] = useState('')
   const [archive, setArchive] = useState('')
+  const [onlyHtContent, setOnlyHtContent] = useState(true)
   const [mode, setMode] = useState<AssetMode>('all')
   const [snapshot, setSnapshot] = useState('')
   const [loaded, setLoaded] = useState<{ mode: AssetMode; snapshot: string; revision: number }>({
@@ -39,8 +41,9 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     }
     return [...groups]
   }, [state.archives])
-  const query = useMemo(() => ({ mode: loaded.mode, snapshot: loaded.snapshot, search, archives: archive ? [archive] : [] }),
-    [loaded, search, archive])
+  const query = useMemo(() => ({
+    mode: loaded.mode, snapshot: loaded.snapshot, search, archives: archive ? [archive] : [], onlyHtContent
+  }), [loaded, search, archive, onlyHtContent])
 
   useEffect(() => {
     if (!active) return
@@ -138,7 +141,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     <div className="workbench-assets-browser">
       <section className="workbench-assets-tree workbench-panel" aria-label="文件">
         <header className="workbench-panel-heading">
-          <h2>文件</h2>
+          <h2 className="mr-auto">文件</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="sm" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
@@ -165,10 +168,24 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" className="size-8" disabled={!!busy}
+                aria-label="过滤文件" title="过滤文件">
+                <Filter aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuCheckboxItem checked={onlyHtContent} onCheckedChange={checked => {
+                setOnlyHtContent(checked)
+                setSelection(undefined)
+              }}>只看 HT/Content</DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <div className="group/file-tree relative min-h-0 flex-1">
           <div className="absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
-            {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive])}
+            {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive, onlyHtContent])}
               query={query} selected={selection?.entry} onSelect={select} onOpen={entry => select(entry, true)} />
               : <div className="workbench-assets-empty">
                 <FolderOpen size={24} aria-hidden="true" />

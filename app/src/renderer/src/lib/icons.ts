@@ -26,6 +26,7 @@ export { default as ExternalLink } from 'lucide-react/dist/esm/icons/external-li
 export { default as File } from 'lucide-react/dist/esm/icons/file.js'
 export { default as FileOutput } from 'lucide-react/dist/esm/icons/file-output.js'
 export { default as FileText } from 'lucide-react/dist/esm/icons/file-text.js'
+export { default as Filter } from 'lucide-react/dist/esm/icons/filter.js'
 export { default as Folder } from 'lucide-react/dist/esm/icons/folder.js'
 export { default as FolderInput } from 'lucide-react/dist/esm/icons/folder-input.js'
 export { default as FolderOpen } from 'lucide-react/dist/esm/icons/folder-open.js'

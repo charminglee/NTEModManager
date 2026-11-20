@@ -15,6 +15,7 @@ export interface AssetQuery {
   snapshot: string
   search: string
   directory: string
+  onlyHtContent: boolean
 }
 
 export interface AssetDirectory {

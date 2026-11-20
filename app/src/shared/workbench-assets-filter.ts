@@ -20,7 +20,7 @@ export function assetResults(rows: AssetEntry[], query: AssetQuery, baseline?: M
   for (const row of rows) {
     if (!row.path.startsWith(prefix) || archives.size && !archives.has(row.archive)) continue
     const path = row.path.toLowerCase()
-    if (!path.includes(term)) continue
+    if ((query.onlyHtContent && !path.startsWith('ht/content/')) || !path.includes(term)) continue
     if (query.mode === 'modified' || query.mode === 'new') {
       const old = baseline?.get(path)
       if (query.mode === 'modified' ? !old || old.size === row.size && old.encrypted === row.encrypted : old) continue
