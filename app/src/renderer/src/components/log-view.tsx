@@ -74,10 +74,10 @@ function LogView() {
           />
         </label>
         <Select value={level} onValueChange={setLevel}>
-          <SelectTrigger className="log-level-trigger" aria-label="日志级别">
+          <SelectTrigger aria-label="日志级别">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="log-level-menu" align="start">
+          <SelectContent>
             <SelectItem value="all">全部级别</SelectItem>
             {Object.entries(labels).map(([key, label]) => (
               <SelectItem key={key} value={key}>

@@ -3,11 +3,11 @@ import { createPortal } from 'react-dom'
 import { ChevronDown, FileOutput, Filter, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup,
-  DropdownMenuRadioGroup, DropdownMenuRadioItem,
-  DropdownMenuSeparator, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
+  DropdownMenuRadioItem, DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { Input } from './ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from './ui/select'
 import WorkbenchSelect from './workbench-select'
 import WorkbenchAssetTree from './workbench-asset-tree'
 import WorkbenchAssetPreview from './workbench-asset-preview'
@@ -114,32 +114,23 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
       </div>
       <div className="workbench-assets-actions flex min-w-0 max-w-full flex-wrap items-center justify-end gap-y-2">
         <div className="flex min-w-0 max-w-full items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
-                aria-label="选择包体" title={archiveLabel}>
-                <span className="truncate">{archiveLabel}</span>
-                <ChevronDown aria-hidden="true" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="workbench-assets-archive-menu">
-              <DropdownMenuRadioGroup value={archive} onValueChange={value => {
-                const nextArchive = archive === value ? '' : value
-                if (nextArchive && !state.count) return loadResources(loaded.mode, loaded.snapshot, nextArchive)
-                setArchive(nextArchive)
-                setSelection(undefined)
-              }}>
-                {archiveGroups.map(([directory, paths], index) => <Fragment key={directory}>
-                  {index > 0 && <DropdownMenuSeparator />}
-                  <DropdownMenuGroup aria-label={directory}>
-                    {paths.map(path => <DropdownMenuRadioItem key={path} value={path}>
-                      <span className="break-all">{path.split('/').pop()}</span>
-                    </DropdownMenuRadioItem>)}
-                  </DropdownMenuGroup>
-                </Fragment>)}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Select value={archive} disabled={!!busy || !state.archives.length} onValueChange={nextArchive => {
+            if (!state.count) return loadResources(loaded.mode, loaded.snapshot, nextArchive)
+            setArchive(nextArchive)
+            setSelection(undefined)
+          }}>
+            <SelectTrigger aria-label="选择包体" title={archiveLabel}>
+              <SelectValue placeholder={archiveLabel} />
+            </SelectTrigger>
+            <SelectContent>
+              {archiveGroups.map(([directory, paths], index) => <Fragment key={directory}>
+                {index > 0 && <SelectSeparator />}
+                <SelectGroup aria-label={directory}>
+                  {paths.map(path => <SelectItem key={path} value={path}>{path.split('/').pop()}</SelectItem>)}
+                </SelectGroup>
+              </Fragment>)}
+            </SelectContent>
+          </Select>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" disabled={!!busy}
