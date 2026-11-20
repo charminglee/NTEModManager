@@ -31,6 +31,7 @@ export interface AssetState {
 }
 
 export interface AssetPreview {
+  format: Exclude<AssetFormat, 'raw'>
   name: string
   bytes: Uint8Array
 }

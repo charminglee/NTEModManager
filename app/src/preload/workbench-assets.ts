@@ -7,8 +7,8 @@ export const workbenchAssetsApi = {
   workbenchAssetSnapshot: (): Promise<AssetState> => ipcRenderer.invoke('assets:snapshot'),
   workbenchAssetQuery: (query: AssetQuery): Promise<AssetDirectory> =>
     ipcRenderer.invoke('assets:query', query),
-  workbenchAssetPreview: (entry: AssetEntry, format: Exclude<AssetFormat, 'raw'>): Promise<AssetPreview> =>
-    ipcRenderer.invoke('assets:preview', entry, format),
+  workbenchAssetPreview: (entry: AssetEntry): Promise<AssetPreview> =>
+    ipcRenderer.invoke('assets:preview', entry),
   workbenchAssetExport: (entry: AssetEntry, format: AssetFormat): Promise<string> =>
     ipcRenderer.invoke('assets:export', entry, format)
 }

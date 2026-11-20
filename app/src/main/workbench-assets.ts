@@ -24,7 +24,7 @@ let index: { paks: string; key: string; rows: AssetEntry[]; effective: AssetEntr
 let baseline: { file: string; entries: Map<string, AssetEntry> } | undefined
 const current = (ctx: Context) => index?.paks === ctx.paks && index.key === ctx.config.workbenchAesKey ? index : undefined
 
-async function parse(ctx: Context, action: AssetFormat | 'index', output: string, entry?: { path: string; archive?: string }, preview = false) {
+async function parse(ctx: Context, action: AssetFormat | 'index' | 'auto', output: string, entry?: { path: string; archive?: string }, preview = false) {
   const tools = bundledToolsDirectory()
   const parser = join(tools, 'cue4parse')
   const tool = join(parser, 'win-x64', 'WorkbenchAssets.exe')
@@ -77,24 +77,26 @@ async function state(ctx: Context): Promise<AssetState> {
   }
 }
 
-async function convert(entry: AssetEntry, format: AssetFormat, preview: boolean): Promise<AssetPreview | string> {
+async function convert(entry: AssetEntry, action: AssetFormat | 'auto'): Promise<AssetPreview | string> {
   const ctx = context()
   const asset = current(ctx)?.rows.find(row => row.path === entry.path && row.archive === entry.archive)
   if (!asset) throw new Error('资源索引已失效，请重新加载。')
-  if (!['raw', 'texture', 'model', 'json'].includes(format)) throw new Error('未知的资源格式。')
+  const preview = action === 'auto'
   const root = preview ? ctx.root : ctx.config.workbenchExportDirectory
   if (!root) throw new Error('请先设置工作台导出目录。')
   await mkdir(root, { recursive: true })
   const stage = await mkdtemp(join(root, '.ntemm-'))
   try {
-    await parse(ctx, format, stage, asset, preview)
+    await parse(ctx, action, stage, asset, preview)
     const files = (await readdir(stage, { recursive: true, withFileTypes: true })).filter(f => f.isFile())
     if (!files.length) throw new Error('解析器未生成文件。')
     if (preview) {
-      const ext = { json: '.json', texture: '.png', model: '.glb', raw: '' }[format]
-      const f = files.find(file => extname(file.name).toLowerCase() === ext)
-      if (!f) throw new Error('资源中没有可预览的对象。')
-      return { name: f.name, bytes: await readFile(join(f.parentPath, f.name)) }
+      const formats = { '.glb': 'model', '.png': 'texture', '.json': 'json' } as const
+      for (const [extension, detected] of Object.entries(formats)) {
+        const file = files.find(file => extname(file.name).toLowerCase() === extension)
+        if (file) return { format: detected, name: file.name, bytes: await readFile(join(file.parentPath, file.name)) }
+      }
+      throw new Error('资源中没有可预览的对象。')
     }
     const target = join(root, `${basename(asset.path, extname(asset.path))}-${randomUUID().slice(0, 8)}`)
     await rename(stage, target)
@@ -165,6 +167,9 @@ export function registerWorkbenchAssets() {
     }
     return assetResults(query.mode === 'all' ? cached.rows : cached.effective, query, previous)
   })
-  ipcMain.handle('assets:preview', (_event, entry, format) => convert(entry, format, true))
-  ipcMain.handle('assets:export', (_event, entry, format) => convert(entry, format, false))
+  ipcMain.handle('assets:preview', (_event, entry) => convert(entry, 'auto'))
+  ipcMain.handle('assets:export', (_event, entry, format: AssetFormat) => {
+    if (!['raw', 'texture', 'model', 'json'].includes(format)) throw new Error('未知的资源格式。')
+    return convert(entry, format)
+  })
 }

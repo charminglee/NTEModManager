@@ -26,7 +26,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [loaded, setLoaded] = useState<{ mode: AssetMode; snapshot: string; revision: number }>({
     mode: 'all', snapshot: '', revision: 0
   })
-  const [selection, setSelection] = useState<{ entry: AssetEntry; open: number }>()
+  const [selection, setSelection] = useState<AssetEntry>()
   const [busy, setBusy] = useState<'index' | 'snapshot'>()
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
@@ -77,14 +77,6 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
       setArchive(value.archives.includes(nextArchive) ? nextArchive : '')
       setSelection(undefined)
       setLoaded(previous => ({ mode: nextMode, snapshot: nextSnapshot, revision: previous.revision + 1 }))
-    })
-  }
-
-  function select(entry: AssetEntry, open = false) {
-    setSelection(previous => {
-      if (open) return { entry, open: (previous?.open ?? 0) + 1 }
-      if (previous?.entry.path === entry.path && previous.entry.archive === entry.archive) return previous
-      return { entry, open: 0 }
     })
   }
 
@@ -186,7 +178,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
         <div className="group/file-tree relative min-h-0 flex-1">
           <div className="absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
             {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive, onlyHtContent])}
-              query={query} selected={selection?.entry} onSelect={select} onOpen={entry => select(entry, true)} />
+              query={query} selected={selection} onSelect={setSelection} />
               : <div className="workbench-assets-empty">
                 <FolderOpen size={24} aria-hidden="true" />
                 <p>{loaded.revision ? '没有可浏览的资源。' : '选择包体，或点击「加载」读取游戏资源。'}</p>
@@ -201,11 +193,10 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
       <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
         <header className="workbench-panel-heading"><h2>资源预览</h2></header>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.entry.path, selection.entry.archive, selection.open])}
-            entry={selection.entry} autoOpen={selection.open > 0} disabled={!!busy} />
+          {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.path, selection.archive])} entry={selection} />
             : <div className="workbench-assets-empty">
               <PackageOpen size={24} aria-hidden="true" />
-              <p>双击文件树中的文件加载预览。</p>
+              <p>点击文件树中的文件加载预览。</p>
             </div>}
         </div>
       </section>

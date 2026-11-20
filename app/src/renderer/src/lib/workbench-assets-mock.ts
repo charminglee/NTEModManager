@@ -64,7 +64,11 @@ export const workbenchAssetsMock = {
     const selected = query.mode === 'all' ? rows : [...effectiveAssets(rows).values()]
     return assetResults(indexed ? selected : [], query, snapshots.get(query.snapshot))
   },
-  workbenchAssetPreview: sample,
+  async workbenchAssetPreview(entry) {
+    const name = entry.path.split('/').pop()!
+    const format = name === 'SM_Triangle.uasset' ? 'model' : name === 'T_Palette.uasset' ? 'texture' : 'json'
+    return { format, ...await sample(entry, format) }
+  },
   async workbenchAssetExport(entry, format) {
     if (format === 'raw') throw new Error('浏览器示例仅提供预览格式，原始包导出需使用桌面版。')
     const file = await sample(entry, format)

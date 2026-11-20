@@ -79,14 +79,21 @@ try
     }
     if (!file.IsUePackage)
     {
-        if (request.Action != "json" || !file.Extension.Equals("json", StringComparison.OrdinalIgnoreCase))
+        if (request.Action is not ("json" or "auto") || !file.Extension.Equals("json", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("该文件支持原始导出。");
         File.WriteAllBytes(OutputFile(file.Path), file.Read());
         return 0;
     }
     provider.MappingsContainer = new FileUsmapTypeMappingsProvider(request.Mapping);
     var exports = provider.LoadPackage(file).GetExports().ToArray();
-    if (request.Action == "json")
+    var action = request.Action;
+    if (action == "auto")
+    {
+        action = "json";
+        if (exports.Any(obj => obj is USkeletalMesh or UStaticMesh)) action = "model";
+        else if (exports.Any(obj => obj is UTexture2D)) action = "texture";
+    }
+    if (action == "json")
     {
         using var output = File.CreateText(OutputFile(Path.ChangeExtension(file.Path, ".json")));
         JsonSerializer.CreateDefault(new JsonSerializerSettings { Formatting = Formatting.Indented }).Serialize(output, exports);
@@ -94,8 +101,8 @@ try
     }
     var session = new ExportSession();
     foreach (var obj in exports)
-        if ((request.Action == "texture" && obj is UTexture2D) ||
-            (request.Action == "model" && obj is USkeletalMesh or UStaticMesh))
+        if ((action == "texture" && obj is UTexture2D) ||
+            (action == "model" && obj is USkeletalMesh or UStaticMesh))
             session.Add(obj);
     if (!session.HasQueuedItems) throw new InvalidDataException("资源中没有所选类型的对象。");
     var options = new ExportOptions(meshFormat: EMeshFormat.Gltf2, exportMorphTargets: !request.Preview, exportMaterials: false, exportHdrTexturesAsHdr: false);
