@@ -143,10 +143,10 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     </div>
     {(busy || message) && <p role={message?.error ? 'alert' : 'status'}
       className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>{busy || message?.text}</p>}
-    <div className="workbench-assets-browser workbench-panel">
-      <section className="workbench-assets-tree" aria-label="文件树">
+    <div className="workbench-assets-browser">
+      <section className="workbench-assets-tree workbench-panel" aria-label="文件">
         <header className="workbench-panel-heading">
-          <h2>文件树</h2>
+          <h2>文件</h2>
           {!!state.count && <span className="text-xs font-normal text-muted-foreground">{modes[loaded.mode]}</span>}
         </header>
         <div className="min-h-0 flex-1 overflow-auto">
@@ -158,13 +158,13 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             </div>}
         </div>
       </section>
-      <section className="workbench-assets-preview" aria-label="资源预览">
+      <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
         <header className="workbench-panel-heading"><h2>资源预览</h2></header>
         {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.entry.path, selection.entry.archive, selection.open])}
           entry={selection.entry} autoOpen={selection.open > 0} disabled={!!busy} />
           : <div className="workbench-assets-empty">
             <PackageOpen size={24} aria-hidden="true" />
-            <p>双击左侧文件加载预览。</p>
+            <p>双击文件树中的文件加载预览。</p>
           </div>}
       </section>
     </div>
