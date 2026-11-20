@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, FileOutput, FolderOpen, PackageOpen, Search } from 'lucide-react'
+import { ChevronDown, FileOutput, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuRadioGroup, DropdownMenuRadioItem,
@@ -25,7 +25,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     mode: 'all', snapshot: '', revision: 0
   })
   const [selection, setSelection] = useState<{ entry: AssetEntry; open: number }>()
-  const [busy, setBusy] = useState('')
+  const [busy, setBusy] = useState<'index' | 'snapshot'>()
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
   const archiveLabel = archive ? archive.split('/').pop() : '选择包体'
@@ -55,20 +55,20 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     return () => { current = false }
   }, [active])
 
-  async function run(label: string, work: () => Promise<void>) {
-    setBusy(label)
+  async function run(operation: NonNullable<typeof busy>, work: () => Promise<void>) {
+    setBusy(operation)
     setMessage(undefined)
     try {
       await work()
     } catch (error) {
       setMessage({ text: String(error), error: true })
     } finally {
-      setBusy('')
+      setBusy(undefined)
     }
   }
 
   function loadResources(nextMode: AssetMode, nextSnapshot: string, nextArchive = archive) {
-    return run('正在加载游戏资源……', async () => {
+    return run('index', async () => {
       const value = await window.api.workbenchAssetIndex()
       setState(value)
       setArchive(value.archives.includes(nextArchive) ? nextArchive : '')
@@ -103,7 +103,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             ...state.snapshots.map(file => [file, file.replace(/\.snapshot\.json$/, '')] as const)
           ]}
           onValueChange={value => setSnapshot(value === 'none' ? '' : value)} />}
-        <Button variant="outline" disabled={!state.count} title="导出索引快照" onClick={() => run('正在导出索引快照……', async () => {
+        <Button variant="outline" disabled={!state.count} title="导出索引快照" onClick={() => run('snapshot', async () => {
           const value = await window.api.workbenchAssetSnapshot()
           setState(value)
           setSnapshot(value.snapshots[0])
@@ -129,8 +129,10 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
         </div>
       </div>
     </div>
-    {(busy || message) && <p role={message?.error ? 'alert' : 'status'}
-      className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>{busy || message?.text}</p>}
+    {(busy === 'snapshot' || message) && <p role={message?.error ? 'alert' : 'status'}
+      className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>
+      {busy === 'snapshot' ? '正在导出索引快照……' : message?.text}
+    </p>}
     <div className="workbench-assets-browser">
       <section className="workbench-assets-tree workbench-panel" aria-label="文件">
         <header className="workbench-panel-heading">
@@ -162,13 +164,19 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <div className="min-h-0 flex-1 overflow-auto">
-          {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive])}
-            query={query} selected={selection?.entry} onSelect={select} onOpen={entry => select(entry, true)} />
-            : <div className="workbench-assets-empty">
-              <FolderOpen size={24} aria-hidden="true" />
-              <p>{loaded.revision ? '没有可浏览的资源。' : '选择包体，或点击「加载」读取游戏资源。'}</p>
-            </div>}
+        <div className="group/file-tree relative min-h-0 flex-1">
+          <div className="absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
+            {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive])}
+              query={query} selected={selection?.entry} onSelect={select} onOpen={entry => select(entry, true)} />
+              : <div className="workbench-assets-empty">
+                <FolderOpen size={24} aria-hidden="true" />
+                <p>{loaded.revision ? '没有可浏览的资源。' : '选择包体，或点击「加载」读取游戏资源。'}</p>
+              </div>}
+          </div>
+          <div role="status" className="pointer-events-none absolute inset-0 hidden place-items-center text-muted-foreground group-has-aria-busy/file-tree:grid">
+            <LoaderCircle size={28} className="motion-safe:animate-spin" aria-hidden="true" />
+            <span className="sr-only">正在加载文件树……</span>
+          </div>
         </div>
       </section>
       <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">

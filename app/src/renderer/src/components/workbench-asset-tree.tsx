@@ -54,7 +54,7 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
     return () => { active = false; clearTimeout(timer) }
   }, [query, directory, request])
 
-  return <>
+  return <div aria-busy={loading}>
     {result && result.count > 0 && <ul className={directory ? 'ml-3 border-l border-border pl-1' : 'p-1'}>
       {result.folders.map(path => <AssetFolder key={path} path={path}
         expand={!!query.search.trim() && !result.more && result.folders.length === 1 && !result.rows.length}
@@ -75,12 +75,11 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
     </ul>}
     {result?.count === 0 && <p className="px-3 py-2 text-sm text-muted-foreground">没有匹配的资源。</p>}
     {error && <p role="alert" className="break-all px-3 py-2 text-xs text-destructive">{error}</p>}
-    {loading && <p role="status" className="px-3 py-2 text-xs text-muted-foreground">正在读取目录……</p>}
     {!loading && result?.more && <Button type="button" variant="ghost" size="sm" className="ml-2"
       onClick={() => {
         setError('')
         setLoading(true)
         setRequest({ page: nextPage })
       }}>显示更多</Button>}
-  </>
+  </div>
 }
