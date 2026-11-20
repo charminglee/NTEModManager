@@ -22,8 +22,9 @@
 }
 
 .menu-surface {
+  --menu-inset: 4px;
   max-block-size: var(--menu-available-height, calc(100dvh - 16px));
-  padding: 4px;
+  padding-block: var(--menu-inset);
   background: var(--cream);
   color: var(--ink);
   border: 1px solid var(--ink);
@@ -39,6 +40,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.menu-item,
+.menu-label {
+  margin-inline: var(--menu-inset);
 }
 
 .menu-item {
@@ -81,12 +87,6 @@
   flex-shrink: 0;
 }
 
-.menu-item .menu-radio-dot {
-  inline-size: 0.5rem;
-  block-size: 0.5rem;
-  fill: currentColor;
-}
-
 .menu-item[data-inset],
 .menu-item-with-indicator,
 .menu-label[data-inset] {
@@ -96,11 +96,18 @@
 .menu-item-indicator {
   position: absolute;
   inset-inline-start: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   inline-size: 0.875rem;
   block-size: 0.875rem;
+}
+
+.menu-item-indicator::before {
+  content: '';
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .menu-submenu-arrow,
@@ -126,6 +133,5 @@
 
 .menu-separator {
   margin-block: 4px;
-  margin-inline: -4px;
   border-block-start: 1px solid hsl(var(--border));
 }

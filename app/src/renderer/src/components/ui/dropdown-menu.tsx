@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
-import { Check, ChevronRight, Circle } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './menu.css'
 
@@ -101,11 +101,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
     checked={checked}
     {...props}
   >
-    <span className="menu-item-indicator" aria-hidden="true">
-      <DropdownMenuPrimitive.ItemIndicator>
-        <Check />
-      </DropdownMenuPrimitive.ItemIndicator>
-    </span>
+    <DropdownMenuPrimitive.ItemIndicator className="menu-item-indicator" aria-hidden="true" />
     {children}
   </DropdownMenuPrimitive.CheckboxItem>
 ))
@@ -120,11 +116,7 @@ const DropdownMenuRadioItem = React.forwardRef<
     className={cn('menu-item menu-item-with-indicator', className)}
     {...props}
   >
-    <span className="menu-item-indicator" aria-hidden="true">
-      <DropdownMenuPrimitive.ItemIndicator>
-        <Circle className="menu-radio-dot" />
-      </DropdownMenuPrimitive.ItemIndicator>
-    </span>
+    <DropdownMenuPrimitive.ItemIndicator className="menu-item-indicator" aria-hidden="true" />
     {children}
   </DropdownMenuPrimitive.RadioItem>
 ))

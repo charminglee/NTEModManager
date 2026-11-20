@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
-import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import './menu.css'
 
@@ -101,11 +101,7 @@ const SelectItem = React.forwardRef<
     className={cn('menu-item menu-item-with-indicator', className)}
     {...props}
   >
-    <span className="menu-item-indicator" aria-hidden="true">
-      <SelectPrimitive.ItemIndicator>
-        <Check />
-      </SelectPrimitive.ItemIndicator>
-    </span>
+    <SelectPrimitive.ItemIndicator className="menu-item-indicator" />
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
