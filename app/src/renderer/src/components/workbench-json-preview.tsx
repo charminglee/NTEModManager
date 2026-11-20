@@ -31,7 +31,7 @@ const searchPhrases = EditorState.phrases.of({
 
 const previewTheme = EditorView.theme({
   '&': { height: '100%' },
-  '&.cm-focused': { outline: '2px solid hsl(var(--ring))', outlineOffset: '-2px' },
+  '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { scrollbarWidth: 'thin' },
   '.cm-content': { paddingBlock: '12px' },
   '.cm-line': { paddingInline: '16px' },
