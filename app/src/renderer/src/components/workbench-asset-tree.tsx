@@ -48,7 +48,7 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
     return () => { active = false; clearTimeout(timer) }
   }, [query, directory])
 
-  return <div aria-busy={loading}>
+  return <div aria-busy={directory ? undefined : loading}>
     {result && result.count > 0 && <ul className={directory ? 'ml-3 border-l border-border pl-1' : 'p-1'}>
       {result.folders.map(path => <AssetFolder key={path} path={path}
         expand={!!query.search.trim() && result.folders.length === 1 && !result.rows.length}
