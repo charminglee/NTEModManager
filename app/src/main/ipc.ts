@@ -42,7 +42,7 @@ import {
   getYoudaoCredentialsStatus,
   saveYoudaoCredentials
 } from './youdao-translation'
-import type { AppConfigPatch, BatchModAction, GameBananaTranslationRequest, ImportResult, ModInfo, OperationResult, YoudaoCredentialsInput } from '../shared/types'
+import type { ApplicationCacheKind, ApplicationCacheSizes, AppConfigPatch, BatchModAction, GameBananaTranslationRequest, ImportResult, ModInfo, OperationResult, YoudaoCredentialsInput } from '../shared/types'
 import { cancelDownload, getPendingDownloads, prepareDownload } from './ayakamods'
 
 type ProgressReporter = (message: string) => void
@@ -290,15 +290,41 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
   })
   ipcMain.handle('youdao:clearCredentials', () => clearYoudaoCredentials())
   ipcMain.handle('gamebanana:translate', (_event, request: GameBananaTranslationRequest) => translateGameBanana(request))
-  ipcMain.handle('app:cacheSize', async () => {
-    const imageCacheSize = await gameBananaImageSession().getCacheSize()
-    return imageCacheSize + getGameBananaTranslationCacheSize() + getGameBananaDownloadCacheSize()
-  })
-  ipcMain.handle('app:clearCache', async () => {
-    await gameBananaImageSession().clearCache()
-    clearGameBananaTranslationCache()
-    clearGameBananaDownloadCache()
-    sendGameBananaDownloadMarks({})
+  ipcMain.handle('app:cacheSizes', async (): Promise<ApplicationCacheSizes> => ({
+    runtime: getGameBananaDownloadCacheSize(),
+    translation: getGameBananaTranslationCacheSize(),
+    image: await gameBananaImageSession().getCacheSize()
+  }))
+  ipcMain.handle('app:clearCache', async (_event, selection: unknown) => {
+    const caches = {
+      runtime: {
+        label: '运行数据',
+        clear: () => {
+          clearGameBananaDownloadCache()
+          sendGameBananaDownloadMarks({})
+        }
+      },
+      translation: { label: '翻译缓存', clear: clearGameBananaTranslationCache },
+      image: { label: '图片缓存', clear: () => gameBananaImageSession().clearCache() }
+    }
+    if (!Array.isArray(selection) || !selection.length ||
+      !selection.every((kind) => typeof kind === 'string' && Object.hasOwn(caches, kind))) {
+      throw new Error('请选择有效的缓存清理项目。')
+    }
+
+    const failures: string[] = []
+    for (const kind of new Set(selection as ApplicationCacheKind[])) {
+      const { label, clear } = caches[kind]
+      try {
+        await clear()
+        logger.info(`已清理应用缓存中的${label}。`)
+      } catch (error) {
+        const message = `${label}：${describeError(error)}`
+        logger.error(`清理应用缓存失败：${message}`)
+        failures.push(message)
+      }
+    }
+    if (failures.length) throw new Error(failures.join('；'))
   })
   ipcMain.handle('gamebanana:downloadMarks', () => getGameBananaDownloadMarks())
   ipcMain.handle('gamebanana:tasks', () => getGameBananaTasks().filter((task) => task.source === 'gamebanana'))

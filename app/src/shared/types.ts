@@ -2,6 +2,9 @@ export const ALL_CATEGORY = '全部'
 export const OTHER_CATEGORY = '其他'
 export const MANIFEST_FILE_NAME = '.nte-mod-manager.json'
 
+export type ApplicationCacheKind = 'runtime' | 'translation' | 'image'
+export type ApplicationCacheSizes = Record<ApplicationCacheKind, number>
+
 export type LogLevel = 'debug' | 'info' | 'warning' | 'error'
 
 export interface LogEntry {

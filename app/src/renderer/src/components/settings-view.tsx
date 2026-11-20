@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { FolderOpen, Globe, Settings, SlidersHorizontal, Trash2, Wrench } from 'lucide-react'
-import type { AppConfigData, AppConfigPatch } from '@shared/types'
+import type { ApplicationCacheKind, ApplicationCacheSizes, AppConfigData, AppConfigPatch } from '@shared/types'
 import { formatFileSize } from '@/lib/format'
 import { Button } from './ui/button'
+import { AppDialog } from './ui/dialog'
 import { Input } from './ui/input'
 import Switch from './ui/switch'
 import Sidebar from './sidebar'
@@ -26,6 +27,11 @@ const settingsSections = [
   { id: 'preferences', label: '操作偏好', icon: <Settings size={20} /> },
   { id: 'translation', label: '有道翻译', icon: <Globe size={20} /> },
   { id: 'advanced', label: '高级', icon: <Wrench size={20} /> }
+] as const
+const cacheItems = [
+  { kind: 'runtime', label: '运行数据', description: '清除 GameBanana 文件的上次下载标记。' },
+  { kind: 'translation', label: '翻译缓存' },
+  { kind: 'image', label: '图片缓存' }
 ] as const
 const pathFields = [
   { key: 'gameDirectory', label: '游戏安装目录', help: '选择包含 Client 目录的游戏根目录。' },
@@ -57,19 +63,24 @@ const parseGroups = (groupsText: string) =>
     .filter(Boolean)
 export default function SettingsView({ config, onSaved }: Props) {
   const [section, setSection] = useState<(typeof settingsSections)[number]['id']>('paths')
+  const [cacheDialogOpen, setCacheDialogOpen] = useState(false)
+  const [cacheSelection, setCacheSelection] = useState<ApplicationCacheKind[]>([])
   const [clearingCache, setClearingCache] = useState(false)
-  const [cacheSize, setCacheSize] = useState<number | '读取中…' | '无法读取'>('读取中…')
+  const [cacheSizes, setCacheSizes] = useState<ApplicationCacheSizes | '读取中…' | '无法读取'>('读取中…')
   useEffect(() => {
     if (section !== 'paths' || clearingCache) return
     let cancelled = false
-    setCacheSize('读取中…')
-    void window.api.getApplicationCacheSize().then((size) => {
-      if (!cancelled) setCacheSize(size)
+    setCacheSizes('读取中…')
+    void window.api.getApplicationCacheSizes().then((sizes) => {
+      if (!cancelled) setCacheSizes(sizes)
     }).catch(() => {
-      if (!cancelled) setCacheSize('无法读取')
+      if (!cancelled) setCacheSizes('无法读取')
     })
     return () => { cancelled = true }
-  }, [section, clearingCache])
+  }, [section, cacheDialogOpen, clearingCache])
+  const totalCacheSize = typeof cacheSizes === 'string'
+    ? cacheSizes
+    : formatFileSize(cacheSizes.runtime + cacheSizes.translation + cacheSizes.image)
   const [draft, setDraft] = useState<SettingsDraft>(() => ({
     ...config,
     groupsText: config.exclusiveInstallExemptGroups.join('，')
@@ -176,10 +187,12 @@ export default function SettingsView({ config, onSaved }: Props) {
     }
   }
   const clearApplicationCache = async () => {
+    if (!cacheSelection.length || clearingCache) return
     setClearingCache(true)
     try {
-      await window.api.clearApplicationCache()
-      toast.success('已清除应用缓存')
+      await window.api.clearApplicationCache(cacheSelection)
+      setCacheDialogOpen(false)
+      toast.success('已清理选中的缓存项目')
     } catch (error) {
       toast.error('清除应用缓存失败', {
         description: error instanceof Error ? error.message : String(error)
@@ -294,12 +307,15 @@ export default function SettingsView({ config, onSaved }: Props) {
                 <span>
                   <strong>应用缓存</strong>
                   <small id="application-cache-size" aria-live="polite">
-                    当前缓存大小：{typeof cacheSize === 'number' ? formatFileSize(cacheSize) : cacheSize}
+                    当前缓存大小：{totalCacheSize}
                   </small>
                 </span>
-                <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => void clearApplicationCache()} disabled={clearingCache}>
+                <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => {
+                  setCacheSelection([])
+                  setCacheDialogOpen(true)
+                }}>
                   <Trash2 aria-hidden="true" />
-                  {clearingCache ? '正在清除…' : '清除缓存'}
+                  清除缓存
                 </Button>
               </div>
             </>
@@ -346,6 +362,47 @@ export default function SettingsView({ config, onSaved }: Props) {
           <ConfigFileEditor active={section === 'advanced'} config={config} onSave={saveConfigFile} />
         </div>
       </div>
+      <AppDialog
+        open={cacheDialogOpen}
+        onOpenChange={(open) => { if (!clearingCache) setCacheDialogOpen(open) }}
+        title="清除缓存"
+        description="勾选需要清理的项目。"
+        panelClassName="flex flex-col"
+        cancelAction={{ label: '取消', disabled: clearingCache }}
+        confirmAction={{
+          label: clearingCache ? '正在清理…' : '清理所选项目',
+          destructive: true,
+          disabled: clearingCache || cacheSelection.length === 0,
+          onSelect: () => void clearApplicationCache()
+        }}
+      >
+        <div className="divide-y divide-[var(--rule)]" aria-busy={clearingCache}>
+          {cacheItems.map((item) => (
+            <label key={item.kind} className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3 first:pt-0 last:pb-0">
+              <input
+                type="checkbox"
+                checked={cacheSelection.includes(item.kind)}
+                disabled={clearingCache}
+                aria-labelledby={`cache-label-${item.kind}`}
+                aria-describedby={item.kind === 'runtime' ? 'cache-size-runtime cache-runtime-description' : `cache-size-${item.kind}`}
+                onChange={(event) => {
+                  const checked = event.currentTarget.checked
+                  setCacheSelection((selection) => checked
+                    ? [...selection, item.kind]
+                    : selection.filter((kind) => kind !== item.kind))
+                }}
+              />
+              <span>
+                <strong id={`cache-label-${item.kind}`} className="text-sm font-medium">{item.label}</strong>
+                {'description' in item && <small id="cache-runtime-description" className="mt-1 block text-xs text-muted-foreground">{item.description}</small>}
+              </span>
+              <span id={`cache-size-${item.kind}`} className="whitespace-nowrap text-sm tabular-nums text-muted-foreground" aria-live="polite">
+                {typeof cacheSizes === 'string' ? cacheSizes : formatFileSize(cacheSizes[item.kind])}
+              </span>
+            </label>
+          ))}
+        </div>
+      </AppDialog>
     </section>
   )
 }

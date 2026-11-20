@@ -532,6 +532,7 @@ let mockLastCategory = ''
 let mockGameBananaTasks: GameBananaDownloadTask[] = []
 const gameBananaTaskListeners = new Set<(task: GameBananaDownloadTask) => void>()
 const MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY = 'ntemm-mock-gamebanana-download-marks'
+const mockCacheSizes = { translation: 24 * 1024, image: 3 * 1024 * 1024 }
 const gameBananaDownloadMarkListeners = new Set<(marks: Record<string, string>) => void>()
 
 let previewWindowState: WindowState = { isMaximized: false, isFullScreen: false }
@@ -905,13 +906,19 @@ const api: Api = {
     return document.documentElement.outerHTML
   },
 
-  async getApplicationCacheSize() {
+  async getApplicationCacheSizes() {
     const savedMarks = window.localStorage.getItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)
-    return savedMarks === null ? 0 : new TextEncoder().encode(savedMarks).length
+    return { ...mockCacheSizes, runtime: savedMarks === null ? 0 : new TextEncoder().encode(savedMarks).length }
   },
-  async clearApplicationCache() {
-    window.localStorage.removeItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)
-    for (const listener of gameBananaDownloadMarkListeners) listener({})
+  async clearApplicationCache(selection) {
+    for (const kind of selection) {
+      if (kind === 'runtime') {
+        window.localStorage.removeItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)
+        for (const listener of gameBananaDownloadMarkListeners) listener({})
+      } else {
+        mockCacheSizes[kind] = 0
+      }
+    }
   },
   async getGameBananaDownloadMarks() {
     const savedMarks = window.localStorage.getItem(MOCK_GAMEBANANA_DOWNLOAD_MARKS_KEY)

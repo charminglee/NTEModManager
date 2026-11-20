@@ -4,6 +4,8 @@ import { workbenchProjectsApi } from './workbench-projects'
 import { workbenchSpineApi } from './workbench-spine'
 import type { SpineFile } from '../shared/workbench-spine'
 import type {
+  ApplicationCacheKind,
+  ApplicationCacheSizes,
   AppConfigData,
   AppConfigPatch,
   AyakaModsDownloadRequest,
@@ -160,10 +162,10 @@ const api = {
     ipcRenderer.invoke('youdao:clearCredentials'),
   translateGameBanana: (request: GameBananaTranslationRequest): Promise<string> =>
     ipcRenderer.invoke('gamebanana:translate', request),
-  getApplicationCacheSize: (): Promise<number> =>
-    ipcRenderer.invoke('app:cacheSize'),
-  clearApplicationCache: (): Promise<void> =>
-    ipcRenderer.invoke('app:clearCache'),
+  getApplicationCacheSizes: (): Promise<ApplicationCacheSizes> =>
+    ipcRenderer.invoke('app:cacheSizes'),
+  clearApplicationCache: (selection: ApplicationCacheKind[]): Promise<void> =>
+    ipcRenderer.invoke('app:clearCache', selection),
   getGameBananaDownloadMarks: (): Promise<Record<string, string>> =>
     ipcRenderer.invoke('gamebanana:downloadMarks'),
   onGameBananaDownloadMarksChanged: (callback: (marks: Record<string, string>) => void): (() => void) => {
