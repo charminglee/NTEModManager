@@ -62,7 +62,7 @@ async function state(ctx: Context): Promise<AssetState> {
 async function convert(entry: AssetEntry, format: AssetFormat, preview: boolean): Promise<AssetPreview | string> {
   const ctx = context()
   const asset = current(ctx)?.rows.find(row => row.path === entry.path && row.archive === entry.archive)
-  if (!asset) throw new Error('资源索引已失效，请重新建立索引。')
+  if (!asset) throw new Error('资源索引已失效，请重新加载。')
   if (!['raw', 'texture', 'model', 'json'].includes(format)) throw new Error('未知的资源格式。')
   const root = preview ? ctx.root : ctx.config.workbenchExportDirectory
   if (!root) throw new Error('请先设置工作台导出目录。')
@@ -138,7 +138,7 @@ export function registerWorkbenchAssets() {
   ipcMain.handle('assets:query', async (_event, query: AssetQuery) => {
     const ctx = context()
     const cached = current(ctx)
-    if (!cached) return { rows: [], count: 0 }
+    if (!cached) return assetResults([], query)
     let previous: Map<string, AssetEntry> | undefined
     if (query.mode === 'new' || query.mode === 'modified') {
       if (!/^\d{4}-[\dT.Z-]+[a-f\d]{8}\.snapshot\.json$/.test(query.snapshot)) throw new Error('请选择对比快照。')
@@ -146,7 +146,7 @@ export function registerWorkbenchAssets() {
       if (baseline?.file !== file) baseline = { file, entries: effectiveAssets(JSON.parse(await readFile(file, 'utf8'))) }
       previous = baseline.entries
     }
-    return assetResults(query.mode === 'multiple' || query.mode === 'all' ? cached.rows : cached.effective, query, previous)
+    return assetResults(query.mode === 'all' ? cached.rows : cached.effective, query, previous)
   })
   ipcMain.handle('assets:preview', (_event, entry, format) => convert(entry, format, true))
   ipcMain.handle('assets:export', (_event, entry, format) => convert(entry, format, false))

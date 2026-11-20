@@ -1,4 +1,4 @@
-export type AssetMode = 'multiple' | 'all' | 'new' | 'modified' | 'unpatched'
+export type AssetMode = 'all' | 'new' | 'modified' | 'unpatched'
 export type AssetFormat = 'json' | 'texture' | 'model' | 'raw'
 
 export interface AssetEntry {
@@ -14,10 +14,18 @@ export interface AssetQuery {
   archives: string[]
   snapshot: string
   search: string
+  directory: string
   page: number
 }
 
 export const assetPageSize = 60
+
+export interface AssetDirectory {
+  count: number
+  folders: string[]
+  rows: AssetEntry[]
+  more: boolean
+}
 
 export interface AssetState {
   count: number

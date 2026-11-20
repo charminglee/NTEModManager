@@ -61,7 +61,7 @@ export const workbenchAssetsMock = {
     return state()
   },
   async workbenchAssetQuery(query) {
-    const selected = query.mode === 'all' || query.mode === 'multiple' ? rows : [...effectiveAssets(rows).values()]
+    const selected = query.mode === 'all' ? rows : [...effectiveAssets(rows).values()]
     return assetResults(indexed ? selected : [], query, snapshots.get(query.snapshot))
   },
   workbenchAssetPreview: sample,
