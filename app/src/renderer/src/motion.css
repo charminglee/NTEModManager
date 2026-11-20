@@ -133,9 +133,7 @@
 /* 控件仅过渡明确的属性，不让布局尺寸跟随 transition-all。 */
 .app-shell button,
 .dialog-panel button,
-.overlay-panel button,
-.solid-popover [role^='menuitem'],
-[role='option'] {
+.overlay-panel button {
   transition-property: background-color, color, border-color, box-shadow, opacity, scale;
   transition-duration: var(--motion-fast);
   transition-timing-function: ease-out;

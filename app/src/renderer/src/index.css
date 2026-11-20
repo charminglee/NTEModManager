@@ -1919,16 +1919,6 @@ select {
   right: 40px;
   bottom: 40px;
 }
-.solid-popover {
-  background: var(--cream);
-  color: var(--ink);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius-xl);
-  box-shadow: 4px 5px 0 #20201e22;
-}
-.solid-popover:not(.overlay-panel) {
-  padding: 4px;
-}
 .overlay-panel {
   display: grid;
   gap: 16px;
@@ -1949,14 +1939,6 @@ select {
 }
 .toast-surface > svg {
   color: var(--vermilion);
-}
-.hairline-2dp {
-  height: 1px;
-}
-.card-context-menu > .solid-popover > [role='separator'] {
-  height: auto;
-  background-color: transparent;
-  border-top: 1px solid hsl(var(--border));
 }
 .fps-counter {
   position: fixed;

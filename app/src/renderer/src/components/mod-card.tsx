@@ -4,7 +4,7 @@ import type { ModInfo } from '@shared/types'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
-import { useCardContextMenu } from './card-context-menu'
+import { useContextMenu } from './ui/context-menu'
 import { ModCardMenu } from './mod-actions'
 
 export interface ModCardActions {
@@ -57,7 +57,7 @@ function ModCard({
   displayName,
   onActivate
 }: Props) {
-  const menu = useCardContextMenu(!disabled)
+  const menu = useContextMenu(!disabled)
 
   function handleActivate(event: ReactMouseEvent<HTMLElement>) {
     if (selectionMode || event.ctrlKey || event.metaKey) {

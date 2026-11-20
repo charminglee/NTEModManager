@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import './menu.css'
 
 const Select = SelectPrimitive.Root
 const SelectGroup = SelectPrimitive.Group
@@ -14,7 +15,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-9 items-center justify-between gap-2 rounded-md border border-input bg-card px-3 text-sm whitespace-nowrap shadow-xs outline-none transition-colors',
+      'flex h-9 min-w-0 max-w-full items-center justify-between gap-2 rounded-md border border-input bg-card px-3 text-sm whitespace-nowrap shadow-xs outline-none transition-colors',
       'enabled:hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50 [&>span]:truncate',
       className
     )}
@@ -59,29 +60,19 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
+>(({ className, children, position = 'popper', sideOffset = 4, collisionPadding = 8, ...props }, ref) => (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
-      className={cn(
-        'relative z-50 max-h-(--radix-select-content-available-height) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-        position === 'popper' && 'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
-        className
-      )}
+      className={cn('menu-popup menu-select', className)}
       position={position}
+      sideOffset={sideOffset}
+      collisionPadding={collisionPadding}
       {...props}
     >
-      <div className="solid-popover p-4 flex max-h-(--radix-select-content-available-height) min-w-[8rem] flex-col overflow-hidden text-popover-foreground shadow-card">
+      <div className="menu-surface">
         <SelectScrollUpButton />
-        <SelectPrimitive.Viewport
-          className={cn(
-            'p-1',
-            position === 'popper' &&
-              'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
-          )}
-        >
-          {children}
-        </SelectPrimitive.Viewport>
+        <SelectPrimitive.Viewport>{children}</SelectPrimitive.Viewport>
         <SelectScrollDownButton />
       </div>
     </SelectPrimitive.Content>
@@ -95,7 +86,7 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn('px-2 py-1.5 text-xs font-medium text-muted-foreground', className)}
+    className={cn('menu-label', className)}
     {...props}
   />
 ))
@@ -107,15 +98,12 @@ const SelectItem = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
-    className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className
-    )}
+    className={cn('menu-item menu-item-with-indicator', className)}
     {...props}
   >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="menu-item-indicator" aria-hidden="true">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check />
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -129,7 +117,7 @@ const SelectSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Separator
     ref={ref}
-    className={cn('-mx-1 my-1 hairline-2dp bg-border', className)}
+    className={cn('menu-separator', className)}
     {...props}
   />
 ))

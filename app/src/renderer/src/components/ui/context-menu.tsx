@@ -1,14 +1,14 @@
 import { useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from './dropdown-menu'
 
-export interface CardMenuPosition {
+export interface ContextMenuPosition {
   x: number
   y: number
   keyboardTrigger?: HTMLElement
 }
 
-export function useCardContextMenu(enabled: boolean) {
-  const [position, setPosition] = useState<CardMenuPosition | null>(null)
+export function useContextMenu(enabled: boolean) {
+  const [position, setPosition] = useState<ContextMenuPosition | null>(null)
   if (!enabled && position) setPosition(null)
 
   return {
@@ -30,9 +30,9 @@ export function useCardContextMenu(enabled: boolean) {
   }
 }
 
-export function CardContextMenu({ label, position, onClose, children }: {
+export function ContextMenu({ label, position, onClose, children }: {
   label: string
-  position: CardMenuPosition
+  position: ContextMenuPosition
   onClose: () => void
   children: ReactNode
 }) {
@@ -50,8 +50,6 @@ export function CardContextMenu({ label, position, onClose, children }: {
         aria-labelledby={undefined}
         align="start"
         sideOffset={0}
-        collisionPadding={8}
-        className="card-context-menu w-52 [&>.solid-popover]:max-h-[var(--radix-dropdown-menu-content-available-height)] [&>.solid-popover]:overflow-y-auto"
         onContextMenu={(event) => event.preventDefault()}
         onEscapeKeyDown={() => position.keyboardTrigger?.focus()}
         onKeyDown={(event) => {

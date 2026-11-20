@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import type { ModCardActions } from './mod-card'
-import { CardContextMenu, type CardMenuPosition } from './card-context-menu'
+import { ContextMenu, type ContextMenuPosition } from './ui/context-menu'
 import { Button } from './ui/button'
 import {
   DropdownMenu,
@@ -84,7 +84,7 @@ export default function ModActions({
           {label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent align="end">
         <ModArchiveActionItems mod={mod} actions={actions} />
         <DropdownMenuSeparator />
         <ModFlagAndDeleteItems mod={mod} actions={actions} />
@@ -101,13 +101,13 @@ export function ModCardMenu({
   onActivate,
   onClose
 }: ModActionProps & {
-  position: CardMenuPosition
+  position: ContextMenuPosition
   selected: boolean
   onActivate: (name: string) => void
   onClose: () => void
 }) {
   return (
-    <CardContextMenu label={`模组操作：${mod.name}`} position={position} onClose={onClose}>
+    <ContextMenu label={`模组操作：${mod.name}`} position={position} onClose={onClose}>
       <DropdownMenuItem onSelect={() => onActivate(mod.name)}>
         <Info />
         查看详情
@@ -154,6 +154,6 @@ export function ModCardMenu({
       )}
       <DropdownMenuSeparator />
       <ModFlagAndDeleteItems mod={mod} actions={actions} />
-    </CardContextMenu>
+    </ContextMenu>
   )
 }

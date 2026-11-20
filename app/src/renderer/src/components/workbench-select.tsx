@@ -13,12 +13,12 @@ export default function WorkbenchSelect({
 }) {
   return (
     <Select {...props}>
-      <SelectTrigger aria-label={label} className={`min-w-0 max-w-full ${className}`}>
+      <SelectTrigger aria-label={label} className={className}>
         <SelectValue />
       </SelectTrigger>
-      <SelectContent align="start" className="max-w-(--radix-select-content-available-width)">
+      <SelectContent align="start">
         {options.map(([value, text]) => (
-          <SelectItem key={value} value={value} className="break-all">{text}</SelectItem>
+          <SelectItem key={value} value={value}>{text}</SelectItem>
         ))}
       </SelectContent>
     </Select>

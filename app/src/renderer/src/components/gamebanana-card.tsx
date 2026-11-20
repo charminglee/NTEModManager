@@ -1,7 +1,7 @@
 import { Download, ExternalLink, Info } from 'lucide-react'
 import type { GameBananaFile, GameBananaMod } from '@shared/types'
 import { gameBananaImageSrc } from '@/lib/gamebanana-image'
-import { CardContextMenu, useCardContextMenu } from './card-context-menu'
+import { ContextMenu, useContextMenu } from './ui/context-menu'
 import {
   DropdownMenuItem,
   DropdownMenuPortal,
@@ -35,7 +35,7 @@ export default function GameBananaCard({ mod, selected, active, now, onOpen, onD
   onOpen: (mod: GameBananaMod) => void
   onDownload: (mod: GameBananaMod, file: GameBananaFile) => void
 }) {
-  const menu = useCardContextMenu(active)
+  const menu = useContextMenu(active)
   const files = [...mod.files, ...mod.archivedFiles]
   const firstFile = files[0]
 
@@ -61,7 +61,7 @@ export default function GameBananaCard({ mod, selected, active, now, onOpen, onD
         </div>
       </button>
       {menu.position && (
-        <CardContextMenu label={`模组操作：${mod.name}`} position={menu.position} onClose={menu.close}>
+        <ContextMenu label={`模组操作：${mod.name}`} position={menu.position} onClose={menu.close}>
           <DropdownMenuItem onSelect={() => onOpen(mod)}>
             <Info />
             查看详情
@@ -69,18 +69,19 @@ export default function GameBananaCard({ mod, selected, active, now, onOpen, onD
           {files.length > 1 ? (
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
-                <Download className="size-4 shrink-0" />
+                <Download />
                 下载
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
-                <DropdownMenuSubContent
-                  collisionPadding={8}
-                  className="max-w-80 [&>.solid-popover]:max-h-[var(--radix-dropdown-menu-content-available-height)] [&>.solid-popover]:overflow-y-auto"
-                >
+                <DropdownMenuSubContent>
                   {files.map((file) => (
-                    <DropdownMenuItem key={file.id} onSelect={() => onDownload(mod, file)}>
-                      <span className="truncate" title={file.name}>{file.name}</span>
-                      {file.archived && <span className="shrink-0 text-xs text-muted-foreground">归档</span>}
+                    <DropdownMenuItem
+                      key={file.id}
+                      title={file.name}
+                      detail={file.archived ? '归档' : undefined}
+                      onSelect={() => onDownload(mod, file)}
+                    >
+                      {file.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -96,7 +97,7 @@ export default function GameBananaCard({ mod, selected, active, now, onOpen, onD
             <ExternalLink />
             查看原页面
           </DropdownMenuItem>
-        </CardContextMenu>
+        </ContextMenu>
       )}
     </>
   )
