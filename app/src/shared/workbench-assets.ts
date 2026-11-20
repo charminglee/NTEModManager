@@ -15,16 +15,12 @@ export interface AssetQuery {
   snapshot: string
   search: string
   directory: string
-  page: number
 }
-
-export const assetPageSize = 60
 
 export interface AssetDirectory {
   count: number
   folders: string[]
   rows: AssetEntry[]
-  more: boolean
 }
 
 export interface AssetState {

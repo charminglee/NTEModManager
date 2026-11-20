@@ -1,4 +1,4 @@
-import { assetPageSize, type AssetDirectory, type AssetEntry, type AssetQuery } from './workbench-assets'
+import type { AssetDirectory, AssetEntry, AssetQuery } from './workbench-assets'
 
 export function effectiveAssets(rows: AssetEntry[]) {
   const effective = new Map<string, AssetEntry>()
@@ -14,8 +14,6 @@ export function assetResults(rows: AssetEntry[], query: AssetQuery, baseline?: M
   const archives = new Set(query.archives)
   const term = query.search.trim().toLowerCase()
   const prefix = query.directory ? query.directory + '/' : ''
-  const start = query.page * assetPageSize
-  const end = start + assetPageSize
   const folders = new Set<string>()
   const files: AssetEntry[] = []
   let count = 0
@@ -32,11 +30,9 @@ export function assetResults(rows: AssetEntry[], query: AssetQuery, baseline?: M
     else folders.add(row.path.slice(0, separator))
     count++
   }
-  const sortedFolders = [...folders].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   return {
     count,
-    folders: sortedFolders.slice(start, end),
-    rows: files.slice(Math.max(0, start - folders.size), Math.max(0, end - folders.size)),
-    more: end < folders.size + files.length
+    folders: [...folders].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+    rows: files
   }
 }
