@@ -20,7 +20,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [state, setState] = useState<AssetState>({ count: 0, archives: [], snapshots: [] })
   const [search, setSearch] = useState('')
   const [archive, setArchive] = useState('')
-  const [onlyHtContent, setOnlyHtContent] = useState(false)
+  const [onlyHtContent, setOnlyHtContent] = useState(true)
   const [mode, setMode] = useState<AssetMode>('all')
   const [snapshot, setSnapshot] = useState('')
   const [loaded, setLoaded] = useState<{ mode: AssetMode; snapshot: string; revision: number }>({
