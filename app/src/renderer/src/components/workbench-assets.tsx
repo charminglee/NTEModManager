@@ -87,14 +87,34 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
 
   return <fieldset disabled={!!busy} className="workbench-assets">
     <div className="workbench-assets-toolbar">
-      <label className="library-search workbench-assets-search">
-        <Search size={17} aria-hidden="true" />
-        <Input type="search" placeholder="搜索资源路径" aria-label="搜索资源路径" value={search}
-          onChange={event => {
-            setSearch(event.target.value)
-            setSelection(undefined)
-          }} />
-      </label>
+      <div className="flex min-w-0 items-center gap-2">
+        <label className="library-search workbench-assets-search">
+          <Search size={17} aria-hidden="true" />
+          <Input type="search" placeholder="搜索资源" aria-label="搜索资源" value={search}
+            onChange={event => {
+              setSearch(event.target.value)
+              setSelection(undefined)
+            }} />
+        </label>
+        <div className="inline-flex shrink-0" role="group" aria-label="加载资源">
+          <Button variant="secondary" className="rounded-r-none" disabled={comparing && !snapshot}
+            onClick={() => loadResources(mode, comparing ? snapshot : '')}>加载</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="icon" className="rounded-l-none border-l-secondary-foreground/25" disabled={!!busy}
+                aria-label="加载模式" title={`加载模式：${modes[mode]}`}>
+                <ChevronDown aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup value={mode} onValueChange={value => setMode(value as AssetMode)}>
+                {Object.entries(modes).map(([value, label]) =>
+                  <DropdownMenuRadioItem key={value} value={value}>{label}</DropdownMenuRadioItem>)}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         {comparing && <WorkbenchSelect label="对比快照" className="w-auto max-w-56" disabled={!!busy}
           value={snapshot || 'none'}
@@ -109,24 +129,6 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           setSnapshot(value.snapshots[0])
           setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
         })}><FileOutput aria-hidden="true" />导出</Button>
-        <div className="inline-flex shrink-0" role="group" aria-label="加载资源">
-          <Button className="rounded-r-none" disabled={comparing && !snapshot}
-            onClick={() => loadResources(mode, comparing ? snapshot : '')}>加载</Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" className="rounded-l-none border-l-primary-foreground/25" disabled={!!busy}
-                aria-label="加载模式" title={`加载模式：${modes[mode]}`}>
-                <ChevronDown aria-hidden="true" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuRadioGroup value={mode} onValueChange={value => setMode(value as AssetMode)}>
-                {Object.entries(modes).map(([value, label]) =>
-                  <DropdownMenuRadioItem key={value} value={value}>{label}</DropdownMenuRadioItem>)}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
       </div>
     </div>
     {(busy === 'snapshot' || message) && <p role={message?.error ? 'alert' : 'status'}
