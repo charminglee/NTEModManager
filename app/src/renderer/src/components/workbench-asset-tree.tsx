@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, File, Folder, FolderOpen } from 'lucide-react'
+import {
+  AudioLines, Bone, Braces, ChevronRight, Clapperboard, File, FileText, Film, Folder, FolderOpen,
+  Image, Map as MapIcon, Package, Palette, PanelsTopLeft, PersonStanding, Shapes, Sparkles, Table2, Type, Workflow, type LucideIcon
+} from 'lucide-react'
 import { Button } from './ui/button'
 import type { AssetDirectory, AssetEntry, AssetQuery } from '@shared/workbench-assets'
 
@@ -12,6 +15,52 @@ type BranchProps = {
 }
 
 const rowClass = 'h-7 w-full justify-start gap-1.5 border-0 px-2 text-left text-xs font-normal focus-visible:outline-offset-[-2px]'
+
+const iconClasses: [LucideIcon, string[]][] = [
+  [Image, [
+    'Texture2D', 'Texture2DArray', 'Texture2DDynamic', 'TextureCube', 'TextureCubeArray', 'VolumeTexture',
+    'TextureRenderTarget2D', 'TextureRenderTarget2DArray', 'TextureRenderTargetCube', 'TextureRenderTargetVolume',
+    'LightMapTexture2D', 'VirtualTexture2D', 'CurveLinearColorAtlas', 'SpineAtlasAsset', 'PaperSprite'
+  ]],
+  [PersonStanding, ['StaticMesh', 'SkeletalMesh', 'GeometryCollection', 'GeometryCache']],
+  [Bone, ['Skeleton']],
+  [Shapes, ['PhysicsAsset']],
+  [Palette, [
+    'Material', 'MaterialInstance', 'MaterialInstanceConstant', 'MaterialFunction', 'MaterialFunctionInstance',
+    'MaterialParameterCollection', 'MaterialLayer', 'MaterialLayerBlend'
+  ]],
+  [Clapperboard, [
+    'AnimSequence', 'AnimMontage', 'AnimComposite', 'AnimBlueprint', 'AnimBlueprintGeneratedClass',
+    'BlendSpace', 'BlendSpace1D', 'AimOffsetBlendSpace', 'AimOffsetBlendSpace1D', 'LevelSequence', 'SpineSkeletonDataAsset'
+  ]],
+  [PanelsTopLeft, ['WidgetBlueprint', 'WidgetBlueprintGeneratedClass', 'UserWidget', 'SlateWidgetStyleAsset']],
+  [Workflow, ['Blueprint', 'BlueprintGeneratedClass', 'BlueprintFunctionLibrary']],
+  [Sparkles, ['NiagaraSystem', 'NiagaraEmitter', 'NiagaraScript', 'ParticleSystem']],
+  [AudioLines, [
+    'SoundWave', 'SoundCue', 'SoundClass', 'SoundMix', 'SoundAttenuation', 'SoundConcurrency',
+    'MetaSoundSource', 'AkAudioEvent', 'AkAudioBank', 'AkInitBank', 'AkMediaAsset'
+  ]],
+  [Table2, ['DataTable', 'CompositeDataTable', 'CurveTable', 'StringTable']],
+  [Braces, ['DataAsset', 'PrimaryDataAsset']],
+  [Type, ['Font', 'FontFace']],
+  [MapIcon, ['World']]
+]
+const assetClassIcons = new Map(iconClasses.flatMap(([Icon, classes]) => classes.map(name => [name, Icon] as const)))
+
+function fileIcon(name: string, assetClass?: string) {
+  if (assetClass) return assetClassIcons.get(assetClass) ?? Package
+  switch (name.slice(name.lastIndexOf('.')).toLowerCase()) {
+    case '.uasset': return Package
+    case '.umap': return MapIcon
+    case '.png': case '.jpg': case '.jpeg': case '.dds': case '.svg': case '.webp': return Image
+    case '.wem': case '.bnk': case '.wav': case '.ogg': case '.mp3': case '.acb': case '.awb': return AudioLines
+    case '.usm': case '.bk2': case '.mp4': case '.webm': return Film
+    case '.json': case '.uplugin': case '.uproject': case '.upluginmanifest': return Braces
+    case '.ini': case '.txt': case '.srt': case '.locres': case '.locmeta': return FileText
+    case '.ufont': case '.ttf': case '.otf': return Type
+    default: return File
+  }
+}
 
 function AssetFolder({ path, expand, ...props }: BranchProps & { path: string; expand: boolean }) {
   const [open, setOpen] = useState(expand)
@@ -56,12 +105,13 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
         query={query} selected={selected} onSelect={onSelect} />)}
       {result.rows.map(row => {
         const name = row.path.slice(row.path.lastIndexOf('/') + 1)
+        const Icon = fileIcon(name, row.assetClass)
         return <li key={JSON.stringify([row.path, row.archive])}>
-          <Button type="button" variant="ghost" title={`${row.path}\n${row.archive}`}
+          <Button type="button" variant="ghost" title={`${row.path}\n${row.archive}${row.assetClass ? `\n${row.assetClass}` : ''}`}
             aria-pressed={row.path === selected?.path && row.archive === selected.archive}
             className={`${rowClass} pl-7 aria-pressed:bg-accent aria-pressed:text-accent-foreground`}
             onClick={() => onSelect(row)}>
-            <File aria-hidden="true" />
+            <Icon aria-hidden="true" className={Icon === PersonStanding ? 'scale-125' : undefined} />
             <span className="truncate">{name}</span>
           </Button>
         </li>

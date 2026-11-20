@@ -5,10 +5,10 @@ import { assetResults, effectiveAssets } from '../../../shared/workbench-assets-
 const base = 'Paks/pakchunk0-Windows.utoc'
 const patch = 'PatchPaks/pakchunk0-Windows_0_P.utoc'
 const rows: AssetEntry[] = [
-  { path: 'HT/Content/Demo/SM_Triangle.uasset', archive: base, size: 4096, encrypted: true, order: 3 },
-  { path: 'HT/Content/Demo/T_Palette.uasset', archive: base, size: 2048, encrypted: true, order: 3 },
-  { path: 'HT/Content/Demo/T_Palette.uasset', archive: patch, size: 3072, encrypted: true, order: 103 },
-  { path: 'HT/Content/Demo/UI_Style.uasset', archive: patch, size: 512, encrypted: true, order: 103 }
+  { path: 'HT/Content/Demo/SM_Triangle.uasset', archive: base, size: 4096, encrypted: true, order: 3, assetClass: 'StaticMesh' },
+  { path: 'HT/Content/Demo/T_Palette.uasset', archive: base, size: 2048, encrypted: true, order: 3, assetClass: 'Texture2D' },
+  { path: 'HT/Content/Demo/T_Palette.uasset', archive: patch, size: 3072, encrypted: true, order: 103, assetClass: 'Texture2D' },
+  { path: 'HT/Content/Demo/UI_Style.uasset', archive: patch, size: 512, encrypted: true, order: 103, assetClass: 'SlateWidgetStyleAsset' }
 ]
 let indexed = false
 const snapshots = new Map([['示例旧版本', effectiveAssets(rows.slice(0, 2))]])
