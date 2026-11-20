@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, Download, FolderOpen, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
+  DropdownMenuRadioItem, DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { Input } from './ui/input'
 import WorkbenchSelect from './workbench-select'
@@ -28,6 +28,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
+  const selectedArchiveNames = archives.map(archive => archive.split('/').pop())
   const query = useMemo(() => ({ mode: loaded.mode, snapshot: loaded.snapshot, search, archives }),
     [loaded, search, archives])
 
@@ -84,19 +85,17 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
-              aria-label="选择包体" title={archives.join('\n') || '全部包体'}>
-              <span className="truncate">{archives.length === 1 ? archives[0].split('/').pop()
-                : archives.length > 1 ? `${archives.length} 个包体` : '全部包体'}</span>
+              aria-label="选择包体" title={selectedArchiveNames.join('\n') || '选择包体'}>
+              <span className="truncate">{archives.length > 1 ? `${archives.length} 个包体`
+                : selectedArchiveNames[0] ?? '选择包体'}</span>
               <ChevronDown aria-hidden="true" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="workbench-assets-archive-menu">
-            <DropdownMenuItem onSelect={() => filterArchives([])}>全部包体</DropdownMenuItem>
-            <DropdownMenuSeparator />
             {state.archives.map(archive => <DropdownMenuCheckboxItem key={archive} checked={archives.includes(archive)}
               onSelect={event => event.preventDefault()}
               onCheckedChange={checked => filterArchives(checked ? [...archives, archive] : archives.filter(value => value !== archive))}>
-              <span className="break-all">{archive}</span>
+              <span className="break-all">{archive.split('/').pop()}</span>
             </DropdownMenuCheckboxItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
