@@ -1,11 +1,41 @@
 .header-mod-actions {
+  display: grid;
+  justify-content: end;
+  flex: none;
+  inline-size: 0;
+  margin-inline-start: auto;
+  /* 内容自行留出按钮间距，收起时抵消工具栏的额外间隔。 */
+  margin-inline-end: calc(-1 * var(--toolbar-gap));
+  overflow: clip;
+  overflow-clip-margin: 5px;
+  interpolate-size: allow-keywords;
+  transition: inline-size var(--motion-normal) var(--motion-out);
+}
+.header-mod-actions[data-visible] {
+  inline-size: max-content;
+}
+.header-mod-actions-content {
   display: flex;
+  inline-size: max-content;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
-  flex-shrink: 0;
+  padding-inline-end: var(--toolbar-gap);
 }
-.header-mod-actions > button {
+.header-mod-action-stack {
+  display: grid;
+}
+.header-mod-action {
+  grid-area: 1 / 1;
+  transition: opacity var(--motion-fast) ease-out,
+    translate var(--motion-normal) var(--motion-out),
+    visibility var(--motion-fast);
+}
+.header-mod-action[inert] {
+  opacity: 0;
+  translate: 0 4px;
+  visibility: hidden;
+}
+.header-mod-action > button {
   height: 38px;
 }
 .header-action-divider {
@@ -18,11 +48,17 @@
 .header-mod-actions + .launch-button {
   margin-left: 0;
 }
+.header-mod-actions .header-action-divider {
+  transition: opacity var(--motion-fast) ease-out;
+}
+.header-mod-actions:not([data-visible]) .header-action-divider {
+  opacity: 0;
+}
 @media (max-width: 760px) {
-  .header-mod-actions {
+  .header-mod-actions-content {
     gap: 6px;
   }
-  .header-mod-actions > button {
+  .header-mod-action > button {
     padding-inline: 10px;
     font-size: 13px;
   }

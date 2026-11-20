@@ -93,9 +93,7 @@ export default function AppHeader({
             </Fragment>
           ))}
         </nav>
-        {(view === 'mods' || view === 'workbench') && (
-          <HeaderModActions view={view} busy={busy} onImport={onImport} onPackageMod={onPackageMod} />
-        )}
+        <HeaderModActions view={view} busy={busy} onImport={onImport} onPackageMod={onPackageMod} />
         <button
           type="button"
           className="launch-button"
