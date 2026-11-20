@@ -69,7 +69,6 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
             onDoubleClick={() => onOpen(row)}>
             <File aria-hidden="true" />
             <span className="truncate">{name}</span>
-            <span className="ml-auto max-w-[35%] truncate text-muted-foreground">{row.archive.split('/').pop()}</span>
           </Button>
         </li>
       })}
