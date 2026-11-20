@@ -9,10 +9,11 @@
   overflow: clip;
   overflow-clip-margin: 5px;
   interpolate-size: allow-keywords;
-  transition: inline-size var(--motion-normal) var(--motion-out);
+  transition: inline-size 0s var(--motion-fast);
 }
 .header-mod-actions[data-visible] {
   inline-size: max-content;
+  transition: inline-size var(--motion-normal) var(--motion-out);
 }
 .header-mod-actions-content {
   display: flex;
@@ -34,6 +35,9 @@
   opacity: 0;
   translate: 0 4px;
   visibility: hidden;
+  transition: opacity var(--motion-fast) ease-out,
+    translate 0s var(--motion-fast),
+    visibility var(--motion-fast);
 }
 .header-mod-action > button {
   height: 38px;
