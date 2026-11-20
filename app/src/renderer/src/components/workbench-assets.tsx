@@ -97,11 +97,11 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             }} />
         </label>
         <div className="inline-flex shrink-0" role="group" aria-label="加载资源">
-          <Button variant="secondary" className="rounded-r-none" disabled={comparing && !snapshot}
+          <Button variant="secondary" className="rounded-r-none border-r-0" disabled={comparing && !snapshot}
             onClick={() => loadResources(mode, comparing ? snapshot : '')}>加载</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-l-none border-l-secondary-foreground/25" disabled={!!busy}
+              <Button variant="secondary" size="icon" className="rounded-l-none" disabled={!!busy}
                 aria-label="加载模式" title={`加载模式：${modes[mode]}`}>
                 <ChevronDown aria-hidden="true" />
               </Button>
@@ -123,7 +123,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             ...state.snapshots.map(file => [file, file.replace(/\.snapshot\.json$/, '')] as const)
           ]}
           onValueChange={value => setSnapshot(value === 'none' ? '' : value)} />}
-        <Button variant="outline" disabled={!state.count} title="导出索引快照" onClick={() => run('snapshot', async () => {
+        <Button variant="secondary" disabled={!state.count} title="导出索引快照" onClick={() => run('snapshot', async () => {
           const value = await window.api.workbenchAssetSnapshot()
           setState(value)
           setSnapshot(value.snapshots[0])
@@ -141,7 +141,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           <h2>文件</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
+              <Button variant="secondary" size="sm" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
                 aria-label="选择包体" title={archiveLabel}>
                 <span className="truncate">{archiveLabel}</span>
                 <ChevronDown aria-hidden="true" />

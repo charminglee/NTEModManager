@@ -99,7 +99,7 @@ export default function WorkbenchAssetPreview({ entry, autoOpen, disabled }: {
           setLoading(true)
           setRequest({ format })
         }}>预览</Button>
-        <Button variant="outline" disabled={exporting} onClick={exportAsset}>
+        <Button variant="secondary" disabled={exporting} onClick={exportAsset}>
           <Download aria-hidden="true" />{exporting ? '正在导出……' : '导出资源'}
         </Button>
       </div>

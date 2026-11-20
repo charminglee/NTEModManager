@@ -57,7 +57,7 @@ export default function ImportDialog({ session, busy, activity, onClose, onRetry
                 )}
               </div>
               {item && !item.result.success && (
-                <Button variant="outline" size="sm" disabled={busy} onClick={() => onRetry(path)}>
+                <Button variant="secondary" size="sm" disabled={busy} onClick={() => onRetry(path)}>
                   重试
                 </Button>
               )}

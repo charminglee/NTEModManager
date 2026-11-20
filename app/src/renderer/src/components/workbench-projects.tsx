@@ -45,7 +45,7 @@ export default function WorkbenchProjects() {
   return (
     <fieldset disabled={!!busy} aria-label="模组项目" className="grid min-w-0 gap-4 text-sm">
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="outline" onClick={() => select('open')}><FolderOpen />打开项目</Button>
+        <Button variant="secondary" onClick={() => select('open')}><FolderOpen />打开项目</Button>
         <Button onClick={() => select('create')}>新建项目</Button>
       </div>
       {busy && <p role="status" className="workbench-panel px-4 py-3 text-muted-foreground">{busy}</p>}
@@ -116,7 +116,7 @@ export default function WorkbenchProjects() {
           </section>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="outline" onClick={() => folder('builds')}>产物目录</Button>
+          <Button variant="secondary" onClick={() => folder('builds')}>产物目录</Button>
           <Button disabled={!project.engine || !project.uproject || !project.assets.length} onClick={() => void run('正在烘焙并校验容器，进度见运行日志……', async () => {
             setOutput('')
             setOutput(await api.buildWorkbenchProject())

@@ -253,7 +253,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                       if (event.currentTarget.dataset.previous !== event.currentTarget.value) save(event.currentTarget.value)
                     }} />
                   {key !== 'workbenchAesKey' && (
-                    <Button variant="outline" onClick={async () => {
+                    <Button variant="secondary" onClick={async () => {
                       const selected = key === 'workbenchMapping'
                         ? await window.api.pickFile({ title: label, extensions: ['usmap'], defaultPath: draft[key] })
                         : await window.api.pickDirectory(draft[key])
@@ -296,7 +296,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                         flush()
                       }}
                     />
-                    <Button type="button" variant="outline" onClick={() => void browse(key)}>
+                    <Button type="button" variant="secondary" onClick={() => void browse(key)}>
                       <FolderOpen />
                       浏览
                     </Button>
@@ -310,7 +310,7 @@ export default function SettingsView({ config, onSaved }: Props) {
                     当前缓存大小：{totalCacheSize}
                   </small>
                 </span>
-                <Button type="button" variant="outline" aria-describedby="application-cache-size" onClick={() => {
+                <Button type="button" variant="secondary" aria-describedby="application-cache-size" onClick={() => {
                   setCacheSelection(['image'])
                   setCacheDialogOpen(true)
                 }}>

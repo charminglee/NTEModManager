@@ -55,28 +55,28 @@ export default function ModDetail({
       headerEnd={<ModStatus mod={mod} />}
       footer={
         <div className="detail-actions">
-          <Button variant="outline" disabled={busy} onClick={() => actions.onRepackage(mod)}>
+          <Button variant="secondary" disabled={busy} onClick={() => actions.onRepackage(mod)}>
             <Package />
             重新打包
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             disabled={busy || !mod.installed}
             onClick={() => actions.onReinstall(mod)}
           >
             <RefreshCw />
             重新安装
           </Button>
-          <Button variant="outline" disabled={busy} onClick={() => actions.onAddArchive(mod)}>
+          <Button variant="secondary" disabled={busy} onClick={() => actions.onAddArchive(mod)}>
             <FolderInput />
             添加
           </Button>
-          <Button variant="outline" disabled={busy} onClick={() => actions.onOpenSource(mod)}>
+          <Button variant="secondary" disabled={busy} onClick={() => actions.onOpenSource(mod)}>
             <FolderOpen />
             打开源目录
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             disabled={busy || !mod.installed}
             onClick={() => actions.onOpenInstall(mod)}
           >
@@ -86,7 +86,7 @@ export default function ModDetail({
           <ModActions mod={mod} actions={actions} disabled={busy} label="更多操作" />
           <Button
             className="detail-primary-action"
-            variant={mod.installed ? 'outline' : 'default'}
+            variant={mod.installed ? 'secondary' : 'default'}
             disabled={busy}
             onClick={() => actions.onToggleInstall(mod)}
           >

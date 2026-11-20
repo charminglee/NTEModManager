@@ -133,7 +133,7 @@ export default function YoudaoSettings() {
             disabled={loading || saving}
           />
           {status.configured && (
-            <Button type="button" variant="outline" onClick={() => void clearCredentials()} disabled={saving}>
+            <Button type="button" variant="secondary" onClick={() => void clearCredentials()} disabled={saving}>
               <Trash2 aria-hidden="true" />
               清除凭据
             </Button>

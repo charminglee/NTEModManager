@@ -106,7 +106,7 @@ function ModCard({
         </button>
         <ModStatus mod={mod} />
         <Button
-          variant={mod.installed || mod.invalid ? 'outline' : 'default'}
+          variant={mod.installed || mod.invalid ? 'secondary' : 'default'}
           size="sm"
           className="mod-install-button"
           disabled={disabled}

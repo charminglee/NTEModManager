@@ -42,11 +42,11 @@ function ModListHeader(p: Props) {
         <Button variant="default" onClick={p.onInstallAll} disabled={p.busy}>
           全部安装
         </Button>
-        <Button variant="outline" onClick={p.onUninstallAll} disabled={p.busy}>
+        <Button variant="secondary" onClick={p.onUninstallAll} disabled={p.busy}>
           全部卸载
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           size="icon"
           aria-label="重新扫描模组目录"
           onClick={p.onRefresh}

@@ -142,7 +142,7 @@ export default function WorkbenchSpine() {
         >
           从游戏载入
         </Button>
-        <Button type="button" variant="outline" onClick={() => skeletonInput.current?.click()}>
+        <Button type="button" variant="secondary" onClick={() => skeletonInput.current?.click()}>
           <FolderOpen />打开本地骨架
         </Button>
         <input ref={skeletonInput} hidden type="file" multiple accept=".json,.skel,.uasset,.uexp,.atlas,.txt,.png"
@@ -181,7 +181,7 @@ export default function WorkbenchSpine() {
                 ['-1', '初始姿势'],
                 ...animations.map((name, index) => [String(index), name] as const)
               ]} />
-            <Button type="button" variant="outline" onClick={() => atlasInput.current?.click()}>
+            <Button type="button" variant="secondary" onClick={() => atlasInput.current?.click()}>
               <FolderOpen />载入图集与贴图
             </Button>
             <input ref={atlasInput} hidden type="file" multiple accept=".atlas,.txt,.uexp,.png"

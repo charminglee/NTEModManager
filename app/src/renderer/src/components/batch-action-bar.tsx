@@ -65,7 +65,7 @@ function BatchActionBar({
           <div className="h-5 w-px bg-[var(--rule)] opacity-60" />
 
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={busy || allSelected}
             onClick={onSelectAll}
@@ -75,7 +75,7 @@ function BatchActionBar({
           </Button>
 
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={busy || !canInstall}
             onClick={onInstall}
@@ -85,7 +85,7 @@ function BatchActionBar({
           </Button>
 
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={busy || !canUninstall}
             onClick={onUninstall}
@@ -95,7 +95,7 @@ function BatchActionBar({
           </Button>
 
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             disabled={busy || !canUninstall}
             onClick={onReinstall}
@@ -104,14 +104,14 @@ function BatchActionBar({
             重新安装
           </Button>
 
-          <Button variant="outline" size="sm" disabled={busy} onClick={onRepackage}>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={onRepackage}>
             <Package />
             重新打包
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={busy}>
+              <Button variant="secondary" size="sm" disabled={busy}>
                 <TriangleAlert />
                 标记失效
               </Button>
@@ -126,7 +126,7 @@ function BatchActionBar({
             删除
           </Button>
           <div className="h-5 w-px bg-[var(--rule)] opacity-60" />
-          <Button variant="outline" size="sm" disabled={busy} onClick={onClear}>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={onClear}>
             <X />
             取消
           </Button>

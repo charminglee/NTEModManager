@@ -195,7 +195,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
               <Search size={17} />
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索模组或作者" />
             </div>
-            <Button variant="outline" onClick={() => void loadFirstPage()} disabled={loading || loadingMore} size="icon">
+            <Button variant="secondary" onClick={() => void loadFirstPage()} disabled={loading || loadingMore} size="icon">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
             </Button>
           </div>
@@ -240,7 +240,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
                 {loadMoreError ? (
                   <>
                     <span className="gamebanana-error">加载更多模组失败：{loadMoreError}</span>
-                    <Button size="sm" variant="outline" onClick={() => void loadNextPage()}>重试</Button>
+                    <Button size="sm" variant="secondary" onClick={() => void loadNextPage()}>重试</Button>
                   </>
                 ) : loadingMore ? (
                   <><LoaderCircle className="animate-spin" size={15} />正在加载更多模组……</>
@@ -256,7 +256,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
         )}
 
         <div className="gamebanana-page-footer">
-          <Button variant="outline" onClick={() => setDrawerOpen(true)}>
+          <Button variant="secondary" onClick={() => setDrawerOpen(true)}>
             <Download />下载列表{activeTaskCount > 0 ? `  ·  ${activeTaskCount}` : ''}
           </Button>
         </div>

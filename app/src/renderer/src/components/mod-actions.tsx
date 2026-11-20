@@ -74,7 +74,7 @@ export default function ModActions({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant={label ? 'outline' : 'ghost'}
+          variant={label ? 'secondary' : 'ghost'}
           size={label ? 'default' : 'icon'}
           className={label ? undefined : 'size-8'}
           disabled={disabled}

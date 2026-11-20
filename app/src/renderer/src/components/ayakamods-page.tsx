@@ -138,7 +138,7 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
         </div>
         {RUNS_IN_ELECTRON && (
           <div className="gamebanana-heading-actions">
-            <Button variant="outline" size="icon" onClick={reload} aria-label="刷新">
+            <Button variant="secondary" size="icon" onClick={reload} aria-label="刷新">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
             </Button>
           </div>
@@ -170,7 +170,7 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
         </div>
       </div>
       <div className="gamebanana-page-footer">
-        <Button variant="outline" onClick={() => setDrawerOpen(true)}>
+        <Button variant="secondary" onClick={() => setDrawerOpen(true)}>
           <Download />下载列表{tasks.some((task) => !['completed', 'failed'].includes(task.status))
             ? `  ·  ${tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length}` : ''}
         </Button>

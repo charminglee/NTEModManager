@@ -22,7 +22,7 @@ export function HeaderModActions({
           <Import />
           导入
         </Button>
-        <Button variant="outline" onClick={onPackageMod} disabled={busy}>
+        <Button variant="secondary" onClick={onPackageMod} disabled={busy}>
           <Package />
           打包
         </Button>

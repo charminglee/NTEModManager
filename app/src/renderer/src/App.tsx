@@ -1155,7 +1155,7 @@ export default function App() {
                     </p>
                     {search || statusFilter !== 'all' ? (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => {
                           setSearch('')
                           setStatusFilter('all')

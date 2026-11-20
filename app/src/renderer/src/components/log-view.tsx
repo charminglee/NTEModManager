@@ -89,7 +89,7 @@ function LogView() {
         <Button
           type="button"
           className="follow-toggle"
-          variant={follow ? 'default' : 'outline'}
+          variant={follow ? 'default' : 'secondary'}
           aria-label="跟随滚动"
           aria-pressed={follow}
           onClick={() => setFollow((previous) => !previous)}
@@ -97,7 +97,7 @@ function LogView() {
           跟随滚动
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           size="icon"
           aria-label="刷新日志"
           onClick={() => void window.api.getLogEntries().then(setLogs)}
@@ -138,7 +138,7 @@ function LogView() {
       {!follow && (
         <Button
           className="jump-to-log"
-          variant="outline"
+          variant="secondary"
           size="icon"
           aria-label="查看最新日志"
           onClick={() => {

@@ -166,7 +166,7 @@ function DetailSectionStatus({ label, request, retry }: {
     <p className="gamebanana-empty break-words" role="status">
       {request.status === 'error' ? `${label}加载失败：${request.message}` : `正在加载${label}……`}
     </p>
-    {request.status === 'error' && <Button variant="outline" size="sm" onClick={retry}>重试{label}</Button>}
+    {request.status === 'error' && <Button variant="secondary" size="sm" onClick={retry}>重试{label}</Button>}
   </div>
 }
 
@@ -209,7 +209,7 @@ export default function GameBananaDetail({
         title={mod?.name ?? initial.name}
         eyebrow={<span className="eyebrow">GAMEBANANA ／ MOD #{initial.id}</span>}
         headerAction={mod && (
-          <Button variant="outline" className="gamebanana-source-button" onClick={() => void window.api.openExternal(mod.profileUrl)}>
+          <Button variant="secondary" className="gamebanana-source-button" onClick={() => void window.api.openExternal(mod.profileUrl)}>
             <ExternalLink />查看原页面
           </Button>
         )}
@@ -363,9 +363,9 @@ export default function GameBananaDetail({
         footerClassName="gamebanana-lightbox-actions"
         footer={mod && imageIndex !== null ? (
           <>
-            <Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex - 1 + mod.screenshots.length) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>上一张</Button>
+            <Button variant="secondary" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex - 1 + mod.screenshots.length) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>上一张</Button>
             <span>{originalSize ? '原始尺寸' : '适应窗口'}</span>
-            <Button variant="outline" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex + 1) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>下一张</Button>
+            <Button variant="secondary" onClick={() => { setOriginalSize(false); setImageIndex((imageIndex + 1) % mod.screenshots.length) }} disabled={mod.screenshots.length < 2}>下一张</Button>
           </>
         ) : undefined}
         onKeyDown={(event) => {

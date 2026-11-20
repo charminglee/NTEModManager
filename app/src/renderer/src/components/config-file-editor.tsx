@@ -158,7 +158,7 @@ export default function ConfigFileEditor({ active, config, onSave }: Props) {
         {file && (
           <div className="settings-config-actions">
             {dirty && <span className="settings-config-status">未保存</span>}
-            <Button type="button" variant="outline" disabled={!dirty || saving || conflict} onClick={() => void save()}>
+            <Button type="button" variant="secondary" disabled={!dirty || saving || conflict} onClick={() => void save()}>
               {saving ? '正在保存…' : '保存'}
             </Button>
           </div>
@@ -171,7 +171,7 @@ export default function ConfigFileEditor({ active, config, onSave }: Props) {
       {!file && !error && <p role="status">正在读取配置文件…</p>}
       {error && <p className="settings-config-error" role="alert">{error}</p>}
       {(conflict || (!file && error)) && (
-        <Button type="button" variant="outline" onClick={reload}>
+        <Button type="button" variant="secondary" onClick={reload}>
           {conflict && dirty ? '放弃修改并重新加载' : '重新加载'}
         </Button>
       )}

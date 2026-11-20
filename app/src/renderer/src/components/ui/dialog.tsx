@@ -100,7 +100,7 @@ export function AppDialog({
                     {footerStart}
                     {cancelAction && (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         disabled={cancelAction.disabled}
                         onClick={() => {
                           cancelAction.onSelect?.()
