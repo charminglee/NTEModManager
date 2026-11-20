@@ -56,6 +56,16 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     }
   }
 
+  function loadResources(nextMode: AssetMode, nextSnapshot: string, nextArchive = archive) {
+    return run('正在加载游戏资源……', async () => {
+      const value = await window.api.workbenchAssetIndex()
+      setState(value)
+      setArchive(value.archives.includes(nextArchive) ? nextArchive : '')
+      setSelection(undefined)
+      setLoaded(previous => ({ mode: nextMode, snapshot: nextSnapshot, revision: previous.revision + 1 }))
+    })
+  }
+
   function select(entry: AssetEntry, open = false) {
     setSelection(previous => {
       if (open) return { entry, open: (previous?.open ?? 0) + 1 }
@@ -90,13 +100,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
         })}><FileOutput aria-hidden="true" />导出</Button>
         <div className="inline-flex shrink-0" role="group" aria-label="加载资源">
           <Button className="rounded-r-none" disabled={comparing && !snapshot}
-            onClick={() => run('正在加载游戏资源……', async () => {
-              const value = await window.api.workbenchAssetIndex()
-              setState(value)
-              setArchive(previous => value.archives.includes(previous) ? previous : '')
-              setSelection(undefined)
-              setLoaded(previous => ({ mode, snapshot: comparing ? snapshot : '', revision: previous.revision + 1 }))
-            })}>加载</Button>
+            onClick={() => loadResources(mode, comparing ? snapshot : '')}>加载</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="icon" className="rounded-l-none border-l-primary-foreground/25" disabled={!!busy}
@@ -133,7 +137,9 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="workbench-assets-archive-menu">
               <DropdownMenuRadioGroup value={archive} onValueChange={value => {
-                setArchive(previous => previous === value ? '' : value)
+                const nextArchive = archive === value ? '' : value
+                if (nextArchive && !state.count) return loadResources(loaded.mode, loaded.snapshot, nextArchive)
+                setArchive(nextArchive)
                 setSelection(undefined)
               }}>
                 {state.archives.map(path => <DropdownMenuRadioItem key={path} value={path}>
@@ -148,7 +154,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             query={query} selected={selection?.entry} onSelect={select} onOpen={entry => select(entry, true)} />
             : <div className="workbench-assets-empty">
               <FolderOpen size={24} aria-hidden="true" />
-              <p>{loaded.revision ? '没有可浏览的资源。' : '点击「加载」读取游戏资源。'}</p>
+              <p>{loaded.revision ? '没有可浏览的资源。' : '选择包体，或点击「加载」读取游戏资源。'}</p>
             </div>}
         </div>
       </section>
