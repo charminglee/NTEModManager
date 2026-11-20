@@ -1645,6 +1645,9 @@ select {
   min-height: 0;
   overflow: hidden;
 }
+.workbench-assets-browser .workbench-panel-heading {
+  font-size: 15px;
+}
 .workbench-assets-empty {
   display: flex;
   flex: 1;
@@ -1662,7 +1665,14 @@ select {
 @container (min-width: 36rem) {
   .workbench-assets-browser {
     grid-template-columns: minmax(14rem, 2fr) minmax(0, 3fr);
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    row-gap: 0;
+  }
+  .workbench-assets-tree,
+  .workbench-assets-preview {
+    display: grid;
+    grid-row: 1 / -1;
+    grid-template-rows: subgrid;
   }
 }
 @container (width < 36rem) {

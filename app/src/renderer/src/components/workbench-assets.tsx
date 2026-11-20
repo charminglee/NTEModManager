@@ -154,12 +154,14 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
       </section>
       <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
         <header className="workbench-panel-heading"><h2>资源预览</h2></header>
-        {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.entry.path, selection.entry.archive, selection.open])}
-          entry={selection.entry} autoOpen={selection.open > 0} disabled={!!busy} />
-          : <div className="workbench-assets-empty">
-            <PackageOpen size={24} aria-hidden="true" />
-            <p>双击文件树中的文件加载预览。</p>
-          </div>}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.entry.path, selection.entry.archive, selection.open])}
+            entry={selection.entry} autoOpen={selection.open > 0} disabled={!!busy} />
+            : <div className="workbench-assets-empty">
+              <PackageOpen size={24} aria-hidden="true" />
+              <p>双击文件树中的文件加载预览。</p>
+            </div>}
+        </div>
       </section>
     </div>
   </fieldset>
