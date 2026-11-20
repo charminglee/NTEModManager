@@ -13,6 +13,7 @@ type Section = (typeof sections)[number]['id']
 export default function Workbench({ visible }: { visible: boolean }) {
   const [section, setSection] = useState<Section>('assets')
   const [opened, setOpened] = useState<Section[]>(['assets'])
+  const [headingActions, setHeadingActions] = useState<HTMLDivElement | null>(null)
   const activeSection = sections.find(({ id }) => id === section)!
 
   return (
@@ -22,11 +23,14 @@ export default function Workbench({ visible }: { visible: boolean }) {
         setOpened(current => current.includes(id) ? current : [...current, id])
       }} />
       <main aria-label={activeSection.label} className="settings-page">
-        <header className="workspace-page-heading"><h1>{activeSection.label}</h1></header>
+        <header className="workspace-page-heading">
+          <h1>{activeSection.label}</h1>
+          <div ref={setHeadingActions} className="workbench-heading-actions" />
+        </header>
         {sections.map(({ id, label, Panel }) => opened.includes(id) && (
           <div key={id} className="workbench-content" style={id === section ? undefined : { display: 'none' }}>
             <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">正在加载{label}……</p>}>
-              <Panel active={visible && id === section} />
+              <Panel active={visible && id === section} toolbarTarget={headingActions} />
             </Suspense>
           </div>
         ))}

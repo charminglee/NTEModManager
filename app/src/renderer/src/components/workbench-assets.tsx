@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, FileOutput, Filter, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
@@ -16,7 +17,7 @@ const modes: Record<AssetMode, string> = {
   all: '全部资源', new: '新增资源', modified: '已修改资源', unpatched: '排除已被覆盖的资源'
 }
 
-export default function WorkbenchAssets({ active }: { active: boolean }) {
+export default function WorkbenchAssets({ active, toolbarTarget }: { active: boolean; toolbarTarget: HTMLElement | null }) {
   const [state, setState] = useState<AssetState>({ count: 0, archives: [], snapshots: [] })
   const [search, setSearch] = useState('')
   const [archive, setArchive] = useState('')
@@ -81,9 +82,9 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     })
   }
 
-  return <fieldset disabled={!!busy} className="workbench-assets">
-    <div className="workbench-assets-toolbar">
-      <div className="flex min-w-0 items-center gap-2">
+  const toolbar = active && toolbarTarget && createPortal(
+    <fieldset disabled={!!busy} className="workbench-assets-toolbar" aria-label="原生资源操作">
+      <div className="workbench-assets-search-group flex min-w-0 items-center gap-2">
         <label className="library-search workbench-assets-search">
           <Search size={17} aria-hidden="true" />
           <Input type="search" placeholder="搜索资源" aria-label="搜索资源" value={search}
@@ -111,39 +112,11 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           </DropdownMenu>
         </div>
       </div>
-      <div className="workbench-assets-actions flex min-w-0 items-center justify-end" data-visible={comparing || showExport || undefined}>
-        {comparing && <WorkbenchSelect label="对比快照" className="w-auto max-w-56" disabled={!!busy}
-          value={snapshot || 'none'}
-          options={[
-            ['none', '选择对比快照'],
-            ...state.snapshots.map(file => [file, file.replace(/\.snapshot\.json$/, '')] as const)
-          ]}
-          onValueChange={value => setSnapshot(value === 'none' ? '' : value)} />}
-        <div className="header-action-reveal" data-visible={showExport || undefined}>
-          <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
-            <Button variant="secondary" size="icon" className="size-8" disabled={!!busy || !state.count}
-              aria-label="导出索引快照" title="导出索引快照"
-              onClick={() => run('snapshot', async () => {
-                const value = await window.api.workbenchAssetSnapshot()
-                setState(value)
-                setSnapshot(value.snapshots[0])
-                setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
-              })}><FileOutput aria-hidden="true" /></Button>
-          </div>
-        </div>
-      </div>
-    </div>
-    {(busy === 'snapshot' || message) && <p role={message?.error ? 'alert' : 'status'}
-      className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>
-      {busy === 'snapshot' ? '正在导出索引快照……' : message?.text}
-    </p>}
-    <div className="workbench-assets-browser">
-      <section className="workbench-assets-tree workbench-panel" aria-label="文件">
-        <header className="workbench-panel-heading">
-          <h2 className="mr-auto">文件</h2>
+      <div className="workbench-assets-actions flex min-w-0 max-w-full flex-wrap items-center justify-end gap-y-2">
+        <div className="flex min-w-0 max-w-full items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="sm" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
+              <Button variant="secondary" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
                 aria-label="选择包体" title={archiveLabel}>
                 <span className="truncate">{archiveLabel}</span>
                 <ChevronDown aria-hidden="true" />
@@ -169,7 +142,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="size-8" disabled={!!busy}
+              <Button variant="secondary" size="icon" disabled={!!busy}
                 aria-label="过滤文件" title="过滤文件">
                 <Filter aria-hidden="true" />
               </Button>
@@ -181,31 +154,65 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
               }}>只看 HT/Content</DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </header>
-        <div className="group/file-tree relative min-h-0 flex-1">
-          <div className="absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
-            {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive, onlyHtContent])}
-              query={query} selected={selection} onSelect={setSelection} />
+        </div>
+        {comparing && <WorkbenchSelect label="对比快照" className="ms-2 w-auto max-w-56" disabled={!!busy}
+          value={snapshot || 'none'}
+          options={[
+            ['none', '选择对比快照'],
+            ...state.snapshots.map(file => [file, file.replace(/\.snapshot\.json$/, '')] as const)
+          ]}
+          onValueChange={value => setSnapshot(value === 'none' ? '' : value)} />}
+        <div className="header-action-reveal" data-visible={showExport || undefined}>
+          <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
+            <Button variant="secondary" size="icon" disabled={!!busy || !state.count}
+              aria-label="导出索引快照" title="导出索引快照"
+              onClick={() => run('snapshot', async () => {
+                const value = await window.api.workbenchAssetSnapshot()
+                setState(value)
+                setSnapshot(value.snapshots[0])
+                setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
+              })}><FileOutput aria-hidden="true" /></Button>
+          </div>
+        </div>
+      </div>
+    </fieldset>,
+    toolbarTarget
+  )
+
+  return <>
+    {toolbar}
+    <fieldset disabled={!!busy} className="workbench-assets">
+      {(busy === 'snapshot' || message) && <p role={message?.error ? 'alert' : 'status'}
+        className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>
+        {busy === 'snapshot' ? '正在导出索引快照……' : message?.text}
+      </p>}
+      <div className="workbench-assets-browser">
+        <section className="workbench-assets-tree workbench-panel" aria-label="文件">
+          <div className="group/file-tree relative min-h-0 flex-1">
+            <div className="absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
+              {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive, onlyHtContent])}
+                query={query} selected={selection} onSelect={setSelection} />
+                : <div className="workbench-assets-empty">
+                  <FolderOpen size={24} aria-hidden="true" />
+                  <p>{loaded.revision ? '没有可浏览的资源。' : '选择包体，或点击「加载」读取游戏资源。'}</p>
+                </div>}
+            </div>
+            <div role="status" className="pointer-events-none absolute inset-0 hidden place-items-center text-muted-foreground group-has-aria-busy/file-tree:grid">
+              <LoaderCircle size={28} className="motion-safe:animate-spin" aria-hidden="true" />
+              <span className="sr-only">正在加载文件树……</span>
+            </div>
+          </div>
+        </section>
+        <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.path, selection.archive])} entry={selection} />
               : <div className="workbench-assets-empty">
-                <FolderOpen size={24} aria-hidden="true" />
-                <p>{loaded.revision ? '没有可浏览的资源。' : '选择包体，或点击「加载」读取游戏资源。'}</p>
+                <PackageOpen size={24} aria-hidden="true" />
+                <p>选择文件以查看预览。</p>
               </div>}
           </div>
-          <div role="status" className="pointer-events-none absolute inset-0 hidden place-items-center text-muted-foreground group-has-aria-busy/file-tree:grid">
-            <LoaderCircle size={28} className="motion-safe:animate-spin" aria-hidden="true" />
-            <span className="sr-only">正在加载文件树……</span>
-          </div>
-        </div>
-      </section>
-      <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.path, selection.archive])} entry={selection} />
-            : <div className="workbench-assets-empty">
-              <PackageOpen size={24} aria-hidden="true" />
-              <p>选择文件以查看预览。</p>
-            </div>}
-        </div>
-      </section>
-    </div>
-  </fieldset>
+        </section>
+      </div>
+    </fieldset>
+  </>
 }
