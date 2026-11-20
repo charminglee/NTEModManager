@@ -409,6 +409,7 @@ export default function App() {
     })
   }, [mods])
 
+  const selectionMode = selectedNames.size > 0
   const selectedMods = useMemo(
     () => mods.filter((mod) => selectedNames.has(mod.name)),
     [mods, selectedNames]
@@ -1139,7 +1140,7 @@ export default function App() {
               <div
                 ref={modListRef}
                 key={`${currentCategory}:${statusFilter}`}
-                className={cn('mod-list-scroll', selectedNames.size > 0 && 'has-batch-actions')}
+                className={cn('mod-list-scroll', selectionMode && 'has-batch-actions')}
               >
                 {visibleMods.length === 0 ? (
                   <div className="library-empty">
@@ -1184,6 +1185,7 @@ export default function App() {
                               mod={mod}
                               actions={modCardActions}
                               disabled={busy}
+                              selectionMode={selectionMode}
                               selected={selectedNames.has(mod.name)}
                               active={detailsOpen && detailMod?.name === mod.name}
                               displayName={
@@ -1201,8 +1203,8 @@ export default function App() {
                   ))
                 )}
               </div>
-              <MotionPresence present={selectedNames.size > 0}>
-                {selectedNames.size > 0 ? (
+              <MotionPresence present={selectionMode}>
+                {selectionMode ? (
                   <BatchActionBar
                     count={selectedNames.size}
                     allSelected={allVisibleSelected}

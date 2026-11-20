@@ -41,6 +41,7 @@ interface Props {
   mod: ModInfo
   actions: ModCardActions
   disabled: boolean
+  selectionMode: boolean
   selected: boolean
   active: boolean
   displayName: string
@@ -50,6 +51,7 @@ function ModCard({
   mod,
   actions,
   disabled,
+  selectionMode,
   selected,
   active,
   displayName,
@@ -81,12 +83,14 @@ function ModCard({
         <button
           type="button"
           className="mod-row-body"
-          aria-pressed={active}
+          aria-pressed={selectionMode ? selected : active}
           aria-keyshortcuts="Shift+F10"
           onClick={(event) => {
-            if (event.ctrlKey || event.metaKey)
-              actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
-            else onActivate(mod.name)
+            if (selectionMode || event.ctrlKey || event.metaKey) {
+              if (!disabled) actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
+            } else {
+              onActivate(mod.name)
+            }
           }}
         >
           <span className="mod-package-icon">
