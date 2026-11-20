@@ -20,7 +20,7 @@ import {
 interface BatchActionBarProps {
   /** 当前选中的模组数量 */
   count: number
-  /** 当前视图内全部卡片都已选中时显示「全不选」 */
+  /** 当前视图中的模组是否已全部选中 */
   allSelected: boolean
   /** 选中项中存在未安装的模组(否则「安装」无意义,禁用) */
   canInstall: boolean
@@ -62,16 +62,16 @@ function BatchActionBar({
           <span className="select-none whitespace-nowrap px-2 text-xs font-semibold text-foreground/90">
             已选 {count} 个
           </span>
-          <div className="h-5 w-px bg-foreground/10" />
+          <div className="h-5 w-px bg-[var(--rule)] opacity-60" />
 
           <Button
             variant="outline"
             size="sm"
-            disabled={busy}
-            onClick={allSelected ? onClear : onSelectAll}
+            disabled={busy || allSelected}
+            onClick={onSelectAll}
           >
-            {allSelected ? <X /> : <ListChecks />}
-            {allSelected ? '全不选' : '全选'}
+            <ListChecks />
+            全选
           </Button>
 
           <Button
@@ -124,6 +124,11 @@ function BatchActionBar({
           <Button variant="destructive" size="sm" disabled={busy} onClick={onDelete}>
             <Trash2 />
             删除
+          </Button>
+          <div className="h-5 w-px bg-[var(--rule)] opacity-60" />
+          <Button variant="outline" size="sm" disabled={busy} onClick={onClear}>
+            <X />
+            取消
           </Button>
         </div>
       </div>
