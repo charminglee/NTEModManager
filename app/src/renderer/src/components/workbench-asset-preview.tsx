@@ -1,5 +1,5 @@
 import { createElement, useEffect, useState } from 'react'
-import { LoaderCircle, PackageOpen } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import type { AssetEntry, AssetPreview } from '@shared/workbench-assets'
 import WorkbenchJsonPreview from './workbench-json-preview'
 
@@ -36,9 +36,11 @@ export default function WorkbenchAssetPreview({ entry }: { entry: AssetEntry }) 
     }
   }, [entry, canPreview])
 
+  if (!canPreview) return <WorkbenchJsonPreview value={JSON.stringify(entry, null, 4)} />
+
   return <>
     {error && <p role="alert" className="shrink-0 break-all px-4 py-2 text-sm text-destructive">{error}</p>}
-    {canPreview && !preview && !error && <div role="status" className="grid min-h-0 flex-1 place-items-center text-muted-foreground">
+    {!preview && !error && <div role="status" className="grid min-h-0 flex-1 place-items-center text-muted-foreground">
       <LoaderCircle size={28} className="motion-safe:animate-spin" aria-hidden="true" />
       <span className="sr-only">正在读取资源……</span>
     </div>}
@@ -50,9 +52,5 @@ export default function WorkbenchAssetPreview({ entry }: { entry: AssetEntry }) 
       src: preview.value, alt: preview.name, 'camera-controls': true,
       onError: () => setError('模型渲染失败。'), class: 'block min-h-0 w-full flex-1'
     })}
-    {!canPreview && <div className="workbench-assets-empty">
-      <PackageOpen size={24} aria-hidden="true" />
-      <p>此文件格式暂不支持预览。</p>
-    </div>}
   </>
 }
