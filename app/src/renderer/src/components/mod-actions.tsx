@@ -29,7 +29,7 @@ interface ModActionProps {
   actions: ModCardActions
 }
 
-function ModMoreActionItems({ mod, actions }: ModActionProps) {
+function ModArchiveActionItems({ mod, actions }: ModActionProps) {
   return (
     <>
       <DropdownMenuItem onSelect={() => actions.onReplaceArchive(mod)}>
@@ -40,7 +40,13 @@ function ModMoreActionItems({ mod, actions }: ModActionProps) {
         <Download />
         导出
       </DropdownMenuItem>
-      <DropdownMenuSeparator />
+    </>
+  )
+}
+
+function ModFlagAndDeleteItems({ mod, actions }: ModActionProps) {
+  return (
+    <>
       <DropdownMenuItem onSelect={() => actions.onToggleInvalid(mod)}>
         <TriangleAlert />
         {mod.invalid ? '取消失效标记' : '标记为失效'}
@@ -78,7 +84,9 @@ export default function ModActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <ModMoreActionItems mod={mod} actions={actions} />
+        <ModArchiveActionItems mod={mod} actions={actions} />
+        <DropdownMenuSeparator />
+        <ModFlagAndDeleteItems mod={mod} actions={actions} />
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -149,6 +157,7 @@ export function ModCardMenu({
           <FolderInput />
           添加
         </DropdownMenuItem>
+        <ModArchiveActionItems mod={mod} actions={actions} />
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => actions.onOpenSource(mod)}>
           <FolderOpen />
@@ -159,7 +168,7 @@ export function ModCardMenu({
           打开安装目录
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <ModMoreActionItems mod={mod} actions={actions} />
+        <ModFlagAndDeleteItems mod={mod} actions={actions} />
       </DropdownMenuContent>
     </DropdownMenu>
   )
