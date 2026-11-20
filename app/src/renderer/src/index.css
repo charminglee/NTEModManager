@@ -1561,16 +1561,43 @@ select {
   flex-direction: column;
   background: var(--surface-paper);
 }
-.workbench > main {
-  padding: 24px clamp(16px, 2vw, 32px);
-  background: color-mix(in srgb, var(--paper) 92%, transparent);
+.workbench-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px clamp(16px, 2vw, 28px);
+  container-type: inline-size;
 }
-.workbench > main > section,
-.workbench > main > fieldset {
-  width: 100%;
+.workbench-content > * {
   max-width: 80rem;
   margin-inline: auto;
-  padding: 0;
+}
+.workbench-panel {
+  min-width: 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--cream);
+}
+.workbench-panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 14px;
+  font-weight: 750;
+}
+.workbench-split {
+  display: grid;
+  align-items: start;
+  gap: 16px;
+}
+@container (min-width: 42rem) {
+  .workbench-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 .workspace-page-heading {
   display: flex;

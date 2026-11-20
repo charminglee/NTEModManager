@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from './ui/button'
+import Switch from './ui/switch'
 import { atlasRegions, atlasUV, type TextureSet } from './workbench-spine-atlas'
 import type { Attachment, SpineModel } from './workbench-spine-model'
 import { createPose } from './workbench-spine-pose'
@@ -180,28 +182,30 @@ export default function SpinePreview({
     }
   }, [model, textures, animation])
   return (
-    <section className="rounded-md border bg-card p-3">
-      {Boolean(model.physics?.length) && (
-        <p className="mb-1 text-xs text-muted-foreground">
-          编辑预览显示骨骼、权重和形变；游戏物理约束需在游戏中验证。
-        </p>
-      )}
-      <canvas className="block h-80 w-full" ref={canvas} aria-label="Spine 动画预览" />
-      {error && <p role="alert">{error}</p>}
-      <div className="flex items-center gap-4 text-sm">
-        <button type="button" onClick={() => setPlaying(!playing)}>
+    <section className="workbench-panel">
+      <header className="workbench-panel-heading"><h2>动画预览</h2></header>
+      <div className="grid gap-3 p-4">
+        <canvas className="block h-80 w-full rounded-md bg-(--ink)" ref={canvas} aria-label="Spine 动画预览" />
+        {error && <p role="alert" className="break-all text-sm text-destructive">{error}</p>}
+        {Boolean(model.physics?.length) && (
+          <p className="text-xs text-muted-foreground">游戏物理约束需在游戏中验证。</p>
+        )}
+      </div>
+      <footer className="flex flex-wrap items-center gap-4 border-t px-4 py-3 text-sm">
+        <Button size="sm" variant="secondary" type="button" onClick={() => setPlaying(!playing)}>
           {playing ? '暂停' : '播放'}
-        </button>
-        <label>
-          <input
-            type="checkbox"
+        </Button>
+        <label className="flex items-center gap-2">
+          <span>骨架与网格</span>
+          <Switch
+            aria-label="骨架与网格"
             checked={!textures || overlay}
             disabled={!textures}
-            onChange={(e) => setOverlay(e.target.checked)}
-          />{' '}
-          骨架与网格
+            onCheckedChange={setOverlay}
+            className="focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
         </label>
-      </div>
+      </footer>
     </section>
   )
 }

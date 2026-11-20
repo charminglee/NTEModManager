@@ -20,9 +20,14 @@ export default function Workbench({ visible }: { visible: boolean }) {
         setOpened(current => current.includes(id) ? current : [...current, id])
       }} />
       {sections.map(({ id, label, Panel }) => opened.includes(id) && (
-        <main key={id} aria-label={label} className="settings-page overflow-auto"
+        <main key={id} aria-label={label} className="settings-page"
           style={id === section ? undefined : { display: 'none' }}>
-          <Suspense fallback={<p role="status" className="p-6">正在加载{label}…</p>}><Panel /></Suspense>
+          <header className="workspace-page-heading"><h1>{label}</h1></header>
+          <div className="workbench-content">
+            <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">正在加载{label}……</p>}>
+              <Panel />
+            </Suspense>
+          </div>
         </main>
       ))}
     </section>

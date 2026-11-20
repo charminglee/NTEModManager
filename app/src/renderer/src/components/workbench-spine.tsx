@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { FolderOpen, Layers } from 'lucide-react'
 import type { SpineFile } from '@shared/workbench-spine'
 import { Button } from './ui/button'
+import { Input } from './ui/input'
+import WorkbenchSelect from './workbench-select'
 import Inspector from './workbench-spine-inspector'
 import SpinePreview from './workbench-spine-preview'
 import { atlasRegions, type TextureSet } from './workbench-spine-atlas'
@@ -56,6 +59,8 @@ export default function WorkbenchSpine() {
   const [message, setMessage] = useState('')
   const [failure, setFailure] = useState(false)
   const [revision, setRevision] = useState(0)
+  const skeletonInput = useRef<HTMLInputElement>(null)
+  const atlasInput = useRef<HTMLInputElement>(null)
   async function run(action: () => Promise<void>) {
     setBusy(true)
     setMessage('')
@@ -116,104 +121,97 @@ export default function WorkbenchSpine() {
       files = format === 'native' ? doc.native!.write(bytes) : [{ name: doc.name + '.skel', bytes }]
     }
     const result = await window.api.saveSpineFiles(files)
-    if (result) setMessage('已导出至 ' + result)
+    if (result) setMessage('已导出至：' + result)
   }
   const pages = [...new Set([...atlasRegions(textures?.atlas ?? '').values()].map((r) => r.page))]
   const missing = pages.filter((page) => !textures?.images[page])
+  const animations = doc ? Object.keys(doc.model.animations).filter(Boolean) : []
   return (
-    <section aria-label="Spine 编辑器" className="space-y-3">
-      <fieldset disabled={busy} className="flex flex-wrap items-center gap-2">
-        <input
-          className="rounded border bg-background px-2 py-1"
+    <section className="grid min-w-0 gap-4">
+      <fieldset disabled={busy} className="flex min-w-0 flex-wrap items-center gap-2">
+        <Input
+          className="w-auto flex-1 basis-40"
           aria-label="游戏骨架资源名"
+          placeholder="游戏骨架资源名"
           value={resource}
           onChange={(e) => setResource(e.target.value)}
         />
         <Button
-          size="sm"
           disabled={!resource.trim()}
           onClick={() => run(async () => open(await window.api.loadGameSpine(resource.trim())))}
         >
           从游戏载入
         </Button>
-        <label className="cursor-pointer rounded border px-3 py-1 text-sm focus-within:ring">
-          打开本地骨架
-          <input
-            className="sr-only"
-            type="file"
-            multiple
-            accept=".json,.skel,.uasset,.uexp,.atlas,.txt,.png"
-            onChange={(e) => {
-              const files = e.target.files
-              if (files?.length) void run(async () => open(await readFiles(files)))
-              e.target.value = ''
-            }}
-          />
-        </label>
+        <Button type="button" variant="outline" onClick={() => skeletonInput.current?.click()}>
+          <FolderOpen />打开本地骨架
+        </Button>
+        <input ref={skeletonInput} hidden type="file" multiple accept=".json,.skel,.uasset,.uexp,.atlas,.txt,.png"
+          onChange={(e) => {
+            const files = e.target.files
+            if (files?.length) void run(async () => open(await readFiles(files)))
+            e.target.value = ''
+          }} />
       </fieldset>
-      {!doc && (
-        <p className="text-sm text-muted-foreground">
-          输入游戏骨架名，或打开 Spine 4.2 的 JSON、SKEL、配对的 .uasset 与 .uexp。可同时选择图集和 PNG。
-        </p>
-      )}
-      {busy && <p role="status">正在处理 Spine 资源……</p>}
+      {busy && <p role="status" className="workbench-panel px-4 py-3 text-sm text-muted-foreground">正在处理 Spine 资源……</p>}
       {message && (
-        <p className="break-all text-sm" role={failure ? 'alert' : 'status'}>
+        <p className={`workbench-panel break-all px-4 py-3 text-sm ${failure ? 'text-destructive' : 'select-text'}`} role={failure ? 'alert' : 'status'}>
           {message}
         </p>
       )}
+      {!doc && !busy && (
+        <div className="library-empty workbench-panel">
+          <Layers size={32} aria-hidden="true" />
+          <h2>尚未载入骨架</h2>
+          <p>从游戏载入，或打开 Spine 4.2 的 JSON、SKEL、配对的 .uasset 与 .uexp。可同时选择图集和 PNG。</p>
+        </div>
+      )}
       {doc && (
-        <fieldset disabled={busy} className="grid gap-3">
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <strong>{doc.name}</strong>
-            <span>
-              Spine {doc.model.skeleton.spine} · {doc.model.bones.length} 根骨骼
-            </span>
-            <label>
-              动画{' '}
-              <select
-                className="rounded border bg-background"
-                value={animation}
-                onChange={(e) => setAnimation(e.target.value)}
-              >
-                <option value="">初始姿势</option>
-                {Object.keys(doc.model.animations).map((a) => (
-                  <option key={a}>{a}</option>
-                ))}
-              </select>
-            </label>
-            <label className="cursor-pointer underline focus-within:ring">
-              载入图集与贴图
-              <input
-                className="sr-only"
-                type="file"
-                multiple
-                accept=".atlas,.txt,.uexp,.png"
-                onChange={(e) => {
-                  const files = e.target.files
-                  if (files?.length)
-                    void run(async () => {
-                      const next = await readTextures(await readFiles(files), textures)
-                      if (!next) throw new Error('请同时选择图集描述文件。')
-                      setTextures(next)
-                    })
-                  e.target.value = ''
-                }}
-              />
-            </label>
+        <fieldset disabled={busy} className="grid min-w-0 gap-4">
+          <div className="workbench-panel flex flex-wrap items-center gap-3 p-4 text-sm">
+            <div className="min-w-0 flex-1 break-all">
+              <strong>{doc.name}</strong>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Spine {doc.model.skeleton.spine} · {doc.model.bones.length} 根骨骼
+              </p>
+            </div>
+            <WorkbenchSelect label="动画" className="w-auto" disabled={busy}
+              value={String(animations.indexOf(animation))}
+              onValueChange={(index) => setAnimation(animations[Number(index)] ?? '')}
+              options={[
+                ['-1', '初始姿势'],
+                ...animations.map((name, index) => [String(index), name] as const)
+              ]} />
+            <Button type="button" variant="outline" onClick={() => atlasInput.current?.click()}>
+              <FolderOpen />载入图集与贴图
+            </Button>
+            <input ref={atlasInput} hidden type="file" multiple accept=".atlas,.txt,.uexp,.png"
+              onChange={(e) => {
+                const files = e.target.files
+                if (files?.length)
+                  void run(async () => {
+                    const next = await readTextures(await readFiles(files), textures)
+                    if (!next) throw new Error('请同时选择图集描述文件。')
+                    setTextures(next)
+                  })
+                e.target.value = ''
+              }} />
           </div>
-          {missing.length > 0 && <p className="text-sm">待载入的图集贴图：{missing.join('、')}</p>}
-          <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(18rem,2fr)]">
+          {missing.length > 0 && <p className="workbench-panel break-all px-4 py-3 text-sm">待载入的图集贴图：{missing.join('、')}</p>}
+          <div className="workbench-split">
             <SpinePreview model={doc.model} animation={animation} textures={textures} />
-            <Inspector
-              key={revision}
-              model={doc.model}
-              animation={animation}
-              setAnimation={setAnimation}
-              edit={edit}
-            />
+            <section className="workbench-panel">
+              <header className="workbench-panel-heading"><h2>编辑属性</h2></header>
+              <Inspector
+                key={revision}
+                model={doc.model}
+                animation={animation}
+                setAnimation={setAnimation}
+                edit={edit}
+                disabled={busy}
+              />
+            </section>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant="secondary"
               size="sm"

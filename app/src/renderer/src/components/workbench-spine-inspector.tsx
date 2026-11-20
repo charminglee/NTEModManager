@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
+import { Input } from './ui/input'
+import WorkbenchSelect from './workbench-select'
 import {
   addInfluence,
   meshList,
@@ -12,13 +14,11 @@ import {
 const fields = ['x', 'y', 'rotation', 'length', 'scaleX', 'scaleY'] as const
 const labels = ['横坐标', '纵坐标', '旋转角度', '长度', '横向缩放', '纵向缩放']
 const tracks = ['rotate', 'translate', 'translatex', 'translatey', 'scale', 'scalex', 'scaley']
-const inputClass = 'h-8 min-w-0 rounded border bg-background px-2'
 function field(label: string, value: number, key: string, min?: number) {
   return (
     <label key={key} className="grid gap-1">
       {label}
-      <input
-        className={inputClass}
+      <Input
         type="number"
         name={key}
         required
@@ -33,12 +33,14 @@ export default function Inspector({
   model,
   animation,
   setAnimation,
-  edit
+  edit,
+  disabled
 }: {
   model: SpineModel
   animation: string
   setAnimation: (v: string) => void
   edit: (change: (copy: SpineModel) => void) => void
+  disabled: boolean
 }) {
   const [tab, setTab] = useState('骨骼')
   const [boneIndex, setBone] = useState(0)
@@ -58,11 +60,12 @@ export default function Inspector({
   const current = frames[index] ?? {}
   const pair = track === 'scale' || track === 'translate'
   const axis = pair ? (['x', 'y'] as const) : (['value'] as const)
+  const boneOptions = model.bones.map((bone, index) => [String(index), bone.name] as const)
   return (
-    <section className="grid content-start gap-3 rounded-md border bg-card p-3 text-sm">
-      <div className="flex flex-wrap gap-2">
+    <div className="grid gap-3 p-4 text-sm">
+      <div role="group" aria-label="编辑属性分组" className="flex flex-wrap gap-2">
         {['骨骼', '网格权重', '动画关键帧'].map((t) => (
-          <Button size="sm" variant={tab === t ? 'default' : 'secondary'} key={t} onClick={() => setTab(t)}>
+          <Button size="sm" aria-pressed={tab === t} variant={tab === t ? 'default' : 'secondary'} key={t} onClick={() => setTab(t)}>
             {t}
           </Button>
         ))}
@@ -70,18 +73,14 @@ export default function Inspector({
       {tab !== '网格权重' && (
         <label className="grid gap-1">
           骨骼
-          <select
-            className={inputClass}
-            value={bone.name}
-            onChange={(e) => {
-              setBone(e.target.selectedIndex)
+          <WorkbenchSelect
+            label="骨骼" disabled={disabled} options={boneOptions}
+            value={String(Math.min(boneIndex, model.bones.length - 1))}
+            onValueChange={(value) => {
+              setBone(Number(value))
               setIndex(0)
             }}
-          >
-            {model.bones.map((b) => (
-              <option key={b.name}>{b.name}</option>
-            ))}
-          </select>
+          />
         </label>
       )}
       {tab === '骨骼' && (
@@ -102,11 +101,8 @@ export default function Inspector({
             {bone.parent && (
               <label className="col-span-2 grid gap-1">
                 父骨骼
-                <select name="parent" className={inputClass} defaultValue={bone.parent}>
-                  {model.bones.slice(0, model.bones.indexOf(bone)).map((b) => (
-                    <option key={b.name}>{b.name}</option>
-                  ))}
-                </select>
+                <WorkbenchSelect label="父骨骼" name="parent" disabled={disabled} defaultValue={bone.parent}
+                  options={model.bones.slice(0, model.bones.indexOf(bone)).map((b) => [b.name, b.name])} />
               </label>
             )}
             {fields.map((key, i) => field(labels[i], bone[key] ?? (key.startsWith('scale') ? 1 : 0), key))}
@@ -115,7 +111,7 @@ export default function Inspector({
             </Button>
           </form>
           <form
-            className="flex gap-2"
+            className="flex flex-wrap items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault()
               const name = String(new FormData(e.currentTarget).get('name')).trim()
@@ -127,14 +123,14 @@ export default function Inspector({
               })
             }}
           >
-            <input
+            <Input
               name="name"
               aria-label="子骨骼名称"
               placeholder="子骨骼名称"
               required
-              className={inputClass}
+              className="w-auto flex-1 basis-32"
             />
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary">
               新增子骨骼
             </Button>
           </form>
@@ -145,25 +141,18 @@ export default function Inspector({
           <>
             <label className="grid gap-1">
               网格
-              <select
-                className={inputClass}
-                value={meshIndex}
-                onChange={(e) => {
-                  setMesh(Number(e.target.value))
+              <WorkbenchSelect
+                label="网格" disabled={disabled} options={meshes.map((m, i) => [String(i), m.label])}
+                value={String(meshIndex)}
+                onValueChange={(value) => {
+                  setMesh(Number(value))
                   setVertex(0)
                 }}
-              >
-                {meshes.map((m, i) => (
-                  <option key={m.label} value={i}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
             <label className="grid gap-1">
               顶点编号（共 {count} 个）
-              <input
-                className={inputClass}
+              <Input
                 type="number"
                 min="0"
                 max={count - 1}
@@ -210,17 +199,11 @@ export default function Inspector({
                   <fieldset className="grid grid-cols-3 gap-2" key={i}>
                     <label className="col-span-3 grid gap-1">
                       影响骨骼
-                      <select
+                      <WorkbenchSelect
+                        label={`影响骨骼 ${i + 1}`} disabled={disabled} options={boneOptions}
                         name={'bone' + i}
-                        className={inputClass}
-                        defaultValue={verts[offset + 1 + i * 4]}
-                      >
-                        {model.bones.map((b, j) => (
-                          <option key={b.name} value={j}>
-                            {b.name}
-                          </option>
-                        ))}
-                      </select>
+                        defaultValue={String(verts[offset + 1 + i * 4])}
+                      />
                     </label>
                     {field('横坐标', verts[offset + 2 + i * 4], 'x' + i)}
                     {field('纵坐标', verts[offset + 3 + i * 4], 'y' + i)}
@@ -236,32 +219,27 @@ export default function Inspector({
               <Button size="sm">{weighted ? '应用并归一化权重' : '应用顶点位置'}</Button>
             </form>
             <form
-              className="flex flex-wrap gap-2"
+              className="flex flex-wrap items-center gap-2"
               onSubmit={(e) => {
                 e.preventDefault()
                 const target = Number(new FormData(e.currentTarget).get('binding'))
                 edit((copy) => addInfluence(copy, mesh, vertex, target))
               }}
             >
-              <select aria-label="新绑定的骨骼" name="binding" className={inputClass}>
-                {model.bones.map((b, i) => (
-                  <option value={i} key={b.name}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              <Button size="sm" variant="secondary">
+              <WorkbenchSelect label="新绑定的骨骼" name="binding" disabled={disabled} defaultValue="0"
+                options={boneOptions} className="flex-1 basis-32" />
+              <Button variant="secondary">
                 添加影响骨骼
               </Button>
             </form>
           </>
         ) : (
-          <p>当前骨架没有可编辑的网格。</p>
+          <p className="text-muted-foreground">当前骨架没有可编辑的网格。</p>
         ))}
       {tab === '动画关键帧' && (
         <>
           <form
-            className="flex gap-2"
+            className="flex flex-wrap items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault()
               const name = String(new FormData(e.currentTarget).get('name')).trim()
@@ -278,14 +256,14 @@ export default function Inspector({
               })
             }}
           >
-            <input
+            <Input
               name="name"
               required
               placeholder="动画名称"
               aria-label="新动画名称"
-              className={inputClass}
+              className="w-auto flex-1 basis-32"
             />
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary">
               新增动画
             </Button>
           </form>
@@ -293,33 +271,25 @@ export default function Inspector({
             <>
               <label className="grid gap-1">
                 轨道
-                <select
-                  className={inputClass}
+                <WorkbenchSelect
+                  label="轨道" disabled={disabled} options={tracks.map((t) => [t, t])}
                   value={track}
-                  onChange={(e) => {
-                    setTrack(e.target.value)
+                  onValueChange={(value) => {
+                    setTrack(value)
                     setIndex(0)
                   }}
-                >
-                  {tracks.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
+                />
               </label>
               <label className="grid gap-1">
                 关键帧
-                <select
-                  className={inputClass}
-                  value={frames[index] ? index : -1}
-                  onChange={(e) => setIndex(Number(e.target.value))}
-                >
-                  {frames.map((f, i) => (
-                    <option key={i} value={i}>
-                      {(f.time ?? 0).toFixed(3)} 秒
-                    </option>
-                  ))}
-                  <option value={-1}>新增关键帧</option>
-                </select>
+                <WorkbenchSelect
+                  label="关键帧" disabled={disabled} value={frames[index] ? String(index) : '-1'}
+                  onValueChange={(value) => setIndex(Number(value))}
+                  options={[
+                    ...frames.map((f, i) => [String(i), `${(f.time ?? 0).toFixed(3)} 秒`] as const),
+                    ['-1', '新增关键帧']
+                  ]}
+                />
               </label>
               <form
                 className="grid gap-2"
@@ -368,15 +338,16 @@ export default function Inspector({
                 )}
                 <label className="grid gap-1">
                   插值
-                  <select
+                  <WorkbenchSelect
+                    label="插值" disabled={disabled}
                     name="curve"
                     defaultValue={Array.isArray(current.curve) ? 'bezier' : (current.curve ?? 'linear')}
-                    className={inputClass}
-                  >
-                    <option value="linear">线性</option>
-                    <option value="stepped">阶梯</option>
-                    {Array.isArray(current.curve) && <option value="bezier">原始贝塞尔曲线</option>}
-                  </select>
+                    options={[
+                      ['linear', '线性'],
+                      ['stepped', '阶梯'],
+                      ...(Array.isArray(current.curve) ? [['bezier', '原始贝塞尔曲线'] as const] : [])
+                    ]}
+                  />
                 </label>
                 <Button size="sm">保存关键帧</Button>
               </form>
@@ -400,6 +371,6 @@ export default function Inspector({
           )}
         </>
       )}
-    </section>
+    </div>
   )
 }
