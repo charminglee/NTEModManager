@@ -1295,6 +1295,12 @@ select {
 .mod-checkbox input {
   width: 17px;
   height: 17px;
+  opacity: 0;
+}
+.has-batch-actions .mod-checkbox input,
+.mod-row:hover .mod-checkbox input,
+.mod-checkbox input:focus-visible {
+  opacity: 1;
 }
 .mod-row-body {
   display: flex;
