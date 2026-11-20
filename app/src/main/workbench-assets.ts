@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
-import { basename, extname, join, resolve } from 'node:path'
+import { basename, dirname, extname, join, resolve } from 'node:path'
 import { getAppConfig } from './config'
 import { logger } from './logger'
 import { ntemmCacheDir } from './ntemm-paths'
@@ -20,7 +20,7 @@ function context() {
 }
 
 type Context = ReturnType<typeof context>
-let index: { paks: string; key: string; rows: AssetEntry[]; effective: AssetEntry[]; archives: string[] } | undefined
+let index: { paks: string; key: string; rows: AssetEntry[]; effective: AssetEntry[] } | undefined
 let baseline: { file: string; entries: Map<string, AssetEntry> } | undefined
 const current = (ctx: Context) => index?.paks === ctx.paks && index.key === ctx.config.workbenchAesKey ? index : undefined
 
@@ -50,12 +50,30 @@ async function parse(ctx: Context, action: AssetFormat | 'index', output: string
   })
 }
 
+async function gameArchives(ctx: Context): Promise<string[]> {
+  if (!ctx.config.gameDirectory) return []
+  const content = dirname(ctx.paks)
+  const directories = await Promise.all(['Paks', 'PatchPaks', 'TagPatchPaks'].map(async directory => {
+    const path = join(content, directory)
+    const files = await readdir(path, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return []
+      logger.error(`读取游戏包体目录失败：${error.message}`)
+      throw error
+    })
+    return files.filter(file => {
+      const name = file.name.toLowerCase()
+      return (file.isFile() || file.isSymbolicLink()) && /\.(?:pak|utoc)$/.test(name) && name !== 'global.utoc'
+    }).map(file => `${directory}/${file.name}`)
+  }))
+  return directories.flat().sort()
+}
+
 async function state(ctx: Context): Promise<AssetState> {
   await mkdir(ctx.root, { recursive: true })
-  const cached = current(ctx)
+  const [archives, files] = await Promise.all([gameArchives(ctx), readdir(ctx.root)])
   return {
-    count: cached?.rows.length ?? 0, archives: cached?.archives ?? [],
-    snapshots: (await readdir(ctx.root)).filter(file => file.endsWith('.snapshot.json')).sort().reverse()
+    count: current(ctx)?.rows.length ?? 0, archives,
+    snapshots: files.filter(file => file.endsWith('.snapshot.json')).sort().reverse()
   }
 }
 
@@ -113,8 +131,7 @@ export function registerWorkbenchAssets() {
       await parse(ctx, 'index', stage)
       const rows: AssetEntry[] = JSON.parse(await readFile(join(stage, 'index.json'), 'utf8'))
       rows.sort((a, b) => a.path.localeCompare(b.path) || a.archive.localeCompare(b.archive))
-      index = { paks: ctx.paks, key: ctx.config.workbenchAesKey, rows, effective: [...effectiveAssets(rows).values()],
-        archives: [...new Set(rows.map(row => row.archive))].sort() }
+      index = { paks: ctx.paks, key: ctx.config.workbenchAesKey, rows, effective: [...effectiveAssets(rows).values()] }
       logger.info(`原生资源索引已就绪，共 ${rows.length} 条。`)
       return await state(ctx)
     } finally {

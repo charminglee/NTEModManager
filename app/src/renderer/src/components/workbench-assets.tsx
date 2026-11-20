@@ -15,7 +15,7 @@ const modes: Record<AssetMode, string> = {
   all: '全部资源', new: '新增资源', modified: '已修改资源', unpatched: '排除已被覆盖的资源'
 }
 
-export default function WorkbenchAssets() {
+export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [state, setState] = useState<AssetState>({ count: 0, archives: [], snapshots: [] })
   const [search, setSearch] = useState('')
   const [archives, setArchives] = useState<string[]>([])
@@ -32,11 +32,18 @@ export default function WorkbenchAssets() {
     [loaded, search, archives])
 
   useEffect(() => {
-    let active = true
-    window.api.workbenchAssetState().then(value => { if (active) setState(value) })
-      .catch(error => { if (active) setMessage({ text: String(error), error: true }) })
-    return () => { active = false }
-  }, [])
+    if (!active) return
+    let current = true
+    window.api.workbenchAssetState().then(value => {
+      if (!current) return
+      setState(value)
+      setArchives(previous => previous.every(archive => value.archives.includes(archive))
+        ? previous : previous.filter(archive => value.archives.includes(archive)))
+      setSnapshot(previous => value.snapshots.includes(previous) ? previous : '')
+      if (!value.count) setSelection(undefined)
+    }).catch(error => { if (current) setMessage({ text: String(error), error: true }) })
+    return () => { current = false }
+  }, [active])
 
   async function run(label: string, work: () => Promise<void>) {
     setBusy(label)

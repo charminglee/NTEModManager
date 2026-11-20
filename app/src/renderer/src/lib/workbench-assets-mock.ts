@@ -12,7 +12,7 @@ const rows: AssetEntry[] = [
 ]
 let indexed = false
 const snapshots = new Map([['示例旧版本', effectiveAssets(rows.slice(0, 2))]])
-const state = () => ({ count: indexed ? rows.length : 0, archives: indexed ? [base, patch] : [], snapshots: [...snapshots.keys()].reverse() })
+const state = () => ({ count: indexed ? rows.length : 0, archives: [base, patch], snapshots: [...snapshots.keys()].reverse() })
 
 async function sample(entry: AssetEntry, format: AssetFormat) {
   const name = entry.path.split('/').pop()!.replace('.uasset', '')

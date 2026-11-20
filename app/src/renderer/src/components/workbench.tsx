@@ -25,7 +25,7 @@ export default function Workbench({ visible }: { visible: boolean }) {
           <header className="workspace-page-heading"><h1>{label}</h1></header>
           <div className="workbench-content">
             <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">正在加载{label}……</p>}>
-              <Panel />
+              <Panel active={visible && id === section} />
             </Suspense>
           </div>
         </main>
