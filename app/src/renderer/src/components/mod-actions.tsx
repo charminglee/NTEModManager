@@ -121,10 +121,12 @@ export function ModCardMenu({
         <PackageOpen />
         {mod.installed ? '卸载' : mod.invalid ? '仍要安装' : '安装'}
       </DropdownMenuItem>
-      <DropdownMenuItem disabled={!mod.installed} onSelect={() => actions.onReinstall(mod)}>
-        <RefreshCw />
-        重新安装
-      </DropdownMenuItem>
+      {mod.installed && (
+        <DropdownMenuItem onSelect={() => actions.onReinstall(mod)}>
+          <RefreshCw />
+          重新安装
+        </DropdownMenuItem>
+      )}
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => actions.onRename(mod)}>
         <Pencil />
@@ -144,10 +146,12 @@ export function ModCardMenu({
         <FolderOpen />
         打开源目录
       </DropdownMenuItem>
-      <DropdownMenuItem disabled={!mod.installed} onSelect={() => actions.onOpenInstall(mod)}>
-        <FolderOpen />
-        打开安装目录
-      </DropdownMenuItem>
+      {mod.installed && (
+        <DropdownMenuItem onSelect={() => actions.onOpenInstall(mod)}>
+          <FolderOpen />
+          打开安装目录
+        </DropdownMenuItem>
+      )}
       <DropdownMenuSeparator />
       <ModFlagAndDeleteItems mod={mod} actions={actions} />
     </CardContextMenu>
