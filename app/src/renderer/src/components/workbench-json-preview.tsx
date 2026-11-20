@@ -1,11 +1,24 @@
 import { defaultKeymap } from '@codemirror/commands'
 import { json } from '@codemirror/lang-json'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
-import { search, searchKeymap } from '@codemirror/search'
+import {
+  closeSearchPanel, findNext, findPrevious, getSearchQuery, search, searchKeymap, SearchQuery, setSearchQuery
+} from '@codemirror/search'
 import { EditorState } from '@codemirror/state'
-import { drawSelection, EditorView, keymap } from '@codemirror/view'
+import { drawSelection, EditorView, keymap, runScopeHandlers } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
-import { useEffect, useRef } from 'react'
+import { CaseSensitive, ChevronDown, ChevronUp, Regex, WholeWord, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Button } from './ui/button'
+
+type PreviewSearch = { controls: HTMLDivElement; view: EditorView; query: SearchQuery }
+
+const searchOptions = [
+  ['caseSensitive', '区分大小写', CaseSensitive],
+  ['regexp', '正则表达式', Regex],
+  ['wholeWord', '全字匹配', WholeWord]
+] as const
 
 const highlighting = syntaxHighlighting(HighlightStyle.define([
   { tag: tags.propertyName, color: '#244e76' },
@@ -16,13 +29,6 @@ const highlighting = syntaxHighlighting(HighlightStyle.define([
 
 const searchPhrases = EditorState.phrases.of({
   Find: '查找',
-  next: '下一处',
-  previous: '上一处',
-  all: '选中全部',
-  'match case': '区分大小写',
-  'by word': '全字匹配',
-  regexp: '正则表达式',
-  close: '关闭查找',
   'current match': '当前匹配',
   'on line': '所在行',
   'Go to line': '转到行',
@@ -45,34 +51,23 @@ const previewTheme = EditorView.theme({
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: '6px 8px',
-    padding: '8px 40px 8px 12px'
+    padding: '8px 12px'
   },
-  '.cm-panel.cm-search :is(input, button, label)': { margin: '0', fontSize: 'inherit' },
-  '.cm-panel.cm-search label': { display: 'inline-flex', alignItems: 'center', gap: '4px' },
+  '.cm-panel.cm-search :is(input, button)': { margin: '0' },
   '.cm-panel.cm-search .cm-textfield': {
     flex: '1 1 10rem',
     minWidth: '0',
     height: '28px',
+    fontSize: 'inherit',
     backgroundColor: 'hsl(var(--card))',
     border: '1px solid hsl(var(--border))'
-  },
-  '.cm-panel.cm-search .cm-button': {
-    height: '28px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid hsl(var(--border))',
-    backgroundImage: 'none',
-    backgroundColor: 'hsl(var(--card))',
-    '&:hover': { backgroundColor: 'hsl(var(--secondary))' }
-  },
-  '.cm-panel.cm-search [name=close]': {
-    top: '8px', right: '8px', width: '28px', height: '28px', fontSize: '18px',
-    '&:hover': { backgroundColor: 'hsl(var(--secondary))' }
   },
   '.cm-panel.cm-search :is(input, button):focus-visible': { outline: '2px solid hsl(var(--ring))', outlineOffset: '1px' }
 })
 
 export default function WorkbenchJsonPreview({ value }: { value: string }) {
   const container = useRef<HTMLDivElement>(null)
+  const [searchPanel, setSearchPanel] = useState<PreviewSearch>()
 
   useEffect(() => {
     const editor = new EditorView({
@@ -89,7 +84,52 @@ export default function WorkbenchJsonPreview({ value }: { value: string }) {
         }),
         EditorState.allowMultipleSelections.of(true),
         drawSelection(),
-        search({ top: true }),
+        search({
+          createPanel(view) {
+            const document = view.dom.ownerDocument
+            const dom = document.createElement('div')
+            const input = document.createElement('input')
+            const controls = document.createElement('div')
+            let query = getSearchQuery(view.state)
+            dom.className = 'cm-search'
+            input.className = 'cm-textfield'
+            input.placeholder = view.state.phrase('Find')
+            input.setAttribute('aria-label', input.placeholder)
+            input.setAttribute('main-field', 'true')
+            input.value = query.search
+            controls.className = 'flex shrink-0 items-center gap-1'
+            input.addEventListener('input', () => {
+              view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ ...query, search: input.value })) })
+            })
+            dom.addEventListener('keydown', event => {
+              if (runScopeHandlers(view, event, 'search-panel')) {
+                event.preventDefault()
+              } else if (event.key === 'Enter' && event.target === input && !event.isComposing) {
+                event.preventDefault()
+                const find = event.shiftKey ? findPrevious : findNext
+                find(view)
+              }
+            })
+            dom.append(input, controls)
+            return {
+              dom,
+              top: true,
+              mount() {
+                input.focus()
+                input.select()
+                setSearchPanel({ controls, view, query })
+              },
+              update({ state }) {
+                const next = getSearchQuery(state)
+                if (next.eq(query)) return
+                query = next
+                if (input.value !== query.search) input.value = query.search
+                setSearchPanel({ controls, view, query })
+              },
+              destroy() { setSearchPanel(undefined) }
+            }
+          }
+        }),
         searchPhrases,
         keymap.of([...searchKeymap, ...defaultKeymap])
       ]
@@ -97,5 +137,23 @@ export default function WorkbenchJsonPreview({ value }: { value: string }) {
     return () => editor.destroy()
   }, [value])
 
-  return <div className="min-h-0 min-w-0 flex-1 bg-muted/30 text-xs select-text" ref={container} />
+  return <div className="min-h-0 min-w-0 flex-1 bg-muted/30 text-xs select-text" ref={container}>
+    {searchPanel && createPortal(<>
+      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="下一处" title="下一处"
+        onClick={() => findNext(searchPanel.view)}><ChevronDown aria-hidden="true" /></Button>
+      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="上一处" title="上一处"
+        onClick={() => findPrevious(searchPanel.view)}><ChevronUp aria-hidden="true" /></Button>
+      {searchOptions.map(([option, label, Icon]) => (
+        <Button key={option} type="button" variant="secondary" size="icon"
+          className="size-7 aria-pressed:border-primary aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+          aria-label={label} title={label} aria-pressed={searchPanel.query[option]} onClick={() => {
+            const { view } = searchPanel
+            const query = getSearchQuery(view.state)
+            view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ ...query, [option]: !query[option] })) })
+          }}><Icon aria-hidden="true" /></Button>
+      ))}
+      <Button type="button" variant="ghost" size="icon" className="size-7" aria-label="关闭查找" title="关闭查找"
+        onClick={() => closeSearchPanel(searchPanel.view)}><X aria-hidden="true" /></Button>
+    </>, searchPanel.controls)}
+  </div>
 }
