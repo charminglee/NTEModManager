@@ -1,14 +1,12 @@
 import { createElement, useEffect, useState } from 'react'
 import { PackageOpen } from 'lucide-react'
-import { formatFileSize } from '@/lib/format'
 import type { AssetEntry, AssetPreview } from '@shared/workbench-assets'
 import WorkbenchJsonPreview from './workbench-json-preview'
 
 type Preview = Pick<AssetPreview, 'format' | 'name'> & { value: string }
 
 export default function WorkbenchAssetPreview({ entry }: { entry: AssetEntry }) {
-  const name = entry.path.slice(entry.path.lastIndexOf('/') + 1)
-  const canPreview = /\.(?:uasset|umap|json)$/i.test(name)
+  const canPreview = /\.(?:uasset|umap|json)$/i.test(entry.path)
   const [preview, setPreview] = useState<Preview>()
   const [error, setError] = useState('')
 
@@ -39,13 +37,6 @@ export default function WorkbenchAssetPreview({ entry }: { entry: AssetEntry }) 
   }, [entry, canPreview])
 
   return <>
-    <div className="min-w-0 shrink-0 border-b border-border px-4 py-3">
-      <p className="truncate text-sm font-semibold" title={entry.path}>{name}</p>
-      <p className="truncate text-xs text-muted-foreground select-text" title={entry.path}>{entry.path}</p>
-      <p className="truncate text-xs text-muted-foreground select-text" title={entry.archive}>
-        {entry.archive} · {formatFileSize(entry.size)}
-      </p>
-    </div>
     {error && <p role="alert" className="shrink-0 break-all px-4 py-2 text-sm text-destructive">{error}</p>}
     {canPreview && !preview && !error && <p role="status" className="px-4 py-3 text-sm text-muted-foreground">正在读取资源……</p>}
     {preview?.format === 'json' && <WorkbenchJsonPreview value={preview.value} />}
