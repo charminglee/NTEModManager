@@ -16,8 +16,8 @@ export function HeaderModActions({
 }) {
   const visible = view === 'mods'
   return (
-    <div className="header-mod-actions" data-visible={visible || undefined}>
-      <div className="header-mod-actions-content" {...(!visible ? { inert: '' } : {})}>
+    <div className="header-mod-actions header-action-reveal" data-visible={visible || undefined}>
+      <div className="header-mod-actions-content header-action-reveal-content" {...(!visible ? { inert: '' } : {})}>
         <Button onClick={onImport} disabled={busy}>
           <Import />
           导入

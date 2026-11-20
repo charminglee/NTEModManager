@@ -103,6 +103,33 @@
   transition-timing-function: var(--motion-out);
 }
 
+.header-action-reveal {
+  display: grid;
+  justify-content: end;
+  flex: none;
+  inline-size: 0;
+  margin-inline-start: auto;
+  overflow: clip;
+  overflow-clip-margin: 5px;
+  interpolate-size: allow-keywords;
+  transition: inline-size 0s var(--motion-fast);
+}
+.header-action-reveal[data-visible] {
+  inline-size: max-content;
+  transition: none;
+}
+.header-action-reveal-content {
+  display: flex;
+  inline-size: max-content;
+  align-items: center;
+  transition: opacity var(--motion-fast) ease-out,
+    visibility var(--motion-fast);
+}
+.header-action-reveal-content[inert] {
+  opacity: 0;
+  visibility: hidden;
+}
+
 /* 控件仅过渡明确的属性，不让布局尺寸跟随 transition-all。 */
 .app-shell button,
 .dialog-panel button,

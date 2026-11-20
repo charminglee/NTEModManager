@@ -30,6 +30,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [busy, setBusy] = useState<'index' | 'snapshot'>()
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
+  const showExport = !!selection
   const archiveLabel = archive ? archive.split('/').pop() : '选择包体'
   const archiveGroups = useMemo(() => {
     const groups = new Map<string, string[]>()
@@ -187,13 +188,17 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
       <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
         <header className="workbench-panel-heading">
           <h2 className="mr-auto">资源预览</h2>
-          <Button variant="secondary" size="sm" disabled={!!busy || !state.count} title="导出索引快照"
-            onClick={() => run('snapshot', async () => {
-              const value = await window.api.workbenchAssetSnapshot()
-              setState(value)
-              setSnapshot(value.snapshots[0])
-              setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
-            })}><FileOutput aria-hidden="true" />导出</Button>
+          <div className="header-action-reveal" data-visible={showExport || undefined}>
+            <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
+              <Button variant="secondary" size="sm" disabled={!!busy || !state.count} title="导出索引快照"
+                onClick={() => run('snapshot', async () => {
+                  const value = await window.api.workbenchAssetSnapshot()
+                  setState(value)
+                  setSnapshot(value.snapshots[0])
+                  setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
+                })}><FileOutput aria-hidden="true" />导出</Button>
+            </div>
+          </div>
         </header>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.path, selection.archive])} entry={selection} />

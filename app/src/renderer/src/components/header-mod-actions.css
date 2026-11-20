@@ -1,32 +1,10 @@
 .header-mod-actions {
-  display: grid;
-  justify-content: end;
-  flex: none;
-  inline-size: 0;
-  margin-inline-start: auto;
   /* 内容自行留出按钮间距，收起时抵消工具栏的额外间隔。 */
   margin-inline-end: calc(-1 * var(--toolbar-gap));
-  overflow: clip;
-  overflow-clip-margin: 5px;
-  interpolate-size: allow-keywords;
-  transition: inline-size 0s var(--motion-fast);
-}
-.header-mod-actions[data-visible] {
-  inline-size: max-content;
-  transition: none;
 }
 .header-mod-actions-content {
-  display: flex;
-  inline-size: max-content;
-  align-items: center;
   gap: 10px;
   padding-inline-end: var(--toolbar-gap);
-  transition: opacity var(--motion-fast) ease-out,
-    visibility var(--motion-fast);
-}
-.header-mod-actions-content[inert] {
-  opacity: 0;
-  visibility: hidden;
 }
 .header-mod-actions-content > button {
   height: 38px;
