@@ -21,20 +21,14 @@
   align-items: center;
   gap: 10px;
   padding-inline-end: var(--toolbar-gap);
-}
-.header-mod-action-stack {
-  display: grid;
-}
-.header-mod-action {
-  grid-area: 1 / 1;
   transition: opacity var(--motion-fast) ease-out,
     visibility var(--motion-fast);
 }
-.header-mod-action[inert] {
+.header-mod-actions-content[inert] {
   opacity: 0;
   visibility: hidden;
 }
-.header-mod-action > button {
+.header-mod-actions-content > button {
   height: 38px;
 }
 .header-action-divider {
@@ -47,17 +41,11 @@
 .header-mod-actions + .launch-button {
   margin-left: 0;
 }
-.header-mod-actions .header-action-divider {
-  transition: opacity var(--motion-fast) ease-out;
-}
-.header-mod-actions:not([data-visible]) .header-action-divider {
-  opacity: 0;
-}
 @media (max-width: 760px) {
   .header-mod-actions-content {
     gap: 6px;
   }
-  .header-mod-action > button {
+  .header-mod-actions-content > button {
     padding-inline: 10px;
     font-size: 13px;
   }
