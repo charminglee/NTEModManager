@@ -1,5 +1,5 @@
 import { createElement, useEffect, useState } from 'react'
-import { PackageOpen } from 'lucide-react'
+import { LoaderCircle, PackageOpen } from 'lucide-react'
 import type { AssetEntry, AssetPreview } from '@shared/workbench-assets'
 import WorkbenchJsonPreview from './workbench-json-preview'
 
@@ -38,7 +38,10 @@ export default function WorkbenchAssetPreview({ entry }: { entry: AssetEntry }) 
 
   return <>
     {error && <p role="alert" className="shrink-0 break-all px-4 py-2 text-sm text-destructive">{error}</p>}
-    {canPreview && !preview && !error && <p role="status" className="px-4 py-3 text-sm text-muted-foreground">正在读取资源……</p>}
+    {canPreview && !preview && !error && <div role="status" className="grid min-h-0 flex-1 place-items-center text-muted-foreground">
+      <LoaderCircle size={28} className="motion-safe:animate-spin" aria-hidden="true" />
+      <span className="sr-only">正在读取资源……</span>
+    </div>}
     {preview?.format === 'json' && <WorkbenchJsonPreview value={preview.value} />}
     {preview?.format === 'texture' && <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4">
       <img className="max-h-full max-w-full object-contain" src={preview.value} alt={preview.name} />
