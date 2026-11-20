@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { File, FolderOpen, Package, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { WorkbenchProject, WorkbenchProjectsApi, ProjectCommand } from '@shared/workbench-projects'
 
-export default function WorkbenchProjects() {
+export default function WorkbenchProjects({ active, toolbarTarget }: { active: boolean; toolbarTarget: HTMLElement | null }) {
   const api = window.api as typeof window.api & WorkbenchProjectsApi
   const [project, setProject] = useState<WorkbenchProject | null>(null)
   const [busy, setBusy] = useState('')
@@ -44,10 +45,13 @@ export default function WorkbenchProjects() {
 
   return (
     <fieldset disabled={!!busy} aria-label="模组项目" className="grid min-w-0 gap-4 text-sm">
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" onClick={() => select('open')}><FolderOpen />打开项目</Button>
-        <Button onClick={() => select('create')}>新建项目</Button>
-      </div>
+      {active && toolbarTarget && createPortal(
+        <fieldset disabled={!!busy} className="flex min-w-0 flex-wrap justify-end gap-2">
+          <Button variant="secondary" onClick={() => select('open')}><FolderOpen />打开项目</Button>
+          <Button onClick={() => select('create')}>新建项目</Button>
+        </fieldset>,
+        toolbarTarget
+      )}
       {busy && <p role="status" className="workbench-panel px-4 py-3 text-muted-foreground">{busy}</p>}
       {error && <p role="alert" className="workbench-panel whitespace-pre-wrap break-all px-4 py-3 text-destructive">{error}</p>}
       {!project && !busy && (

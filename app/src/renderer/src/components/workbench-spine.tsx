@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { FolderOpen, Layers } from 'lucide-react'
 import type { SpineFile } from '@shared/workbench-spine'
 import { Button } from './ui/button'
@@ -49,7 +50,7 @@ async function readTextures(files: SpineFile[], previous: TextureSet | null) {
   return { atlas, images }
 }
 
-export default function WorkbenchSpine() {
+export default function WorkbenchSpine({ active, toolbarTarget }: { active: boolean; toolbarTarget: HTMLElement | null }) {
   const [doc, setDoc] = useState<Document | null>(null)
   const [textures, setTextures] = useState<TextureSet | null>(null)
   const [history, setHistory] = useState<SpineModel[]>([])
@@ -128,30 +129,33 @@ export default function WorkbenchSpine() {
   const animations = doc ? Object.keys(doc.model.animations).filter(Boolean) : []
   return (
     <section className="grid min-w-0 gap-4">
-      <fieldset disabled={busy} className="flex min-w-0 flex-wrap items-center gap-2">
-        <Input
-          className="w-auto flex-1 basis-40"
-          aria-label="游戏骨架资源名"
-          placeholder="游戏骨架资源名"
-          value={resource}
-          onChange={(e) => setResource(e.target.value)}
-        />
-        <Button
-          disabled={!resource.trim()}
-          onClick={() => run(async () => open(await window.api.loadGameSpine(resource.trim())))}
-        >
-          从游戏载入
-        </Button>
-        <Button type="button" variant="secondary" onClick={() => skeletonInput.current?.click()}>
-          <FolderOpen />打开本地骨架
-        </Button>
-        <input ref={skeletonInput} hidden type="file" multiple accept=".json,.skel,.uasset,.uexp,.atlas,.txt,.png"
-          onChange={(e) => {
-            const files = e.target.files
-            if (files?.length) void run(async () => open(await readFiles(files)))
-            e.target.value = ''
-          }} />
-      </fieldset>
+      {active && toolbarTarget && createPortal(
+        <fieldset disabled={busy} className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          <Input
+            className="w-48 max-w-full"
+            aria-label="游戏骨架资源名"
+            placeholder="游戏骨架资源名"
+            value={resource}
+            onChange={(e) => setResource(e.target.value)}
+          />
+          <Button
+            disabled={!resource.trim()}
+            onClick={() => run(async () => open(await window.api.loadGameSpine(resource.trim())))}
+          >
+            从游戏载入
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => skeletonInput.current?.click()}>
+            <FolderOpen />打开本地骨架
+          </Button>
+        </fieldset>,
+        toolbarTarget
+      )}
+      <input ref={skeletonInput} hidden type="file" multiple accept=".json,.skel,.uasset,.uexp,.atlas,.txt,.png"
+        onChange={(e) => {
+          const files = e.target.files
+          if (files?.length) void run(async () => open(await readFiles(files)))
+          e.target.value = ''
+        }} />
       {busy && <p role="status" className="workbench-panel px-4 py-3 text-sm text-muted-foreground">正在处理 Spine 资源……</p>}
       {message && (
         <p className={`workbench-panel break-all px-4 py-3 text-sm ${failure ? 'text-destructive' : 'select-text'}`} role={failure ? 'alert' : 'status'}>
