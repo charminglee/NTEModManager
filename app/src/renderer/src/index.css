@@ -1646,6 +1646,7 @@ select {
   overflow: hidden;
 }
 .workbench-assets-browser .workbench-panel-heading {
+  min-height: 59px;
   font-size: 15px;
 }
 .workbench-assets-empty {
