@@ -28,7 +28,8 @@ import type {
 
 export interface BootstrapPayload {
   config: AppConfigData
-  mods: ModInfo[]
+  /** null 表示备份目录读取失败。 */
+  mods: ModInfo[] | null
   logs: LogEntry[]
   initialization: OperationResult
   /** 冒烟测试用:启动时自动打开设置界面 */
@@ -51,7 +52,7 @@ const api = {
     return () => ipcRenderer.removeListener('window:state-changed', listener)
   },
   bootstrap: (): Promise<BootstrapPayload> => ipcRenderer.invoke('app:bootstrap'),
-  scanMods: (): Promise<ModInfo[]> => ipcRenderer.invoke('mods:scan'),
+  scanMods: (): Promise<ModInfo[] | null> => ipcRenderer.invoke('mods:scan'),
 
   importArchives: (archivePaths: string[]): Promise<ImportResult[]> =>
     ipcRenderer.invoke('mods:import', archivePaths),

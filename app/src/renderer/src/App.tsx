@@ -125,9 +125,12 @@ interface RenameQueueItem {
   defaultName: string
 }
 
+const EMPTY_MODS: ModInfo[] = []
+
 export default function App() {
   const [config, setConfig] = useState<AppConfigData | null>(null)
-  const [mods, setMods] = useState<ModInfo[]>([])
+  const [scannedMods, setScannedMods] = useState<ModInfo[] | null>(null)
+  const mods = scannedMods ?? EMPTY_MODS
   const [currentCategory, setCurrentCategory] = useState<string>(ALL_CATEGORY)
   const [view, setView] = useState<AppView>('mods')
   const [openedWorkbench, setOpenedWorkbench] = useState(false)
@@ -187,8 +190,8 @@ export default function App() {
 
   const refreshMods = useCallback(async (): Promise<ModInfo[]> => {
     const scanned = await window.api.scanMods()
-    setMods(scanned)
-    return scanned
+    setScannedMods(scanned)
+    return scanned ?? EMPTY_MODS
   }, [])
 
   const withBusy = useCallback(
@@ -255,7 +258,7 @@ export default function App() {
     void (async () => {
       const bootstrap = await window.api.bootstrap()
       setConfig(bootstrap.config)
-      setMods(bootstrap.mods)
+      setScannedMods(bootstrap.mods)
       // 日志不再进 App state(见 LogView):推送频繁,存这里会带动整个界面重渲染
       // 「启动时恢复上次打开的分类」:记录的分类已不存在(被删/改名)时留在「全部」
       const last = bootstrap.lastCategory
@@ -1245,6 +1248,7 @@ export default function App() {
         ) : view === 'settings' ? (
           <SettingsView
             config={config}
+            mods={scannedMods}
             onSaved={(next, shouldRefresh) => {
               setConfig(next)
               if (shouldRefresh) void refreshMods()

@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
-import { FolderOpen, Globe, Settings, SlidersHorizontal, Trash2, Wrench } from 'lucide-react'
-import type { ApplicationCacheKind, ApplicationCacheSizes, AppConfigData, AppConfigPatch } from '@shared/types'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, FolderOpen, Globe, Settings, SlidersHorizontal, Trash2, Wrench } from 'lucide-react'
+import type { ApplicationCacheKind, ApplicationCacheSizes, AppConfigData, AppConfigPatch, ModInfo } from '@shared/types'
+import { secondaryNameForMod } from '@shared/mod-list-logic'
 import { formatFileSize } from '@/lib/format'
 import { Button } from './ui/button'
 import { AppDialog } from './ui/dialog'
+import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger
+} from './ui/dropdown-menu'
 import { Input } from './ui/input'
 import Switch from './ui/switch'
 import Sidebar from './sidebar'
@@ -12,9 +17,9 @@ import YoudaoSettings from './youdao-settings'
 import ConfigFileEditor from './config-file-editor'
 interface Props {
   config: AppConfigData
+  mods: ModInfo[] | null
   onSaved: (config: AppConfigData, refresh: boolean) => void
 }
-type SettingsDraft = AppConfigData & { groupsText: string }
 type ToggleKey =
   | 'autoUseLastPackagingPath'
   | 'restoreLastCategory'
@@ -56,12 +61,7 @@ const workbenchFields = [
   },
   { key: 'workbenchExportDirectory', label: '资源导出目录', help: '保存从游戏资源浏览器导出的文件。' }
 ] as const
-const parseGroups = (groupsText: string) =>
-  groupsText
-    .split(/[,，、\n]/)
-    .map((value) => value.trim())
-    .filter(Boolean)
-export default function SettingsView({ config, onSaved }: Props) {
+export default function SettingsView({ config, mods, onSaved }: Props) {
   const [section, setSection] = useState<(typeof settingsSections)[number]['id']>('paths')
   const [cacheDialogOpen, setCacheDialogOpen] = useState(false)
   const [cacheSelection, setCacheSelection] = useState<ApplicationCacheKind[]>([])
@@ -81,16 +81,19 @@ export default function SettingsView({ config, onSaved }: Props) {
   const totalCacheSize = typeof cacheSizes === 'string'
     ? cacheSizes
     : formatFileSize(cacheSizes.runtime + cacheSizes.translation + cacheSizes.image)
-  const [draft, setDraft] = useState<SettingsDraft>(() => ({
-    ...config,
-    groupsText: config.exclusiveInstallExemptGroups.join('，')
-  }))
+  const [draft, setDraft] = useState(config)
+  const modGroups = useMemo(() => mods && new Set(
+    mods.map((mod) => secondaryNameForMod(mod, draft.categories)).filter(Boolean)
+  ), [mods, draft.categories])
+  const selectedExemptGroups = new Set(draft.exclusiveInstallExemptGroups.filter(
+    (group) => !modGroups || modGroups.has(group)
+  ))
   const draftRef = useRef(draft)
   const configRef = useRef(config)
   const saveTimeoutRef = useRef<number | null>(null)
   const pendingPatchRef = useRef<AppConfigPatch>({})
   const saveQueueRef = useRef(Promise.resolve())
-  const update = <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) => {
+  const update = <K extends keyof AppConfigData>(key: K, value: AppConfigData[K]) => {
     const next = { ...draftRef.current, [key]: value }
     draftRef.current = next
     setDraft(next)
@@ -135,9 +138,9 @@ export default function SettingsView({ config, onSaved }: Props) {
       const next = await window.api.saveConfigFile(original, content)
       if (!next) return false
       const editsSinceSave = Object.fromEntries(Object.entries(draftRef.current).filter(
-        ([key, value]) => before[key as keyof SettingsDraft] !== value
+        ([key, value]) => before[key as keyof AppConfigData] !== value
       ))
-      const draft = { ...next, groupsText: next.exclusiveInstallExemptGroups.join('，'), ...editsSinceSave }
+      const draft = { ...next, ...editsSinceSave }
       draftRef.current = draft
       setDraft(draft)
       reportSaved(next)
@@ -146,22 +149,32 @@ export default function SettingsView({ config, onSaved }: Props) {
     saveQueueRef.current = save.then(() => undefined, () => undefined)
     return save
   }
-  const updateText = (key: (typeof pathFields)[number]['key'] | 'groupsText', value: string) => {
-    update(key, value)
-    if (key === 'backupsDirectory') return
-    if (key === 'groupsText') {
-      pendingPatchRef.current.exclusiveInstallExemptGroups = parseGroups(value)
-    } else {
-      const path = normalizePath(value)
-      if (key !== 'backgroundImagesDirectory' && !path) {
-        delete pendingPatchRef.current[key]
-      } else {
-        pendingPatchRef.current[key] = path
-      }
-    }
+  const scheduleSave = () => {
     if (saveTimeoutRef.current !== null) window.clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = window.setTimeout(flush, SAVE_DEBOUNCE_MS)
   }
+  const updateText = (key: (typeof pathFields)[number]['key'], value: string) => {
+    update(key, value)
+    if (key === 'backupsDirectory') return
+    const path = normalizePath(value)
+    if (key !== 'backgroundImagesDirectory' && !path) {
+      delete pendingPatchRef.current[key]
+    } else {
+      pendingPatchRef.current[key] = path
+    }
+    scheduleSave()
+  }
+  const updateExemptGroups = (groups: string[]) => {
+    update('exclusiveInstallExemptGroups', groups)
+    pendingPatchRef.current.exclusiveInstallExemptGroups = groups
+    scheduleSave()
+  }
+  useEffect(() => {
+    if (section !== 'preferences' || !modGroups) return
+    const savedGroups = draftRef.current.exclusiveInstallExemptGroups
+    const remaining = savedGroups.filter((group) => modGroups.has(group))
+    if (remaining.length < savedGroups.length) updateExemptGroups(remaining)
+  }, [section, modGroups, draft.exclusiveInstallExemptGroups])
   const saveBackupsDirectory = (value: string) => {
     const path = value.trim().replace(/\\/g, '/')
     if (!path) {
@@ -334,22 +347,39 @@ export default function SettingsView({ config, onSaved }: Props) {
               )}
               <div className="settings-field">
                 <div>
-                  <label htmlFor="exempt-groups">独占安装豁免分组</label>
+                  <label id="exempt-groups-label" htmlFor="exempt-groups">独占安装豁免分组</label>
                   <p id="exempt-groups-help">
-                    这些分组内允许同时安装多个模组，使用逗号分隔。
+                    {modGroups ? '选中的分组允许同时安装多个模组。' : '无法读取模组分组。'}
                   </p>
                 </div>
                 <div className="settings-input-row">
-                  <Input
-                    id="exempt-groups"
-                    aria-describedby="exempt-groups-help"
-                    value={draft.groupsText}
-                    onChange={(event) => {
-                      updateText('groupsText', event.target.value)
-                    }}
-                    onBlur={flush}
-                    placeholder="例如：UI，特效"
-                  />
+                  <DropdownMenu onOpenChange={(open) => { if (!open) flush() }}>
+                    <DropdownMenuTrigger asChild>
+                      <Button id="exempt-groups" type="button" variant="secondary" className="w-full justify-between"
+                        disabled={!modGroups}
+                        aria-labelledby="exempt-groups-label exempt-groups-count"
+                        aria-describedby="exempt-groups-help">
+                        <span id="exempt-groups-count">已选 {selectedExemptGroups.size} 个分组</span>
+                        <ChevronDown aria-hidden="true" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onSelect={() => updateExemptGroups([])}>清除</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {modGroups && [...modGroups].map((group) => (
+                        <DropdownMenuCheckboxItem key={group} checked={selectedExemptGroups.has(group)}
+                          onSelect={(event) => event.preventDefault()}
+                          onCheckedChange={(checked) => {
+                            const groups = new Set(draftRef.current.exclusiveInstallExemptGroups)
+                            if (checked) groups.add(group)
+                            else groups.delete(group)
+                            updateExemptGroups([...groups])
+                          }}>
+                          {group}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </>

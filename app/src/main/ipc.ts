@@ -257,12 +257,12 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
 
   ipcMain.handle('app:bootstrap', async () => {
     const config = getAppConfig()
-    const mods = await repository.scan()
     const initialization = await repository.initialize()
+    const mods = await repository.scanModLibrary()
     if (!initialization.success) {
       logger.error(`模组仓库初始化失败：${initialization.message}`)
     } else {
-      logger.info(`模组仓库初始化完成，共 ${mods.length} 个模组`)
+      logger.info(`模组仓库初始化完成，共 ${mods?.length ?? 0} 个模组`)
     }
     return {
       config,
@@ -275,7 +275,7 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     }
   })
 
-  ipcMain.handle('mods:scan', () => repository.scan())
+  ipcMain.handle('mods:scan', () => repository.scanModLibrary())
 
   ipcMain.handle('gamebanana:list', (_event, page: number) => listGameBananaMods(page))
   ipcMain.handle('gamebanana:detail', (_event, modId: number) => getGameBananaMod(modId))

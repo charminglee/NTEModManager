@@ -495,6 +495,10 @@ export async function initialize(): Promise<OperationResult> {
 let backupsDirectoryUnavailable = false
 
 export async function scan(): Promise<ModInfo[]> {
+  return (await scanModLibrary()) ?? []
+}
+
+export async function scanModLibrary(): Promise<ModInfo[] | null> {
   const manifest = loadManifest()
   const backupRoot = backupsDirectory()
   let directoryNames: string[]
@@ -506,7 +510,7 @@ export async function scan(): Promise<ModInfo[]> {
       backupsDirectoryUnavailable = true
       logger.warning(`无法读取模组备份目录，模组列表按空处理：${backupRoot}`)
     }
-    return []
+    return null
   }
 
   const collator = new Intl.Collator('zh-Hans-CN', { numeric: true, sensitivity: 'base' })
