@@ -73,33 +73,14 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
 
   return <fieldset disabled={!!busy} className="workbench-assets">
     <div className="workbench-assets-toolbar">
-      <div className="workbench-assets-filters">
-        <label className="library-search">
-          <Search size={17} aria-hidden="true" />
-          <Input type="search" placeholder="搜索资源路径" aria-label="搜索资源路径" value={search}
-            onChange={event => {
-              setSearch(event.target.value)
-              setSelection(undefined)
-            }} />
-        </label>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
-              aria-label="选择包体" title={selectedArchiveNames.join('\n') || '选择包体'}>
-              <span className="truncate">{archives.length > 1 ? `${archives.length} 个包体`
-                : selectedArchiveNames[0] ?? '选择包体'}</span>
-              <ChevronDown aria-hidden="true" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="workbench-assets-archive-menu">
-            {state.archives.map(archive => <DropdownMenuCheckboxItem key={archive} checked={archives.includes(archive)}
-              onSelect={event => event.preventDefault()}
-              onCheckedChange={checked => filterArchives(checked ? [...archives, archive] : archives.filter(value => value !== archive))}>
-              <span className="break-all">{archive.split('/').pop()}</span>
-            </DropdownMenuCheckboxItem>)}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <label className="library-search workbench-assets-search">
+        <Search size={17} aria-hidden="true" />
+        <Input type="search" placeholder="搜索资源路径" aria-label="搜索资源路径" value={search}
+          onChange={event => {
+            setSearch(event.target.value)
+            setSelection(undefined)
+          }} />
+      </label>
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {comparing && <WorkbenchSelect label="对比快照" className="w-auto max-w-56" disabled={!!busy}
           value={snapshot || 'none'}
@@ -145,8 +126,27 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     <div className="workbench-assets-browser">
       <section className="workbench-assets-tree workbench-panel" aria-label="文件">
         <header className="workbench-panel-heading">
-          <h2>文件</h2>
-          {!!state.count && <span className="text-xs font-normal text-muted-foreground">{modes[loaded.mode]}</span>}
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+            <h2>文件</h2>
+            {!!state.count && <span className="text-xs font-normal text-muted-foreground">{modes[loaded.mode]}</span>}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
+                aria-label="选择包体" title={selectedArchiveNames.join('\n') || '选择包体'}>
+                <span className="truncate">{archives.length > 1 ? `${archives.length} 个包体`
+                  : selectedArchiveNames[0] ?? '选择包体'}</span>
+                <ChevronDown aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="workbench-assets-archive-menu">
+              {state.archives.map(archive => <DropdownMenuCheckboxItem key={archive} checked={archives.includes(archive)}
+                onSelect={event => event.preventDefault()}
+                onCheckedChange={checked => filterArchives(checked ? [...archives, archive] : archives.filter(value => value !== archive))}>
+                <span className="break-all">{archive.split('/').pop()}</span>
+              </DropdownMenuCheckboxItem>)}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <div className="min-h-0 flex-1 overflow-auto">
           {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archives])}

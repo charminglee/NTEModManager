@@ -1609,24 +1609,21 @@ select {
   height: 100%;
   max-width: none;
 }
-.workbench-assets-toolbar,
-.workbench-assets-filters {
+.workbench-assets-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   min-width: 0;
 }
-.workbench-assets-toolbar {
-  flex-wrap: wrap;
-  justify-content: space-between;
-}
-.workbench-assets-filters {
+.workbench-assets-search {
   flex: 1 1 22rem;
   max-width: 36rem;
 }
 .workbench-assets-archive {
   min-width: 0;
-  max-width: min(50%, 16rem);
+  max-width: min(60%, 16rem);
 }
 .workbench-assets-archive-menu {
   max-width: min(34rem, var(--radix-dropdown-menu-content-available-width));
