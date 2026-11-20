@@ -254,7 +254,7 @@ export default function GameBananaDetail({
                 </button>)}
               </div>}
             </section>
-            {updateItems?.length !== 0 && <section className="gamebanana-detail-section" aria-label="更新信息">
+            {updateItems?.length !== 0 && <section className="gamebanana-detail-section gamebanana-updates" aria-label="更新信息">
               <h3 className="section-heading">更新信息 {updateItems && <small>{updateItems.length}</small>}</h3>
               {updates.request.status !== 'ready' ? (
                 <DetailSectionStatus label="更新信息" request={updates.request} retry={updates.retry} />

@@ -693,6 +693,7 @@ input[type='checkbox'] {
 .section-heading { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; color: #f3e9dc; font-size: 17px; font-weight: 600; }
 .section-heading::before { content: ''; display: block; width: 3px; height: 17px; background: #ce725a; }
 .section-heading small { color: #d1b28b; font-size: 11px; border: 1px solid #72624f; border-radius: var(--radius-sm); padding: 1px 7px; font-weight: 400; }
+.gamebanana-updates .app-collapsible-label > strong { font-size: 15px; }
 .gamebanana-detail-section h4 { margin: 22px 0 12px; }
 .gamebanana-empty { color: #bcb1a1; font-size: 13px; line-height: 1.7; }
 .gamebanana-screenshots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
