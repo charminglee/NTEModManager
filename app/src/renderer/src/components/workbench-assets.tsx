@@ -197,7 +197,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
                   setState(value)
                   setSnapshot(value.snapshots[0])
                   setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
-                })}><FileOutput aria-hidden="true" />导出</Button>
+                })}><FileOutput aria-hidden="true" /></Button>
             </div>
           </div>
         </header>
