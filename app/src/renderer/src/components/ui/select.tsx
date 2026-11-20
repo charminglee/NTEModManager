@@ -101,7 +101,7 @@ const SelectItem = React.forwardRef<
     className={cn('menu-item menu-item-with-indicator', className)}
     {...props}
   >
-    <SelectPrimitive.ItemIndicator className="menu-item-indicator" />
+    <SelectPrimitive.ItemIndicator className="menu-item-indicator menu-item-indicator-dot" />
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))

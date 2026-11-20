@@ -96,13 +96,14 @@
 .menu-item-indicator {
   position: absolute;
   inset-inline-start: 0.5rem;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   inline-size: 0.875rem;
   block-size: 0.875rem;
 }
 
-.menu-item-indicator::before {
+.menu-item-indicator-dot::before {
   content: '';
   inline-size: 0.5rem;
   block-size: 0.5rem;
