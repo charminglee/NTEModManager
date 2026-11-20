@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, FileOutput, FolderOpen, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { Input } from './ui/input'
 import WorkbenchSelect from './workbench-select'
@@ -18,7 +17,7 @@ const modes: Record<AssetMode, string> = {
 export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [state, setState] = useState<AssetState>({ count: 0, archives: [], snapshots: [] })
   const [search, setSearch] = useState('')
-  const [archives, setArchives] = useState<string[]>([])
+  const [archive, setArchive] = useState('')
   const [mode, setMode] = useState<AssetMode>('all')
   const [snapshot, setSnapshot] = useState('')
   const [loaded, setLoaded] = useState<{ mode: AssetMode; snapshot: string; revision: number }>({
@@ -28,9 +27,9 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
-  const selectedArchiveNames = archives.map(archive => archive.split('/').pop())
-  const query = useMemo(() => ({ mode: loaded.mode, snapshot: loaded.snapshot, search, archives }),
-    [loaded, search, archives])
+  const archiveLabel = archive ? archive.split('/').pop() : '选择包体'
+  const query = useMemo(() => ({ mode: loaded.mode, snapshot: loaded.snapshot, search, archives: archive ? [archive] : [] }),
+    [loaded, search, archive])
 
   useEffect(() => {
     if (!active) return
@@ -38,8 +37,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     window.api.workbenchAssetState().then(value => {
       if (!current) return
       setState(value)
-      setArchives(previous => previous.every(archive => value.archives.includes(archive))
-        ? previous : previous.filter(archive => value.archives.includes(archive)))
+      setArchive(previous => value.archives.includes(previous) ? previous : '')
       setSnapshot(previous => value.snapshots.includes(previous) ? previous : '')
       if (!value.count) setSelection(undefined)
     }).catch(error => { if (current) setMessage({ text: String(error), error: true }) })
@@ -56,11 +54,6 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     } finally {
       setBusy('')
     }
-  }
-
-  function filterArchives(selected: string[]) {
-    setArchives(selected)
-    setSelection(undefined)
   }
 
   function select(entry: AssetEntry, open = false) {
@@ -100,7 +93,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
             onClick={() => run('正在加载游戏资源……', async () => {
               const value = await window.api.workbenchAssetIndex()
               setState(value)
-              setArchives(previous => previous.filter(archive => value.archives.includes(archive)))
+              setArchive(previous => value.archives.includes(previous) ? previous : '')
               setSelection(undefined)
               setLoaded(previous => ({ mode, snapshot: comparing ? snapshot : '', revision: previous.revision + 1 }))
             })}>加载</Button>
@@ -133,23 +126,25 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}
-                aria-label="选择包体" title={selectedArchiveNames.join('\n') || '选择包体'}>
-                <span className="truncate">{archives.length > 1 ? `${archives.length} 个包体`
-                  : selectedArchiveNames[0] ?? '选择包体'}</span>
+                aria-label="选择包体" title={archiveLabel}>
+                <span className="truncate">{archiveLabel}</span>
                 <ChevronDown aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="workbench-assets-archive-menu">
-              {state.archives.map(archive => <DropdownMenuCheckboxItem key={archive} checked={archives.includes(archive)}
-                onSelect={event => event.preventDefault()}
-                onCheckedChange={checked => filterArchives(checked ? [...archives, archive] : archives.filter(value => value !== archive))}>
-                <span className="break-all">{archive.split('/').pop()}</span>
-              </DropdownMenuCheckboxItem>)}
+              <DropdownMenuRadioGroup value={archive} onValueChange={value => {
+                setArchive(previous => previous === value ? '' : value)
+                setSelection(undefined)
+              }}>
+                {state.archives.map(path => <DropdownMenuRadioItem key={path} value={path}>
+                  <span className="break-all">{path.split('/').pop()}</span>
+                </DropdownMenuRadioItem>)}
+              </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
         <div className="min-h-0 flex-1 overflow-auto">
-          {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archives])}
+          {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive])}
             query={query} selected={selection?.entry} onSelect={select} onOpen={entry => select(entry, true)} />
             : <div className="workbench-assets-empty">
               <FolderOpen size={24} aria-hidden="true" />
