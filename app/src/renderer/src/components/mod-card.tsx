@@ -1,9 +1,11 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { Check, Circle, Layers, Package, TriangleAlert } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
+import { ModCardMenu } from './mod-actions'
+
 export interface ModCardActions {
   onToggleInstall: (mod: ModInfo) => void
   onToggleSubMod: (mod: ModInfo, childName: string, enabled: boolean) => void
@@ -52,60 +54,89 @@ function ModCard({
   displayName,
   onActivate
 }: Props) {
+  const [menuPosition, setMenuPosition] = useState<{
+    x: number
+    y: number
+    keyboardTrigger?: HTMLElement
+  } | null>(null)
+
   return (
-    <article
-      data-mod-name={mod.name}
-      className={cn(
-        'mod-row',
-        active && 'is-active',
-        selected && 'is-selected'
-      )}
-    >
-      <label className="mod-checkbox">
-        <input
-          type="checkbox"
-          checked={selected}
-          disabled={disabled}
-          aria-label={`选择模组：${mod.name}`}
-          onChange={(event) =>
-            actions.onToggleSelect(mod, {
-              shiftKey: (event.nativeEvent as MouseEvent).shiftKey ?? false
-            })
-          }
-        />
-      </label>
-      <button
-        type="button"
-        className="mod-row-body"
-        aria-pressed={active}
-        onClick={(event) => {
-          if (event.ctrlKey || event.metaKey)
-            actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
-          else onActivate(mod.name)
+    <>
+      <article
+        data-mod-name={mod.name}
+        className={cn('mod-row', active && 'is-active', selected && 'is-selected')}
+        onContextMenu={(event) => {
+          event.preventDefault()
+          if (!disabled) setMenuPosition({ x: event.clientX, y: event.clientY })
+        }}
+        onKeyDown={(event) => {
+          const opensMenu = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')
+          if (disabled || !opensMenu) return
+          if (!(event.target instanceof HTMLElement)) return
+
+          event.preventDefault()
+          event.stopPropagation()
+          const { left, bottom } = event.target.getBoundingClientRect()
+          setMenuPosition({ x: left, y: bottom, keyboardTrigger: event.target })
         }}
       >
-        <span className="mod-package-icon">
-          {mod.subMods?.length ? <Layers /> : <Package />}
-        </span>
-        <span className="mod-row-copy">
-          <strong>{displayName}</strong>
-          <small>
-            {!!mod.subMods?.length && <span className="bundle-badge">整合包  ·  {mod.subMods.length} 个子模组</span>}
-            {formatFileSize(mod.sizeBytes)}  ·  {formatImportedAt(mod.importedAt)}
-          </small>
-        </span>
-      </button>
-      <ModStatus mod={mod} />
-      <Button
-        variant={mod.installed || mod.invalid ? 'outline' : 'default'}
-        size="sm"
-        className="mod-install-button"
-        disabled={disabled}
-        onClick={() => actions.onToggleInstall(mod)}
-      >
-        {mod.installed ? '卸载' : mod.invalid ? '仍要安装' : '安装'}
-      </Button>
-    </article>
+        <label className="mod-checkbox">
+          <input
+            type="checkbox"
+            checked={selected}
+            disabled={disabled}
+            aria-label={`选择模组：${mod.name}`}
+            onChange={(event) =>
+              actions.onToggleSelect(mod, {
+                shiftKey: (event.nativeEvent as MouseEvent).shiftKey ?? false
+              })
+            }
+          />
+        </label>
+        <button
+          type="button"
+          className="mod-row-body"
+          aria-pressed={active}
+          aria-keyshortcuts="Shift+F10"
+          onClick={(event) => {
+            if (event.ctrlKey || event.metaKey)
+              actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
+            else onActivate(mod.name)
+          }}
+        >
+          <span className="mod-package-icon">
+            {mod.subMods?.length ? <Layers /> : <Package />}
+          </span>
+          <span className="mod-row-copy">
+            <strong>{displayName}</strong>
+            <small>
+              {!!mod.subMods?.length && <span className="bundle-badge">整合包  ·  {mod.subMods.length} 个子模组</span>}
+              {formatFileSize(mod.sizeBytes)}  ·  {formatImportedAt(mod.importedAt)}
+            </small>
+          </span>
+        </button>
+        <ModStatus mod={mod} />
+        <Button
+          variant={mod.installed || mod.invalid ? 'outline' : 'default'}
+          size="sm"
+          className="mod-install-button"
+          disabled={disabled}
+          onClick={() => actions.onToggleInstall(mod)}
+        >
+          {mod.installed ? '卸载' : mod.invalid ? '仍要安装' : '安装'}
+        </Button>
+      </article>
+      {menuPosition && !disabled && (
+        <ModCardMenu
+          mod={mod}
+          actions={actions}
+          position={menuPosition}
+          selected={selected}
+          onActivate={onActivate}
+          onClose={() => setMenuPosition(null)}
+        />
+      )}
+    </>
   )
 }
 export default memo(ModCard)
