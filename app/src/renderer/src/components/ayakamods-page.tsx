@@ -122,6 +122,8 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
     webviewRef.current?.reload()
   }
 
+  const activeTaskCount = tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length
+
   return (
     <main className="ayakamods-page gamebanana-main-column">
       <header className="workspace-page-heading gamebanana-heading">
@@ -136,13 +138,22 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
             浏览社区模组，点击站内下载即可导入模组库。
           </p>
         </div>
-        {RUNS_IN_ELECTRON && (
-          <div className="gamebanana-heading-actions">
+        <div className="gamebanana-heading-actions">
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label="下载列表"
+            title={activeTaskCount > 0 ? `下载列表（${activeTaskCount} 项进行中）` : '下载列表'}
+            onClick={() => setDrawerOpen(true)}
+          >
+            <Download aria-hidden="true" />
+          </Button>
+          {RUNS_IN_ELECTRON && (
             <Button variant="secondary" size="icon" onClick={reload} aria-label="刷新">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
       <div className="ayakamods-browser" {...(target || drawerOpen ? { inert: '' } : {})}>
         <div className="ayakamods-browser-frame">
@@ -168,12 +179,6 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
             </div>
           )}
         </div>
-      </div>
-      <div className="gamebanana-page-footer">
-        <Button variant="secondary" onClick={() => setDrawerOpen(true)}>
-          <Download />下载列表{tasks.some((task) => !['completed', 'failed'].includes(task.status))
-            ? `  ·  ${tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length}` : ''}
-        </Button>
       </div>
       <GameBananaDownloadDrawer open={visible && drawerOpen && !target} tasks={tasks} onClose={() => setDrawerOpen(false)} />
       <PromptDialog

@@ -544,6 +544,7 @@ input[type='checkbox'] {
 .gamebanana-heading-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
 }
 .gamebanana-search {
@@ -790,14 +791,6 @@ input[type='checkbox'] {
 .gamebanana-error span {
   max-width: 520px;
   overflow-wrap: anywhere;
-}
-.gamebanana-page-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-  padding-top: 12px;
 }
 .app-drawer-overlay {
   position: fixed;

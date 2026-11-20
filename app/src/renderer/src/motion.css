@@ -25,7 +25,7 @@
 .detail-file-panel,
 .detail-metadata,
 .community-view-panel.is-active .gamebanana-page > .gamebanana-main-column,
-.community-view-panel.is-active .ayakamods-page > :is(.gamebanana-heading, .ayakamods-browser, .gamebanana-page-footer) {
+.community-view-panel.is-active .ayakamods-page > :is(.gamebanana-heading, .ayakamods-browser) {
   animation: motion-content-in var(--motion-slow) var(--motion-out);
 }
 .app-sidebar > * {

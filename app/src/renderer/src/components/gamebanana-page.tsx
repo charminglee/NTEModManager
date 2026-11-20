@@ -195,7 +195,16 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
               <Search size={17} />
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索模组或作者" />
             </div>
-            <Button variant="secondary" onClick={() => void loadFirstPage()} disabled={loading || loadingMore} size="icon">
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label="下载列表"
+              title={activeTaskCount > 0 ? `下载列表（${activeTaskCount} 项进行中）` : '下载列表'}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <Download aria-hidden="true" />
+            </Button>
+            <Button variant="secondary" onClick={() => void loadFirstPage()} disabled={loading || loadingMore} size="icon" aria-label="刷新">
               <RefreshCw className={loading ? 'animate-spin' : ''} />
             </Button>
           </div>
@@ -254,12 +263,6 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
 
           </div>
         )}
-
-        <div className="gamebanana-page-footer">
-          <Button variant="secondary" onClick={() => setDrawerOpen(true)}>
-            <Download />下载列表{activeTaskCount > 0 ? `  ·  ${activeTaskCount}` : ''}
-          </Button>
-        </div>
       </div>
 
       {lastSelectedRef.current && (
