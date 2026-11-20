@@ -60,51 +60,51 @@ function LogView() {
   }, [filtered, follow])
   return (
     <section className="logs-workspace">
-      <div className="workspace-page-heading">
+      <header className="workspace-page-heading">
         <h1>运行日志</h1>
-      </div>
-      <div className="logs-toolbar">
-        <label className="library-search">
-          <Search size={17} />
-          <Input
-            aria-label="查找日志"
-            placeholder="查找日志"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
-        <Select value={level} onValueChange={setLevel}>
-          <SelectTrigger aria-label="日志级别">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部级别</SelectItem>
-            {Object.entries(labels).map(([key, label]) => (
-              <SelectItem key={key} value={key}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          className="follow-toggle"
-          variant={follow ? 'default' : 'secondary'}
-          aria-label="跟随滚动"
-          aria-pressed={follow}
-          onClick={() => setFollow((previous) => !previous)}
-        >
-          跟随滚动
-        </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          aria-label="刷新日志"
-          onClick={() => void window.api.getLogEntries().then(setLogs)}
-        >
-          <RefreshCw />
-        </Button>
-      </div>
+        <div className="logs-toolbar">
+          <label className="library-search">
+            <Search size={17} />
+            <Input
+              aria-label="查找日志"
+              placeholder="查找日志"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <Select value={level} onValueChange={setLevel}>
+            <SelectTrigger aria-label="日志级别">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部级别</SelectItem>
+              {Object.entries(labels).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            className="follow-toggle"
+            variant={follow ? 'default' : 'secondary'}
+            aria-label="跟随滚动"
+            aria-pressed={follow}
+            onClick={() => setFollow((previous) => !previous)}
+          >
+            跟随滚动
+          </Button>
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label="刷新日志"
+            onClick={() => void window.api.getLogEntries().then(setLogs)}
+          >
+            <RefreshCw />
+          </Button>
+        </div>
+      </header>
       <div
         className="logs-table ink-panel"
         ref={container}
