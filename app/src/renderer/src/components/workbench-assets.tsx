@@ -134,10 +134,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     <div className="workbench-assets-browser">
       <section className="workbench-assets-tree workbench-panel" aria-label="文件">
         <header className="workbench-panel-heading">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-            <h2>文件</h2>
-            {!!state.count && <span className="text-xs font-normal text-muted-foreground">{modes[loaded.mode]}</span>}
-          </div>
+          <h2>文件</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="workbench-assets-archive" disabled={!!busy || !state.archives.length}

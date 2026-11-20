@@ -55,7 +55,6 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
   }, [query, directory, request])
 
   return <>
-    {!directory && result && <p className="px-3 py-1 text-xs text-muted-foreground">{result.count.toLocaleString()} 项资源</p>}
     {result && result.count > 0 && <ul className={directory ? 'ml-3 border-l border-border pl-1' : 'p-1'}>
       {result.folders.map(path => <AssetFolder key={path} path={path}
         expand={!!query.search.trim() && !result.more && result.folders.length === 1 && !result.rows.length}
