@@ -111,15 +111,27 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           </DropdownMenu>
         </div>
       </div>
-      {comparing && <div className="flex min-w-0 justify-end">
-        <WorkbenchSelect label="对比快照" className="w-auto max-w-56" disabled={!!busy}
+      <div className="workbench-assets-actions flex min-w-0 items-center justify-end" data-visible={comparing || showExport || undefined}>
+        {comparing && <WorkbenchSelect label="对比快照" className="w-auto max-w-56" disabled={!!busy}
           value={snapshot || 'none'}
           options={[
             ['none', '选择对比快照'],
             ...state.snapshots.map(file => [file, file.replace(/\.snapshot\.json$/, '')] as const)
           ]}
-          onValueChange={value => setSnapshot(value === 'none' ? '' : value)} />
-      </div>}
+          onValueChange={value => setSnapshot(value === 'none' ? '' : value)} />}
+        <div className="header-action-reveal" data-visible={showExport || undefined}>
+          <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
+            <Button variant="secondary" size="icon" className="size-8" disabled={!!busy || !state.count}
+              aria-label="导出索引快照" title="导出索引快照"
+              onClick={() => run('snapshot', async () => {
+                const value = await window.api.workbenchAssetSnapshot()
+                setState(value)
+                setSnapshot(value.snapshots[0])
+                setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
+              })}><FileOutput aria-hidden="true" /></Button>
+          </div>
+        </div>
+      </div>
     </div>
     {(busy === 'snapshot' || message) && <p role={message?.error ? 'alert' : 'status'}
       className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>
@@ -186,21 +198,6 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
         </div>
       </section>
       <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
-        <header className="workbench-panel-heading">
-          <h2 className="mr-auto">资源预览</h2>
-          <div className="header-action-reveal" data-visible={showExport || undefined}>
-            <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
-              <Button variant="secondary" size="icon" className="size-8" disabled={!!busy || !state.count}
-                aria-label="导出索引快照" title="导出索引快照"
-                onClick={() => run('snapshot', async () => {
-                  const value = await window.api.workbenchAssetSnapshot()
-                  setState(value)
-                  setSnapshot(value.snapshots[0])
-                  setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
-                })}><FileOutput aria-hidden="true" /></Button>
-            </div>
-          </div>
-        </header>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.path, selection.archive])} entry={selection} />
             : <div className="workbench-assets-empty">
