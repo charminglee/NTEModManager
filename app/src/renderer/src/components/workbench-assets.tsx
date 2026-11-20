@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, FileOutput, FolderOpen, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+  DropdownMenuSeparator, DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { Input } from './ui/input'
 import WorkbenchSelect from './workbench-select'
@@ -28,6 +29,16 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
   const archiveLabel = archive ? archive.split('/').pop() : '选择包体'
+  const archiveGroups = useMemo(() => {
+    const groups = new Map<string, string[]>()
+    for (const path of state.archives) {
+      const directory = path.slice(0, path.lastIndexOf('/'))
+      const entries = groups.get(directory)
+      if (entries) entries.push(path)
+      else groups.set(directory, [path])
+    }
+    return [...groups]
+  }, [state.archives])
   const query = useMemo(() => ({ mode: loaded.mode, snapshot: loaded.snapshot, search, archives: archive ? [archive] : [] }),
     [loaded, search, archive])
 
@@ -142,9 +153,14 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
                 setArchive(nextArchive)
                 setSelection(undefined)
               }}>
-                {state.archives.map(path => <DropdownMenuRadioItem key={path} value={path}>
-                  <span className="break-all">{path.split('/').pop()}</span>
-                </DropdownMenuRadioItem>)}
+                {archiveGroups.map(([directory, paths], index) => <Fragment key={directory}>
+                  {index > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuGroup aria-label={directory}>
+                    {paths.map(path => <DropdownMenuRadioItem key={path} value={path}>
+                      <span className="break-all">{path.split('/').pop()}</span>
+                    </DropdownMenuRadioItem>)}
+                  </DropdownMenuGroup>
+                </Fragment>)}
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
