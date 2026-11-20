@@ -20,7 +20,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [state, setState] = useState<AssetState>({ count: 0, archives: [], snapshots: [] })
   const [search, setSearch] = useState('')
   const [archive, setArchive] = useState('')
-  const [onlyHtContent, setOnlyHtContent] = useState(true)
+  const [onlyHtContent, setOnlyHtContent] = useState(false)
   const [mode, setMode] = useState<AssetMode>('all')
   const [snapshot, setSnapshot] = useState('')
   const [loaded, setLoaded] = useState<{ mode: AssetMode; snapshot: string; revision: number }>({
@@ -31,7 +31,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
   const showExport = !!selection
-  const archiveLabel = archive ? archive.split('/').pop() : '选择包体'
+  const archiveLabel = archive ? archive.split('/').pop() : state.count ? '全部包体' : '选择包体'
   const archiveGroups = useMemo(() => {
     const groups = new Map<string, string[]>()
     for (const path of state.archives) {
@@ -71,7 +71,7 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
     }
   }
 
-  function loadResources(nextMode: AssetMode, nextSnapshot: string, nextArchive = archive) {
+  function loadResources(nextMode: AssetMode, nextSnapshot: string, nextArchive = '') {
     return run('index', async () => {
       const value = await window.api.workbenchAssetIndex()
       setState(value)
