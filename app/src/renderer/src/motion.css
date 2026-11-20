@@ -17,6 +17,7 @@
 /* 页面底色与边界保持静止，只对新进入的内容播放入场。 */
 .mod-library-header,
 .settings-page > .workspace-page-heading,
+.workbench-content,
 .logs-workspace > .workspace-page-heading,
 .logs-toolbar,
 .logs-table > table,
