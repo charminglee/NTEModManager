@@ -73,6 +73,11 @@ export function AppDialog({
               panelClassName
             )}
             role={isAlert ? 'alertdialog' : 'dialog'}
+            onPointerDownOutside={(event) => {
+              if (event.target instanceof Element && event.target.closest('.window-controls')) {
+                event.preventDefault()
+              }
+            }}
             onKeyDown={onKeyDown}
           >
             <div className={cn('dialog-header', headerClassName)}>
