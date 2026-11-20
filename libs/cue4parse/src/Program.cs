@@ -110,10 +110,14 @@ try
             (action == "model" && obj is USkeletalMesh or UStaticMesh))
             session.Add(obj);
     if (!session.HasQueuedItems) throw new InvalidDataException("资源中没有所选类型的对象。");
+    var modelPreview = request.Preview && action == "model";
     var options = new ExportOptions(meshFormat: EMeshFormat.Gltf2, exportMorphTargets: !request.Preview,
-        exportMaterials: request.Preview && action == "model", exportHdrTexturesAsHdr: false);
-    foreach (var result in await session.RunAsync(request.Output, options))
+        exportMaterials: modelPreview, exportHdrTexturesAsHdr: false);
+    var results = await session.RunAsync(request.Output, options);
+    foreach (var result in results)
         if (!result.Success) throw new InvalidDataException(result.ObjectPath, result.Error);
+    if (modelPreview)
+        WorkbenchModelPreview.CorrectEmissive(exports, results.SelectMany(result => result.DiskFilePaths!));
     return 0;
 }
 catch (Exception error)
