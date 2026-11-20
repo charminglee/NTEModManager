@@ -352,10 +352,10 @@ export default function SettingsView({ config, mods, onSaved }: Props) {
                     {modGroups ? '选中的分组允许同时安装多个模组。' : '无法读取模组分组。'}
                   </p>
                 </div>
-                <div className="settings-input-row">
+                <div className="settings-input-row justify-end">
                   <DropdownMenu onOpenChange={(open) => { if (!open) flush() }}>
                     <DropdownMenuTrigger asChild>
-                      <Button id="exempt-groups" type="button" variant="secondary" className="w-full justify-between"
+                      <Button id="exempt-groups" type="button" variant="secondary"
                         disabled={!modGroups}
                         aria-labelledby="exempt-groups-label exempt-groups-count"
                         aria-describedby="exempt-groups-help">
