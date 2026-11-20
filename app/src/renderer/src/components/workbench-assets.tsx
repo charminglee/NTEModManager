@@ -93,44 +93,44 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
               setSelection(undefined)
             }} />
         </label>
-        <div className="inline-flex shrink-0" role="group" aria-label="加载资源">
-          <Button variant="secondary" className="rounded-r-none border-r-0" disabled={comparing && !snapshot}
-            onClick={() => loadResources(mode, comparing ? snapshot : '')}>加载</Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-l-none" disabled={!!busy}
-                aria-label="加载模式" title={`加载模式：${modes[mode]}`}>
-                <ChevronDown aria-hidden="true" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuRadioGroup value={mode} onValueChange={value => setMode(value as AssetMode)}>
-                {Object.entries(modes).map(([value, label]) =>
-                  <DropdownMenuRadioItem key={value} value={value}>{label}</DropdownMenuRadioItem>)}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <Select value={archive} disabled={!!busy || !state.archives.length} onValueChange={nextArchive => {
+          if (!state.count) return loadResources(loaded.mode, loaded.snapshot, nextArchive)
+          setArchive(nextArchive)
+          setSelection(undefined)
+        }}>
+          <SelectTrigger aria-label="选择包体" title={archiveLabel}>
+            <SelectValue placeholder={archiveLabel} />
+          </SelectTrigger>
+          <SelectContent>
+            {archiveGroups.map(([directory, paths], index) => <Fragment key={directory}>
+              {index > 0 && <SelectSeparator />}
+              <SelectGroup aria-label={directory}>
+                {paths.map(path => <SelectItem key={path} value={path}>{path.split('/').pop()}</SelectItem>)}
+              </SelectGroup>
+            </Fragment>)}
+          </SelectContent>
+        </Select>
       </div>
       <div className="workbench-assets-actions flex min-w-0 max-w-full flex-wrap items-center justify-end gap-y-2">
         <div className="flex min-w-0 max-w-full items-center gap-2">
-          <Select value={archive} disabled={!!busy || !state.archives.length} onValueChange={nextArchive => {
-            if (!state.count) return loadResources(loaded.mode, loaded.snapshot, nextArchive)
-            setArchive(nextArchive)
-            setSelection(undefined)
-          }}>
-            <SelectTrigger aria-label="选择包体" title={archiveLabel}>
-              <SelectValue placeholder={archiveLabel} />
-            </SelectTrigger>
-            <SelectContent>
-              {archiveGroups.map(([directory, paths], index) => <Fragment key={directory}>
-                {index > 0 && <SelectSeparator />}
-                <SelectGroup aria-label={directory}>
-                  {paths.map(path => <SelectItem key={path} value={path}>{path.split('/').pop()}</SelectItem>)}
-                </SelectGroup>
-              </Fragment>)}
-            </SelectContent>
-          </Select>
+          <div className="inline-flex shrink-0" role="group" aria-label="加载资源">
+            <Button variant="secondary" className="rounded-r-none border-r-0" disabled={comparing && !snapshot}
+              onClick={() => loadResources(mode, comparing ? snapshot : '')}>加载</Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" className="rounded-l-none" disabled={!!busy}
+                  aria-label="加载模式" title={`加载模式：${modes[mode]}`}>
+                  <ChevronDown aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuRadioGroup value={mode} onValueChange={value => setMode(value as AssetMode)}>
+                  {Object.entries(modes).map(([value, label]) =>
+                    <DropdownMenuRadioItem key={value} value={value}>{label}</DropdownMenuRadioItem>)}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" disabled={!!busy}
