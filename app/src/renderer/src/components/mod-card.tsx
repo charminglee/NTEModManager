@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, type MouseEvent as ReactMouseEvent } from 'react'
 import { Check, Circle, Layers, Package, TriangleAlert } from 'lucide-react'
 import type { ModInfo } from '@shared/types'
 import { formatFileSize, formatImportedAt } from '@/lib/format'
@@ -59,11 +59,22 @@ function ModCard({
 }: Props) {
   const menu = useCardContextMenu(!disabled)
 
+  function handleActivate(event: ReactMouseEvent<HTMLElement>) {
+    if (selectionMode || event.ctrlKey || event.metaKey) {
+      if (!disabled) actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
+    } else {
+      onActivate(mod.name)
+    }
+  }
+
   return (
     <>
       <article
         data-mod-name={mod.name}
         className={cn('mod-row', active && 'is-active', selected && 'is-selected')}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) handleActivate(event)
+        }}
         onContextMenu={menu.onContextMenu}
         onKeyDown={menu.onKeyDown}
       >
@@ -85,13 +96,7 @@ function ModCard({
           className="mod-row-body"
           aria-pressed={selectionMode ? selected : active}
           aria-keyshortcuts="Shift+F10"
-          onClick={(event) => {
-            if (selectionMode || event.ctrlKey || event.metaKey) {
-              if (!disabled) actions.onToggleSelect(mod, { shiftKey: event.shiftKey })
-            } else {
-              onActivate(mod.name)
-            }
-          }}
+          onClick={handleActivate}
         >
           <span className="mod-package-icon">
             {mod.subMods?.length ? <Layers /> : <Package />}

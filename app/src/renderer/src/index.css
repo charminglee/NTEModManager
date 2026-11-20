@@ -1271,6 +1271,7 @@ select {
   min-height: 66px;
   border-bottom: 1px solid var(--rule);
   background: rgb(255 252 246 / 40%);
+  cursor: pointer;
 }
 .mod-row:last-child {
   border-bottom: 0;
@@ -1366,6 +1367,9 @@ select {
   width: 14px;
   height: 14px;
 }
+.mod-row > .mod-status {
+  cursor: default;
+}
 .is-installed {
   color: #376552;
 }
@@ -1379,6 +1383,9 @@ select {
   min-width: 59px;
   padding-left: 8px;
   padding-right: 8px;
+}
+.mod-install-button:disabled {
+  pointer-events: auto;
 }
 .library-empty {
   min-height: 280px;
