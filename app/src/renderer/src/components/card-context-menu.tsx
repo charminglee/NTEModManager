@@ -51,7 +51,7 @@ export function CardContextMenu({ label, position, onClose, children }: {
         align="start"
         sideOffset={0}
         collisionPadding={8}
-        className="w-52 [&>.solid-popover]:max-h-[var(--radix-dropdown-menu-content-available-height)] [&>.solid-popover]:overflow-y-auto"
+        className="card-context-menu w-52 [&>.solid-popover]:max-h-[var(--radix-dropdown-menu-content-available-height)] [&>.solid-popover]:overflow-y-auto"
         onContextMenu={(event) => event.preventDefault()}
         onEscapeKeyDown={() => position.keyboardTrigger?.focus()}
         onKeyDown={(event) => {

@@ -1974,6 +1974,11 @@ select {
 .hairline-2dp {
   height: 1px;
 }
+.card-context-menu > .solid-popover > [role='separator'] {
+  height: auto;
+  background-color: transparent;
+  border-top: 1px solid hsl(var(--border));
+}
 .fps-counter {
   position: fixed;
   top: 2px;

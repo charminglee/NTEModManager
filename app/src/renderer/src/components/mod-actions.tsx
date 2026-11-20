@@ -114,7 +114,7 @@ export function ModCardMenu({
       </DropdownMenuItem>
       <DropdownMenuItem onSelect={() => actions.onToggleSelect(mod, { shiftKey: false })}>
         <ListChecks />
-        {selected ? '取消选中模组' : '选中模组'}
+        {selected ? '取消选中' : '选中'}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => actions.onToggleInstall(mod)}>
@@ -130,7 +130,7 @@ export function ModCardMenu({
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => actions.onRename(mod)}>
         <Pencil />
-        重命名模组
+        重命名
       </DropdownMenuItem>
       <DropdownMenuItem onSelect={() => actions.onRepackage(mod)}>
         <Package />
