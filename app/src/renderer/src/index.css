@@ -1626,9 +1626,10 @@ select {
 }
 .workbench-assets-toolbar,
 .workbench-assets-browser {
+  --workbench-assets-column-gap: 16px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  column-gap: 16px;
+  column-gap: var(--workbench-assets-column-gap);
 }
 .workbench-assets-toolbar {
   align-items: center;
@@ -1682,7 +1683,7 @@ select {
 @container (min-width: 36rem) {
   .workbench-assets-toolbar,
   .workbench-assets-browser {
-    grid-template-columns: minmax(14rem, 2fr) minmax(0, 3fr);
+    grid-template-columns: max(14rem, calc((100% - var(--workbench-assets-column-gap)) * 0.4 - 75px)) minmax(0, 1fr);
   }
   .workbench-assets-browser {
     grid-template-rows: auto minmax(0, 1fr);
