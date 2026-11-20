@@ -190,7 +190,8 @@ export default function WorkbenchAssets({ active }: { active: boolean }) {
           <h2 className="mr-auto">资源预览</h2>
           <div className="header-action-reveal" data-visible={showExport || undefined}>
             <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
-              <Button variant="secondary" size="sm" disabled={!!busy || !state.count} title="导出索引快照"
+              <Button variant="secondary" size="icon" className="size-8" disabled={!!busy || !state.count}
+                aria-label="导出索引快照" title="导出索引快照"
                 onClick={() => run('snapshot', async () => {
                   const value = await window.api.workbenchAssetSnapshot()
                   setState(value)
