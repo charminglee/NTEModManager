@@ -39,7 +39,7 @@ const blueprintLanguage = StreamLanguage.define({
       state.typeNext = true
       return 'keyword'
     }
-    if (stream.match(/(?:function|return|if|goto|self)\b/)) return 'keyword'
+    if (stream.match(/(?:function|return|if|goto|self|public|private)\b/)) return 'keyword'
     if (stream.match(/(?:true|false)\b/)) return 'bool'
     if (stream.match(/(?:null|nullptr)\b/)) return 'null'
     if (stream.match(/L_[\dA-F]+\b/)) return 'labelName'

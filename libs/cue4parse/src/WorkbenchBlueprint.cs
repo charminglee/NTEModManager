@@ -19,10 +19,16 @@ static class WorkbenchBlueprint
         var serializer = JsonSerializer.CreateDefault();
         foreach (var type in classes)
         {
-            code.Append("class ").Append(type.Name);
-            if (type.SuperStruct.ResolvedObject is { } parent) code.Append(" : ").Append(parent.Name.Text);
-            code.AppendLine().AppendLine("{");
             BlueprintDecompilerUtils.Mappings = type.Owner?.Mappings;
+            code.Append("class ").Append(BlueprintDecompilerUtils.GetClassWithPrefix(type));
+            if (type.SuperStruct.ResolvedObject is { } parent)
+            {
+                var access = type.Flags.HasFlag(EObjectFlags.RF_Public) ? "public" : "private";
+                var parentName = type.SuperStruct.Load<UStruct>() is { } parentType
+                    ? BlueprintDecompilerUtils.GetClassWithPrefix(parentType) : parent.Name.Text;
+                code.Append(" : ").Append(access).Append(' ').Append(parentName);
+            }
+            code.AppendLine().AppendLine("{");
             var defaults = type.ClassDefaultObject.Load();
             var renderedFields = new HashSet<string>(StringComparer.Ordinal);
             foreach (var property in type.Properties.Concat(defaults?.Properties ?? [])
