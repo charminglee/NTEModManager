@@ -112,7 +112,7 @@ export default function WorkbenchProjects({ active, toolbarTarget }: { active: b
               {project.files.map(file => <li key={file} className="flex items-center gap-2 py-1">
                 <File className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="min-w-0 flex-1 break-all">{file}</span>
-                <Button size="icon" variant="ghost" aria-label={`将 ${file} 移至回收站`} title="移至回收站" onClick={() => void run('正在移至回收站……', async () => {
+                <Button size="icon" variant="ghost" aria-label={`将 ${file} 移至回收站`} onClick={() => void run('正在移至回收站……', async () => {
                   setProject(await api.trashWorkbenchFile(file))
                 })}><Trash2 /></Button>
               </li>)}

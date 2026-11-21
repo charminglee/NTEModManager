@@ -147,8 +147,6 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
     return keyword.length === 0 ? mods : mods.filter((mod) => `${mod.name} ${mod.authors}`.toLowerCase().includes(keyword))
   }, [mods, search])
 
-  const activeTaskCount = tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length
-
   const openDetail = (mod: GameBananaMod) => {
     lastSelectedRef.current = mod
     setSelected(mod)
@@ -199,7 +197,6 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
               variant="secondary"
               size="icon"
               aria-label="下载列表"
-              title={activeTaskCount > 0 ? `下载列表（${activeTaskCount} 项进行中）` : '下载列表'}
               onClick={() => setDrawerOpen(true)}
             >
               <Download aria-hidden="true" />

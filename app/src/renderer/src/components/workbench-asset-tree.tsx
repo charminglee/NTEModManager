@@ -67,7 +67,7 @@ function AssetFolder({ path, expand, ...props }: BranchProps & { path: string; e
   const name = path.slice(path.lastIndexOf('/') + 1)
 
   return <li>
-    <Button type="button" variant="ghost" className={rowClass} title={path} aria-expanded={open}
+    <Button type="button" variant="ghost" className={rowClass} aria-expanded={open}
       onClick={() => setOpen(value => !value)}>
       <ChevronRight aria-hidden="true" className={open ? 'rotate-90' : undefined} />
       {open ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
@@ -107,7 +107,7 @@ export default function WorkbenchAssetTree({ query, directory = '', selected, on
         const name = row.path.slice(row.path.lastIndexOf('/') + 1)
         const Icon = fileIcon(name, row.assetClass)
         return <li key={JSON.stringify([row.path, row.archive])}>
-          <Button type="button" variant="ghost" title={`${row.path}\n${row.archive}${row.assetClass ? `\n${row.assetClass}` : ''}`}
+          <Button type="button" variant="ghost"
             aria-pressed={row.path === selected?.path && row.archive === selected.archive}
             className={`${rowClass} pl-7 aria-pressed:bg-accent aria-pressed:text-accent-foreground`}
             onClick={() => onSelect(row)}>

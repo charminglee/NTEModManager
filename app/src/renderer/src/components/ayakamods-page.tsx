@@ -122,8 +122,6 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
     webviewRef.current?.reload()
   }
 
-  const activeTaskCount = tasks.filter((task) => !['completed', 'failed'].includes(task.status)).length
-
   return (
     <main className="ayakamods-page gamebanana-main-column">
       <header className="workspace-page-heading gamebanana-heading">
@@ -143,7 +141,6 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
             variant="secondary"
             size="icon"
             aria-label="下载列表"
-            title={activeTaskCount > 0 ? `下载列表（${activeTaskCount} 项进行中）` : '下载列表'}
             onClick={() => setDrawerOpen(true)}
           >
             <Download aria-hidden="true" />

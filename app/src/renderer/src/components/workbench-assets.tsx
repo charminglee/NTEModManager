@@ -98,7 +98,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
           setArchive(nextArchive)
           setSelection(undefined)
         }}>
-          <SelectTrigger aria-label="选择包体" title={archiveLabel}>
+          <SelectTrigger aria-label="选择包体">
             <SelectValue placeholder={archiveLabel} />
           </SelectTrigger>
           <SelectContent>
@@ -119,7 +119,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="secondary" size="icon" className="rounded-l-none" disabled={!!busy}
-                  aria-label="加载模式" title={`加载模式：${modes[mode]}`}>
+                  aria-label="加载模式">
                   <ChevronDown aria-hidden="true" />
                 </Button>
               </DropdownMenuTrigger>
@@ -134,7 +134,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" disabled={!!busy}
-                aria-label="过滤文件" title="过滤文件">
+                aria-label="过滤文件">
                 <Filter aria-hidden="true" />
               </Button>
             </DropdownMenuTrigger>
@@ -156,7 +156,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
         <div className="header-action-reveal" data-visible={showExport || undefined}>
           <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
             <Button variant="secondary" size="icon" disabled={!!busy || !state.count}
-              aria-label="导出索引快照" title="导出索引快照"
+              aria-label="导出索引快照"
               onClick={() => run('snapshot', async () => {
                 const value = await window.api.workbenchAssetSnapshot()
                 setState(value)

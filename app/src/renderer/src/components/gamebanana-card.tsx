@@ -77,7 +77,6 @@ export default function GameBananaCard({ mod, selected, active, now, onOpen, onD
                   {files.map((file) => (
                     <DropdownMenuItem
                       key={file.id}
-                      title={file.name}
                       detail={file.archived ? '归档' : undefined}
                       onSelect={() => onDownload(mod, file)}
                     >

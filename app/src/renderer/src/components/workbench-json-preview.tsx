@@ -139,20 +139,20 @@ export default function WorkbenchJsonPreview({ value }: { value: string }) {
 
   return <div className="min-h-0 min-w-0 flex-1 bg-muted/30 text-xs select-text" ref={container}>
     {searchPanel && createPortal(<>
-      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="下一处" title="下一处"
+      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="下一处"
         onClick={() => findNext(searchPanel.view)}><ChevronDown aria-hidden="true" /></Button>
-      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="上一处" title="上一处"
+      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="上一处"
         onClick={() => findPrevious(searchPanel.view)}><ChevronUp aria-hidden="true" /></Button>
       {searchOptions.map(([option, label, Icon]) => (
         <Button key={option} type="button" variant="secondary" size="icon"
           className="size-7 aria-pressed:border-primary aria-pressed:bg-accent aria-pressed:text-accent-foreground"
-          aria-label={label} title={label} aria-pressed={searchPanel.query[option]} onClick={() => {
+          aria-label={label} aria-pressed={searchPanel.query[option]} onClick={() => {
             const { view } = searchPanel
             const query = getSearchQuery(view.state)
             view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ ...query, [option]: !query[option] })) })
           }}><Icon aria-hidden="true" /></Button>
       ))}
-      <Button type="button" variant="ghost" size="icon" className="size-7" aria-label="关闭查找" title="关闭查找"
+      <Button type="button" variant="ghost" size="icon" className="size-7" aria-label="关闭查找"
         onClick={() => closeSearchPanel(searchPanel.view)}><X aria-hidden="true" /></Button>
     </>, searchPanel.controls)}
   </div>
