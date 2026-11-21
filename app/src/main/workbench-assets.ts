@@ -2,10 +2,10 @@ import { ipcMain } from 'electron'
 import { spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
-import { basename, dirname, extname, join, resolve } from 'node:path'
+import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 import { getAppConfig } from './config'
-import { logger } from './logger'
+import { describeError, logger } from './logger'
 import { ntemmCacheDir } from './ntemm-paths'
 import { bundledToolsDirectory } from './bundled-tools'
 import { assetResults, effectiveAssets, matchingAssets } from '../shared/workbench-assets-filter'
@@ -23,6 +23,7 @@ function context() {
 type Context = ReturnType<typeof context>
 let index: { paks: string; key: string; rows: AssetEntry[]; effective: AssetEntry[] } | undefined
 let baseline: { file: string; entries: Map<string, AssetEntry> } | undefined
+let exportQueue = Promise.resolve()
 const current = (ctx: Context) => index?.paks === ctx.paks && index.key === ctx.config.workbenchAesKey ? index : undefined
 
 async function parse(ctx: Context, action: AssetPreviewMode | 'index' | 'texture' | 'export', output: string,
@@ -111,6 +112,46 @@ async function previewAsset(entry: AssetReference, mode: AssetPreviewMode): Prom
   }
 }
 
+async function publishExport(organized: string, root: string) {
+  const files = await readdir(organized, { recursive: true, withFileTypes: true })
+  const backup = await mkdtemp(join(root, '.ntemm-backup-'))
+  const published: { target: string; previous?: string }[] = []
+  let keepBackup = false
+  try {
+    for (const file of files) {
+      if (!file.isFile()) continue
+      const source = join(file.parentPath, file.name)
+      const target = join(root, relative(organized, source))
+      await mkdir(dirname(target), { recursive: true })
+      const existing = await lstat(target).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error
+      })
+      if (existing && !existing.isFile()) throw new Error(`导出目标不是普通文件：${target}`)
+      const previous = existing ? join(backup, String(published.length)) : undefined
+      if (previous) await copyFile(target, previous)
+      await rename(source, target)
+      published.push({ target, previous })
+    }
+  } catch (error) {
+    const failures: string[] = []
+    for (const { target, previous } of published.reverse()) {
+      try {
+        if (previous) await rename(previous, target)
+        else await rm(target, { force: true })
+      } catch (rollbackError) {
+        failures.push(`${target}：${describeError(rollbackError)}${previous ? `，原文件备份：${previous}` : ''}`)
+      }
+    }
+    if (failures.length) {
+      keepBackup = true
+      throw new Error(`${describeError(error)}。导出回滚失败：${failures.join('；')}`, { cause: error })
+    }
+    throw error
+  } finally {
+    if (!keepBackup) await rm(backup, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 })
+  }
+}
+
 async function exportAssets(request: AssetExportRequest): Promise<AssetExportResult> {
   const ctx = context()
   const cached = current(ctx)
@@ -143,29 +184,47 @@ async function exportAssets(request: AssetExportRequest): Promise<AssetExportRes
     ? basename(entries[0].path, extname(entries[0].path)) : '所选资源'
   await mkdir(root, { recursive: true })
   const stage = await mkdtemp(join(root, '.ntemm-'))
+  const organized = join(stage, 'organized')
   let exported = 0
   const failures: string[] = []
   logger.info(`正在导出资源：${label}，共 ${entries.length} 项。`)
   try {
     for (const [archive, items] of groups) {
-      const output = groups.size === 1 ? stage : join(stage, archive)
+      const output = join(stage, 'parsed', archive)
+      const destination = groups.size === 1 ? organized : join(organized, archive)
       await mkdir(output, { recursive: true })
       await parse(ctx, 'export', output, { archive }, false, items)
       const report = join(output, '.ntemm-export.json')
       const result: Pick<AssetExportResult, 'exported' | 'failures'> = JSON.parse(await readFile(report, 'utf8'))
-      await rm(report)
       exported += result.exported
       for (const failure of result.failures) {
         const detail = `${archive}／${failure}`
         failures.push(detail)
         logger.error(`资源导出失败：${detail}`)
       }
+      for (const item of items) {
+        const wrapper = join(output, item.path)
+        if (!wrapper.startsWith(output + sep)) throw new Error(`资源路径超出导出目录：${item.path}`)
+        if (result.failures.length && !existsSync(wrapper)) continue
+        // 转换器在每个资源的临时目录里已经写出了包内相对路径。
+        const files = await readdir(wrapper, { recursive: true, withFileTypes: true })
+        for (const file of files) {
+          if (!file.isFile()) continue
+          const source = join(file.parentPath, file.name)
+          const path = relative(wrapper, source)
+          const target = join(destination, path)
+          await mkdir(dirname(target), { recursive: true })
+          await rename(source, target)
+        }
+      }
     }
     if (!exported) return { directory: '', exported, failures }
-    const directory = join(root, `${label}-${randomUUID().slice(0, 8)}`)
-    await rename(stage, directory)
-    logger.info(`资源已导出：${directory}，共 ${exported} 项。`)
-    return { directory, exported, failures }
+    await publishExport(organized, root)
+    logger.info(`资源已导出：${root}，共 ${exported} 项。`)
+    return { directory: root, exported, failures }
+  } catch (error) {
+    logger.error(`资源导出未完成：${describeError(error)}`)
+    throw error
   } finally {
     await rm(stage, { recursive: true, force: true })
   }
@@ -223,5 +282,9 @@ export function registerWorkbenchAssets() {
     return assetResults(rows, query, previous)
   })
   ipcMain.handle('assets:preview', (_event, entry, mode) => previewAsset(entry, mode))
-  ipcMain.handle('assets:export', (_event, request) => exportAssets(request))
+  ipcMain.handle('assets:export', (_event, request: AssetExportRequest) => {
+    const pending = exportQueue.then(() => exportAssets(request))
+    exportQueue = pending.then(() => {}, () => {})
+    return pending
+  })
 }
