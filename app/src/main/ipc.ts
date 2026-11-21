@@ -238,7 +238,7 @@ async function pickFileWithDialog(options: Electron.OpenDialogOptions): Promise<
 }
 
 export function registerIpcHandlers(categoryImageBase: string, appIconPath: string | null): void {
-  registerWorkbenchAssets()
+  registerWorkbenchAssets(pickFileWithDialog)
   registerWorkbenchProjects()
   registerWorkbenchSpine()
   ipcMain.handle('workbench-spine:load-game', (_event, name: string) => loadGameSpine(name))

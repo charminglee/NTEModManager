@@ -58,8 +58,7 @@ const workbenchFields = [
     key: 'workbenchMapping',
     label: '属性映射文件',
     help: '用于解析游戏资源的属性，请选择与游戏版本匹配的 .usmap 文件。'
-  },
-  { key: 'workbenchExportDirectory', label: '资源导出目录', help: '保存从游戏资源浏览器导出的文件。' }
+  }
 ] as const
 export default function SettingsView({ config, mods, onSaved }: Props) {
   const [section, setSection] = useState<(typeof settingsSections)[number]['id']>('paths')
@@ -265,11 +264,9 @@ export default function SettingsView({ config, mods, onSaved }: Props) {
                     onBlur={event => {
                       if (event.currentTarget.dataset.previous !== event.currentTarget.value) save(event.currentTarget.value)
                     }} />
-                  {key !== 'workbenchAesKey' && (
+                  {key === 'workbenchMapping' && (
                     <Button variant="secondary" onClick={async () => {
-                      const selected = key === 'workbenchMapping'
-                        ? await window.api.pickFile({ title: label, extensions: ['usmap'], defaultPath: draft[key] })
-                        : await window.api.pickDirectory(draft[key])
+                      const selected = await window.api.pickFile({ title: label, extensions: ['usmap'], defaultPath: draft[key] })
                       if (selected) { update(key, selected); save(selected) }
                     }}><FolderOpen />浏览</Button>
                   )}

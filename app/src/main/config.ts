@@ -279,7 +279,6 @@ export function getAppConfig(): AppConfigData {
     configPath: configFilePath(),
     workbenchAesKey: readIni().Workbench?.aes_key || '',
     workbenchMapping: getPath('workbench_mapping', '', true),
-    workbenchExportDirectory: getPath('workbench_exports', join(app.getPath('documents'), 'NTEMM', 'Exports')),
     gameDirectory: deriveGameDirectory(modsDirectory, gameLauncher),
     modsDirectory,
     backupsDirectory: backupsPath(readIni()),
@@ -339,6 +338,28 @@ export function setLastCategory(category: string): void {
     ...readIni().Preferences,
     last_category: category
   })
+}
+
+export function defaultWorkbenchExportDirectory(): string {
+  return getPath('workbench_exports', join(app.getPath('documents'), 'NTEMM', 'Exports'))
+}
+
+export function getLastAssetExportDirectory(): string {
+  return getPath('last_asset_export_directory', '', true) || defaultWorkbenchExportDirectory()
+}
+
+export function setLastAssetExportDirectory(directory: string): void {
+  const content = readConfigFile()
+  const ini = parseIni(content)
+  const path = directory.replace(/\\/g, '/')
+  if (ini.Paths?.last_asset_export_directory === path) return
+  ini.Paths = { ...ini.Paths, last_asset_export_directory: path }
+  try {
+    writeConfigAtomically(configFilePath(), content, updateIniText(content, ini))
+  } catch (error) {
+    logger.error(`保存资源导出位置失败：${describeError(error)}`)
+    throw error
+  }
 }
 
 // ============ 视觉识别(Python 桥)路径 ============
@@ -413,7 +434,6 @@ export function pythonModelCache(): string {
 
 const PATH_PATCH_KEYS: Partial<Record<keyof AppConfigPatch, string>> = {
   workbenchMapping: 'workbench_mapping',
-  workbenchExportDirectory: 'workbench_exports',
   modsDirectory: 'mods_directory',
   backupsDirectory: 'backups_directory',
   backgroundImagesDirectory: 'background_images_directory',

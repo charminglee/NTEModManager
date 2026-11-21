@@ -180,6 +180,7 @@ export default function WorkbenchAssets({ active, toolbarTarget, onExportingChan
                 query={query} onPreview={(entry, mode) => setSelection({ entry, mode })}
                 onExport={request => run('export', async () => {
                   const result = await window.api.workbenchAssetExport(request)
+                  if (!result) return
                   const title = `已导出 ${result.exported} 项`
                   if (!result.failures.length) {
                     toast.success(title, { description: result.directory })

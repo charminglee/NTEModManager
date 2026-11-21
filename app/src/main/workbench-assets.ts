@@ -1,10 +1,10 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain, type OpenDialogOptions } from 'electron'
 import { spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
-import { getAppConfig } from './config'
+import { getAppConfig, getLastAssetExportDirectory, setLastAssetExportDirectory } from './config'
 import { describeError, logger } from './logger'
 import { ntemmCacheDir } from './ntemm-paths'
 import { bundledToolsDirectory } from './bundled-tools'
@@ -152,12 +152,13 @@ async function publishExport(organized: string, root: string) {
   }
 }
 
-async function exportAssets(request: AssetExportRequest): Promise<AssetExportResult> {
+async function exportAssets(
+  request: AssetExportRequest,
+  pickDirectory: (options: OpenDialogOptions) => Promise<string | null>
+): Promise<AssetExportResult | null> {
   const ctx = context()
   const cached = current(ctx)
   if (!cached) throw new Error('资源索引已失效，请重新加载。')
-  const root = ctx.config.workbenchExportDirectory
-  if (!root) throw new Error('请先设置工作台导出目录。')
 
   let entries: AssetEntry[]
   if ('folder' in request) {
@@ -173,6 +174,16 @@ async function exportAssets(request: AssetExportRequest): Promise<AssetExportRes
     if (entries.length !== request.entries.length) throw new Error('资源索引已失效，请重新加载。')
   }
   if (!entries.length) throw new Error('没有符合所选类型的资源。')
+
+  const previousDirectory = getLastAssetExportDirectory()
+  const root = await pickDirectory({
+    title: '选择资源导出目录',
+    defaultPath: statSync(previousDirectory, { throwIfNoEntry: false })?.isDirectory()
+      ? previousDirectory : app.getPath('documents'),
+    properties: ['openDirectory', 'createDirectory']
+  })
+  if (!root) return null
+  setLastAssetExportDirectory(root)
 
   const groups = new Map<string, { path: string; kind?: AssetExportKind }[]>()
   for (const entry of entries) {
@@ -245,7 +256,7 @@ export async function decodeGameTexture(path: string): Promise<Uint8Array<ArrayB
   }
 }
 
-export function registerWorkbenchAssets() {
+export function registerWorkbenchAssets(pickDirectory: (options: OpenDialogOptions) => Promise<string | null>) {
   ipcMain.handle('assets:state', () => state(context()))
   ipcMain.handle('assets:index', async () => {
     const ctx = context()
@@ -283,7 +294,7 @@ export function registerWorkbenchAssets() {
   })
   ipcMain.handle('assets:preview', (_event, entry, mode) => previewAsset(entry, mode))
   ipcMain.handle('assets:export', (_event, request: AssetExportRequest) => {
-    const pending = exportQueue.then(() => exportAssets(request))
+    const pending = exportQueue.then(() => exportAssets(request, pickDirectory))
     exportQueue = pending.then(() => {}, () => {})
     return pending
   })

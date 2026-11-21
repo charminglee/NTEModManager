@@ -9,6 +9,6 @@ export const workbenchAssetsApi = {
     ipcRenderer.invoke('assets:query', query),
   workbenchAssetPreview: (entry: AssetReference, mode: AssetPreviewMode): Promise<AssetPreview> =>
     ipcRenderer.invoke('assets:preview', entry, mode),
-  workbenchAssetExport: (request: AssetExportRequest): Promise<AssetExportResult> =>
+  workbenchAssetExport: (request: AssetExportRequest): Promise<AssetExportResult | null> =>
     ipcRenderer.invoke('assets:export', request)
 }

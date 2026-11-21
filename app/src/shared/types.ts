@@ -89,7 +89,6 @@ export const BACKGROUND_MASK_OPACITY_MAX = 100
 export interface AppConfigData {
   workbenchAesKey: string
   workbenchMapping: string
-  workbenchExportDirectory: string
   configPath: string
   /** 游戏安装目录;由模组目录/启动器路径反推得到 */
   gameDirectory: string
@@ -120,7 +119,6 @@ export interface AppConfigData {
 export interface AppConfigPatch {
   workbenchAesKey?: string
   workbenchMapping?: string
-  workbenchExportDirectory?: string
   /** 游戏安装目录;写入时同步生成模组目录与启动器路径 */
   gameDirectory?: string
   modsDirectory?: string

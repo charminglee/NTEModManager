@@ -424,7 +424,6 @@ const unavailable = (what: string) => ({
 const config: AppConfigData = {
   workbenchAesKey: '',
   workbenchMapping: '',
-  workbenchExportDirectory: 'Documents/NTEMM/Exports',
   configPath: 'C:\\Users\\mock\\.ntemm\\NteModManager.ini',
   gameDirectory: 'D:/Games/NTE',
   modsDirectory: 'D:/Games/NTE/mods',
@@ -450,8 +449,7 @@ const configFileFields = {
     backups_directory: 'backupsDirectory',
     background_images_directory: 'backgroundImagesDirectory',
     game_launcher: 'gameLauncher',
-    workbench_mapping: 'workbenchMapping',
-    workbench_exports: 'workbenchExportDirectory'
+    workbench_mapping: 'workbenchMapping'
   },
   Workbench: { aes_key: 'workbenchAesKey' },
   Categories: { names: 'categories' },

@@ -2,7 +2,7 @@ import { dialog, ipcMain } from 'electron'
 import { basename, join } from 'node:path'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import type { SpineFile } from '../shared/workbench-spine'
-import { getAppConfig } from './config'
+import { defaultWorkbenchExportDirectory } from './config'
 
 export function registerWorkbenchSpine() {
   ipcMain.handle('workbench-spine:save', async (_, files: SpineFile[]) => {
@@ -20,7 +20,7 @@ export function registerWorkbenchSpine() {
       throw new Error('Spine 输出文件无效。')
     const result = await dialog.showOpenDialog({
       title: '选择 Spine 导出位置',
-      defaultPath: getAppConfig().workbenchExportDirectory,
+      defaultPath: defaultWorkbenchExportDirectory(),
       properties: ['openDirectory', 'createDirectory']
     })
     if (result.canceled) return null
