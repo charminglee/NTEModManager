@@ -36,7 +36,10 @@ static class WorkbenchBlueprint
             {
                 if (!renderedFields.Add(property.Name.Text)) continue;
                 if (property.Tag is not null && BlueprintDecompilerUtils.GetPropertyTagVariable(property, out var fieldType, out var value))
-                    code.Append("    ").Append(fieldType).Append(' ').Append(property.Name.Text).Append(" = ").Append(value).AppendLine(";");
+                {
+                    var initializer = value.StartsWith('{') ? value.ReplaceLineEndings(Environment.NewLine + "    ") : value;
+                    code.Append("    ").Append(fieldType).Append(' ').Append(property.Name.Text).Append(" = ").Append(initializer).AppendLine(";");
+                }
                 else
                     code.Append("    ").Append(property.PropertyType).Append(' ').Append(property.Name.Text).AppendLine(";");
             }
