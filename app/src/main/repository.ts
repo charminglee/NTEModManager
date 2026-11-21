@@ -650,13 +650,18 @@ function baseNameWithoutExtension(filePath: string): string {
   return dot > 0 ? name.slice(0, dot) : name
 }
 
-export async function exportArchive(mod: ModInfo, archivePath: string, appDir: string): Promise<OperationResult> {
+export async function exportArchive(
+  mod: ModInfo,
+  archivePath: string,
+  appDir: string,
+  onProgress: (percent: number) => void
+): Promise<OperationResult> {
   const sevenZipPath = find7ZipExecutable(appDir)
   if (!sevenZipPath) {
     return finalize('导出模组', failure('未找到 7-Zip。请安装 7-Zip，或设置环境变量 NTE_7ZIP_PATH 指向 7z.exe。'))
   }
   try {
-    await createZipArchive(sevenZipPath, mod.sourcePath, archivePath)
+    await createZipArchive(sevenZipPath, mod.sourcePath, archivePath, onProgress)
   } catch (error) {
     return finalize('导出模组', failure(describeError(error)))
   }

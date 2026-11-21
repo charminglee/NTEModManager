@@ -81,7 +81,8 @@ export function extractArchive(options: ExtractOptions): Promise<void> {
 export async function createZipArchive(
   sevenZipPath: string,
   sourcePath: string,
-  archivePath: string
+  archivePath: string,
+  onProgress: (percent: number) => void
 ): Promise<void> {
   const sourceDirectory = await realpath(sourcePath)
   const targetDirectory = await realpath(dirname(archivePath))
@@ -98,25 +99,50 @@ export async function createZipArchive(
   try {
     await run7Zip(
       resolve(sevenZipPath),
-      ['a', '-tzip', '-mcu=on', '-spd', '--', temporaryPath, `.${sep}${basename(sourcePath)}`],
+      ['a', '-tzip', '-mcu=on', '-spd', '-bsp1', '-bso2', '--', temporaryPath, `.${sep}${basename(sourcePath)}`],
       '压缩',
-      dirname(sourcePath)
+      dirname(sourcePath),
+      onProgress
     )
     await rename(temporaryPath, join(targetDirectory, basename(archivePath)))
   } finally {
     await rm(temporaryPath, { force: true })
   }
+  onProgress(100)
 }
 
-function run7Zip(sevenZipPath: string, args: string[], action: string, cwd?: string): Promise<void> {
+function run7Zip(
+  sevenZipPath: string,
+  args: string[],
+  action: string,
+  cwd?: string,
+  onProgress?: (percent: number) => void
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(sevenZipPath, args, { cwd, windowsHide: true })
-    let output = Buffer.alloc(0)
+    const output: Buffer[] = []
+    let progressLine = ''
+    let lastPercent = -1
     child.stdout.on('data', (chunk: Buffer) => {
-      output = Buffer.concat([output, chunk])
+      if (!onProgress) {
+        output.push(chunk)
+        return
+      }
+
+      // 7-Zip 用回车或退格重绘进度，百分比也可能跨两个输出块。
+      const lines = (progressLine + chunk.toString('latin1')).split(/[\r\n\b]/)
+      progressLine = lines[lines.length - 1]
+      for (const line of lines) {
+        const match = /^[ \t]*(\d{1,2})%/.exec(line)
+        if (!match) continue
+        const percent = Number(match[1])
+        if (percent <= lastPercent) continue
+        lastPercent = percent
+        onProgress(percent)
+      }
     })
     child.stderr.on('data', (chunk: Buffer) => {
-      output = Buffer.concat([output, chunk])
+      output.push(chunk)
     })
     child.on('error', (error) => {
       reject(new Error(`无法启动 7-Zip：${error.message}`))
@@ -125,7 +151,7 @@ function run7Zip(sevenZipPath: string, args: string[], action: string, cwd?: str
       if (code === 0) {
         resolve()
       } else {
-        const text = decodeConsoleOutput(output).trim()
+        const text = decodeConsoleOutput(Buffer.concat(output)).trim()
         reject(new Error(`${action}失败：${text || `7-Zip 异常退出（退出码 ${code ?? 'unknown'}）`}`))
       }
     })

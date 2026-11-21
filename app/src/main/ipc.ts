@@ -559,8 +559,9 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
         return failure('导出文件名必须以 .zip 结尾。')
       }
 
-      report(`正在将 ${mod.name} 压缩为 ZIP……`)
-      return repository.exportArchive(mod, picked.filePath, appDir())
+      const message = `正在将 ${mod.name} 压缩为 ZIP……`
+      report(message)
+      return repository.exportArchive(mod, picked.filePath, appDir(), (percent) => report(message, percent))
     })
   )
 
