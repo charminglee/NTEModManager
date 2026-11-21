@@ -1,6 +1,6 @@
 import { defaultKeymap } from '@codemirror/commands'
 import { json } from '@codemirror/lang-json'
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language'
 import {
   closeSearchPanel, findNext, findPrevious, getSearchQuery, search, searchKeymap, SearchQuery, setSearchQuery
 } from '@codemirror/search'
@@ -25,6 +25,45 @@ const highlighting = syntaxHighlighting(HighlightStyle.define([
   { tag: tags.string, color: '#316149' },
   { tag: tags.number, color: '#79532e' },
   { tag: [tags.bool, tags.null], color: 'hsl(var(--accent-foreground))' }
+]))
+
+const blueprintLanguage = StreamLanguage.define({
+  startState: () => ({ typeNext: false }),
+  token(stream, state) {
+    if (stream.sol()) state.typeNext = false
+    if (stream.eatSpace()) return null
+    if (stream.match(/\/\/.*/)) return 'comment'
+    if (stream.match(/"(?:\\.|[^"\\])*"?|'(?:\\.|[^'\\])*'?/)) return 'string'
+    if (stream.match(/-?(?:0x[\da-f]+|(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)/i)) return 'number'
+    if (stream.match(/(?:class|struct|enum)\b/)) {
+      state.typeNext = true
+      return 'keyword'
+    }
+    if (stream.match(/(?:function|return|if|goto|self)\b/)) return 'keyword'
+    if (stream.match(/(?:true|false)\b/)) return 'bool'
+    if (stream.match(/(?:null|nullptr)\b/)) return 'null'
+    if (stream.match(/L_[\dA-F]+\b/)) return 'labelName'
+    if (stream.match(/EX_\w+\b/)) return 'operatorKeyword'
+    if (stream.match(/[\p{L}_][\p{L}\p{N}_]*/u)) {
+      const declaredType = state.typeNext
+      state.typeNext = false
+      if (declaredType || stream.string.startsWith('class ')) return 'typeName'
+      if (stream.match(/\s*\(/, false)) return 'variableName.function'
+      if (stream.start === stream.indentation() && stream.match(/\s*[<*\w]/, false)) return 'typeName'
+      return null
+    }
+    stream.next()
+    return null
+  }
+})
+
+const blueprintHighlighting = syntaxHighlighting(HighlightStyle.define([
+  { tag: [tags.keyword, tags.bool, tags.null], color: 'light-dark(#9c362c, #ffa99c)' },
+  { tag: tags.typeName, color: 'light-dark(#244e76, #9acaff)' },
+  { tag: tags.function(tags.variableName), color: 'light-dark(#6e417f, #e9b4fb)' },
+  { tag: [tags.labelName, tags.operatorKeyword, tags.number], color: 'light-dark(#79532e, #f4bd86)' },
+  { tag: tags.string, color: 'light-dark(#316149, #a4d9b8)' },
+  { tag: tags.comment, color: 'light-dark(#625b51, #c4b9ae)', fontStyle: 'italic' }
 ]))
 
 const searchPhrases = EditorState.phrases.of({
@@ -72,7 +111,7 @@ export default function WorkbenchJsonPreview({ value, code = false }: { value: s
       doc: value,
       parent: container.current!,
       extensions: [
-        ...(code ? [] : [json(), highlighting]), previewTheme,
+        ...(code ? [blueprintLanguage, blueprintHighlighting] : [json(), highlighting]), previewTheme,
         EditorState.readOnly.of(true),
         EditorView.editable.of(false),
         EditorView.contentAttributes.of({
