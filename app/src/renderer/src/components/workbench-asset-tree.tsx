@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type ComponentType, type KeyboardEvent, type MouseEvent, type SVGProps } from 'react'
 import {
-  AudioLines, Blocks, Bone, Braces, ChevronRight, Clapperboard, Download, File, FileText, Film, Folder, FolderOpen,
-  Image, Map as MapIcon, Package, Palette, PanelsTopLeft, PersonStanding, Shapes, Sparkles, Table2, Type, Workflow, type LucideIcon
+  AudioLines, Bone, Braces, ChartSpline, ChevronRight, Clapperboard, Download, File, FileText, Film, Folder, FolderOpen,
+  Image, Map as MapIcon, Package, Palette, PanelsTopLeft, PersonStanding, Sparkles, Table2, Type, Workflow, type LucideIcon
 } from 'lucide-react'
 import { Button } from './ui/button'
 import { ContextMenu, useContextMenu } from './ui/context-menu'
@@ -32,15 +32,30 @@ const folderActions: [AssetExportKind, string, LucideIcon][] = [
 const rowClass = 'h-7 w-full justify-start gap-1.5 border-0 px-2 text-left text-xs font-normal'
 const modelIconScale = 'scale-125'
 
-const iconClasses: [LucideIcon, string[]][] = [
+const blueprintIconColors = new Map([
+  ['animblueprint', 'text-orange-700'],
+  ['widgetblueprint', 'text-rose-700']
+])
+
+function PhysicsAssetIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6}
+    strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M5.5 14.5C3.3 13.8 2 12.9 2 12c0-2 4.5-3.6 10-3.6S22 10 22 12c0 .9-1.3 1.8-3.5 2.5" />
+    <path d="M10 4.8C8.4 3.2 6.9 2.5 6.1 3c-1.8 1.1-.5 6 2.7 11.1s7.2 8.2 9 7.1c1.4-.9 1-4.4-.9-8.2" />
+    <path d="M17.8 6.7c.4-1.9.2-3.3-.7-3.7-1.8-1.1-5.8 2-9 7.1S3.6 20.1 5.4 21.2c.9.6 2.4 0 4-1.5" />
+    <circle cx={12} cy={12} r={1.4} fill="currentColor" stroke="none" />
+  </svg>
+}
+
+const iconClasses: [ComponentType<SVGProps<SVGSVGElement>>, string[]][] = [
   [Image, [
     'Texture2D', 'Texture2DArray', 'Texture2DDynamic', 'TextureCube', 'TextureCubeArray', 'VolumeTexture',
     'TextureRenderTarget2D', 'TextureRenderTarget2DArray', 'TextureRenderTargetCube', 'TextureRenderTargetVolume',
     'LightMapTexture2D', 'VirtualTexture2D', 'CurveLinearColorAtlas', 'SpineAtlasAsset', 'PaperSprite'
   ]],
   [PersonStanding, ['StaticMesh', 'SkeletalMesh', 'GeometryCollection', 'GeometryCache']],
-  [Bone, ['Skeleton', 'AnimBlueprint', 'AnimBlueprintGeneratedClass']],
-  [Shapes, ['PhysicsAsset']],
+  [Bone, ['Skeleton']],
+  [PhysicsAssetIcon, ['PhysicsAsset']],
   [Palette, [
     'Material', 'MaterialInstance', 'MaterialInstanceConstant', 'MaterialFunction', 'MaterialFunctionInstance',
     'MaterialParameterCollection', 'MaterialLayer', 'MaterialLayerBlend'
@@ -49,17 +64,14 @@ const iconClasses: [LucideIcon, string[]][] = [
     'AnimSequence', 'AnimMontage', 'AnimComposite',
     'BlendSpace', 'BlendSpace1D', 'AimOffsetBlendSpace', 'AimOffsetBlendSpace1D', 'LevelSequence', 'SpineSkeletonDataAsset'
   ]],
-  [PanelsTopLeft, ['WidgetBlueprint', 'WidgetBlueprintGeneratedClass', 'UserWidget', 'SlateWidgetStyleAsset']],
-  [Blocks, ['BlueprintFunctionLibrary', 'BlueprintInterface']],
-  [Shapes, ['ControlRigBlueprint', 'ControlRigBlueprintGeneratedClass']],
-  [MapIcon, ['LevelScriptBlueprint', 'LevelScriptBlueprintGeneratedClass']],
-  [Workflow, ['Blueprint', 'BlueprintGeneratedClass']],
+  [PanelsTopLeft, ['UserWidget', 'SlateWidgetStyleAsset']],
   [Sparkles, ['NiagaraSystem', 'NiagaraEmitter', 'NiagaraScript', 'ParticleSystem']],
   [AudioLines, [
     'SoundWave', 'SoundCue', 'SoundClass', 'SoundMix', 'SoundAttenuation', 'SoundConcurrency',
     'MetaSoundSource', 'AkAudioEvent', 'AkAudioBank', 'AkInitBank', 'AkMediaAsset'
   ]],
   [Table2, ['DataTable', 'CompositeDataTable', 'CurveTable', 'StringTable']],
+  [ChartSpline, ['CurveFloat', 'CurveVector', 'CurveLinearColor']],
   [Braces, ['DataAsset', 'PrimaryDataAsset']],
   [Type, ['Font', 'FontFace']],
   [MapIcon, ['World']]
@@ -67,7 +79,7 @@ const iconClasses: [LucideIcon, string[]][] = [
 const assetClassIcons = new Map(iconClasses.flatMap(([Icon, classes]) => classes.map(name => [name, Icon] as const)))
 
 function fileIcon(name: string, assetClass?: string) {
-  if (assetClass) return assetClassIcons.get(assetClass) ?? (isBlueprintClass(assetClass) ? Workflow : Package)
+  if (assetClass) return assetClassIcons.get(assetClass) ?? Package
   switch (name.slice(name.lastIndexOf('.')).toLowerCase()) {
     case '.uasset': return Package
     case '.umap': return MapIcon
@@ -126,7 +138,11 @@ function AssetBranch({ query, directory = '', ...props }: BranchProps) {
         query={query} {...props} />)}
       {result.rows.map(row => {
         const name = row.path.slice(row.path.lastIndexOf('/') + 1)
-        const Icon = fileIcon(name, row.assetClass)
+        const { assetClass } = row
+        const blueprintColor = assetClass && isBlueprintClass(assetClass)
+          ? blueprintIconColors.get(assetClass.toLowerCase().replace(/generatedclass$/, '')) ?? 'text-blue-700'
+          : undefined
+        const Icon = blueprintColor ? Workflow : fileIcon(name, assetClass)
         const key = assetKey(row)
         return <li key={key}>
           <Button type="button" variant="ghost"
@@ -145,7 +161,7 @@ function AssetBranch({ query, directory = '', ...props }: BranchProps) {
               }
               props.onMenu({ entry: row }, event)
             }}>
-            <Icon aria-hidden="true" className={Icon === PersonStanding ? modelIconScale : undefined} />
+            <Icon aria-hidden="true" className={Icon === PersonStanding ? modelIconScale : blueprintColor} />
             <span className="truncate">{name}</span>
           </Button>
         </li>
