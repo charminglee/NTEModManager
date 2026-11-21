@@ -10,7 +10,10 @@ const sections = [
 
 type Section = (typeof sections)[number]['id']
 
-export default function Workbench({ visible }: { visible: boolean }) {
+export default function Workbench({ visible, onAssetExportingChange }: {
+  visible: boolean
+  onAssetExportingChange: (exporting: boolean) => void
+}) {
   const [section, setSection] = useState<Section>('assets')
   const [opened, setOpened] = useState<Section[]>(['assets'])
   const [headingActions, setHeadingActions] = useState<HTMLDivElement | null>(null)
@@ -30,7 +33,10 @@ export default function Workbench({ visible }: { visible: boolean }) {
         {sections.map(({ id, label, Panel }) => opened.includes(id) && (
           <div key={id} className="workbench-content" style={id === section ? undefined : { display: 'none' }}>
             <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">正在加载{label}……</p>}>
-              <Panel active={visible && id === section} toolbarTarget={headingActions} />
+              {id === 'assets'
+                ? <Panel active={visible && id === section} toolbarTarget={headingActions}
+                    onExportingChange={onAssetExportingChange} />
+                : <Panel active={visible && id === section} toolbarTarget={headingActions} />}
             </Suspense>
           </div>
         ))}

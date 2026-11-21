@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Filter, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
+import { toast } from './toast-card'
 import { Button } from './ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
@@ -17,7 +18,11 @@ const modes: Record<AssetMode, string> = {
   all: '全部资源', new: '新增资源', modified: '已修改资源', unpatched: '排除已被覆盖的资源'
 }
 
-export default function WorkbenchAssets({ active, toolbarTarget }: { active: boolean; toolbarTarget: HTMLElement | null }) {
+export default function WorkbenchAssets({ active, toolbarTarget, onExportingChange }: {
+  active: boolean
+  toolbarTarget: HTMLElement | null
+  onExportingChange: (exporting: boolean) => void
+}) {
   const [state, setState] = useState<AssetState>({ count: 0, archives: [], snapshots: [] })
   const [search, setSearch] = useState('')
   const [archive, setArchive] = useState('')
@@ -29,7 +34,6 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
   })
   const [selection, setSelection] = useState<{ entry: AssetEntry; mode: AssetPreviewMode }>()
   const [busy, setBusy] = useState<'index' | 'snapshot' | 'export'>()
-  const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
   const archiveLabel = archive ? archive.split('/').pop() : state.count ? '全部包体' : '选择包体'
   const archiveGroups = useMemo(() => {
@@ -55,18 +59,22 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
       setArchive(previous => value.archives.includes(previous) ? previous : '')
       setSnapshot(previous => value.snapshots.includes(previous) ? previous : '')
       if (!value.count) setSelection(undefined)
-    }).catch(error => { if (current) setMessage({ text: String(error), error: true }) })
+    }).catch(error => {
+      if (current) toast.error('读取资源状态失败', { description: error instanceof Error ? error.message : String(error) })
+    })
     return () => { current = false }
   }, [active])
 
   async function run(operation: NonNullable<typeof busy>, work: () => Promise<void>) {
     setBusy(operation)
-    setMessage(undefined)
+    if (operation === 'export') onExportingChange(true)
     try {
       await work()
     } catch (error) {
-      setMessage({ text: String(error), error: true })
+      const title = operation === 'index' ? '加载资源失败' : operation === 'snapshot' ? '导出索引快照失败' : '导出资源失败'
+      toast.error(title, { description: error instanceof Error ? error.message : String(error) })
     } finally {
+      if (operation === 'export') onExportingChange(false)
       setBusy(undefined)
     }
   }
@@ -132,7 +140,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
                   const value = await window.api.workbenchAssetSnapshot()
                   setState(value)
                   setSnapshot(value.snapshots[0])
-                  setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
+                  toast.success('已导出索引快照，可在对比加载时选择')
                 })}>导出索引快照</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -166,11 +174,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
 
   return <>
     {toolbar}
-    <fieldset disabled={!!busy} className="workbench-assets">
-      {(busy === 'snapshot' || busy === 'export' || message) && <p role={message?.error ? 'alert' : 'status'}
-        className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>
-        {busy === 'snapshot' ? '正在导出索引快照……' : busy === 'export' ? '正在导出资源……' : message?.text}
-      </p>}
+    <fieldset disabled={!!busy} aria-busy={!!busy} className="workbench-assets">
       <div className="workbench-assets-browser">
         <section className="workbench-assets-tree workbench-panel" aria-label="文件">
           <div className="group/file-tree relative min-h-0 flex-1">
@@ -179,9 +183,17 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
                 query={query} onPreview={(entry, mode) => setSelection({ entry, mode })}
                 onExport={request => run('export', async () => {
                   const result = await window.api.workbenchAssetExport(request)
-                  const failures = result.failures.length ? '，失败 ' + result.failures.length + ' 项。' : '。'
-                  setMessage({ text: '已导出 ' + result.exported + ' 项' + failures + ' ' + result.directory +
-                    (result.failures.length ? ' 首项失败：' + result.failures[0] : ''), error: !!result.failures.length })
+                  const title = `已导出 ${result.exported} 项`
+                  if (!result.failures.length) {
+                    toast.success(title, { description: result.directory })
+                  } else {
+                    const failure = `首项失败：${result.failures[0]}`
+                    if (result.exported) {
+                      toast.warning(`${title}，失败 ${result.failures.length} 项`, { description: `${result.directory}\n${failure}` })
+                    } else {
+                      toast.error(`导出失败，共 ${result.failures.length} 项`, { description: failure })
+                    }
+                  }
                 })} />
                 : <div className="workbench-assets-empty">
                   <FolderOpen size={24} aria-hidden="true" />

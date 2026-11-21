@@ -134,6 +134,7 @@ export default function App() {
   const [currentCategory, setCurrentCategory] = useState<string>(ALL_CATEGORY)
   const [view, setView] = useState<AppView>('mods')
   const [openedWorkbench, setOpenedWorkbench] = useState(false)
+  const [exportingAssets, setExportingAssets] = useState(false)
   const [mountedCommunityViews] = useState<Set<'gamebanana' | 'ayakamods'>>(
     () => new Set(['gamebanana', 'ayakamods'])
   )
@@ -1106,7 +1107,7 @@ export default function App() {
         <AppHeader
           view={view}
           busy={busy}
-          activity={activity}
+          activity={exportingAssets ? '正在导出资源……' : busy ? activity : ''}
           hasGamePath={Boolean(config.gameDirectory)}
           isFullScreen={isFullScreen}
           onNavigate={requestView}
@@ -1114,7 +1115,7 @@ export default function App() {
           onImport={handleImportAction}
           onPackageMod={handlePackageModAction}
         />
-        {openedWorkbench && <Workbench visible={view === 'workbench'} />}
+        {openedWorkbench && <Workbench visible={view === 'workbench'} onAssetExportingChange={setExportingAssets} />}
         {view === 'mods' ? (
           <div className="mod-workspace">
             <Sidebar

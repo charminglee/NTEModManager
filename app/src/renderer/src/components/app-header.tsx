@@ -130,7 +130,7 @@ export default function AppHeader({
           <span className="launch-text">启动游戏</span>
         </button>
       </div>
-      {busy && (
+      {(busy || activity) && (
         <div className="operation-progress" role="status">
           <LoaderCircle className="animate-spin" size={15} />
           <span>{activity || '操作进行中，请稍候…'}</span>
