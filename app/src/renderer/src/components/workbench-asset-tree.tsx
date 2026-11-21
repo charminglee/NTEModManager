@@ -32,6 +32,12 @@ const folderActions: [AssetExportKind, string, LucideIcon][] = [
 const rowClass = 'h-7 w-full justify-start gap-1.5 border-0 px-2 text-left text-xs font-normal'
 const modelIconScale = 'scale-125'
 
+const folderIconMarks = new Map([
+  ['blueprints', 'm9.5 10-3 3.5 3 3.5m5-7 3 3.5-3 3.5'],
+  ['characters', 'M14 11a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM8 17a4 4 0 0 1 8 0'],
+  ['ui', 'M7 9.5h10v8H7zM7 12.5h10m-6 0v5']
+])
+
 const blueprintIconColors = new Map([
   ['animblueprint', 'text-orange-700'],
   ['widgetblueprint', 'text-rose-700']
@@ -96,6 +102,8 @@ function fileIcon(name: string, assetClass?: string) {
 function AssetFolder({ path, expand, ...props }: BranchProps & { path: string; expand: boolean }) {
   const [open, setOpen] = useState(expand)
   const name = path.slice(path.lastIndexOf('/') + 1)
+  const mark = folderIconMarks.get(name.toLowerCase())
+  const Icon = open && !mark ? FolderOpen : Folder
 
   return <li>
     <Button type="button" variant="ghost" className={rowClass} aria-expanded={open}
@@ -103,7 +111,9 @@ function AssetFolder({ path, expand, ...props }: BranchProps & { path: string; e
       onContextMenu={event => props.onMenu({ folder: path }, event)}
       onKeyDown={event => props.onMenu({ folder: path }, event)}>
       <ChevronRight aria-hidden="true" className={open ? 'rotate-90' : undefined} />
-      {open ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
+      <Icon aria-hidden="true">
+        {mark && <path key="category" d={mark} strokeWidth={1.7} />}
+      </Icon>
       <span>{name}</span>
     </Button>
     {open && <AssetBranch {...props} directory={path} />}
