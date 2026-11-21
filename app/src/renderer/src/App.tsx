@@ -33,7 +33,6 @@ import BatchActionBar from '@/components/batch-action-bar'
 import LogView from '@/components/log-view'
 import FpsCounter from '@/components/fps-counter'
 import PromptDialog from '@/components/prompt-dialog'
-import ImportDialog from '@/components/import-dialog'
 import SettingsView from '@/components/settings-view'
 import Workbench from '@/components/workbench'
 import GameBananaPage from '@/components/gamebanana-page'
@@ -148,7 +147,6 @@ export default function App() {
   const [focusedName, setFocusedName] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [activity, setActivity] = useState('')
-  const [importArchives, setImportArchives] = useState<string[] | null>(null)
   const [categoryImages, setCategoryImages] = useState<Map<string, string | null>>(new Map())
   const [prompt, setPrompt] = useState<{
     title: string
@@ -460,11 +458,9 @@ export default function App() {
   const handleImportArchives = useCallback(
     async (archivePaths: string[]) => {
       if (!archivePaths.length || busyRef.current) return
-      setImportArchives(archivePaths)
       const results = await withBusy(`正在导入 ${archivePaths.length} 个压缩包…`, () =>
         window.api.importArchives(archivePaths)
       )
-      setImportArchives(null)
       if (results) {
         const imported: RenameQueueItem[] = []
         for (const { archive, result, importedName, archiveId } of results) {
@@ -868,17 +864,15 @@ export default function App() {
   useEffect(() => {
     modalOpenRef.current =
       view === 'settings' || view === 'workbench' ||
-      importArchives !== null ||
       prompt !== null ||
       pendingConfirm !== null ||
       renameQueue.length > 0
-  }, [view, importArchives, prompt, pendingConfirm, renameQueue])
+  }, [view, prompt, pendingConfirm, renameQueue])
 
   const ayakaPageVisible =
     view === 'ayakamods' &&
     !chromeHidden &&
     currentRename === null &&
-    importArchives === null &&
     prompt === null &&
     pendingConfirm === null
 
@@ -1313,11 +1307,6 @@ export default function App() {
           onDoubleClick={() => setChromeHidden(false)}
         />
       )}
-      <ImportDialog
-        archives={importArchives}
-        activity={activity}
-        onHide={() => setImportArchives(null)}
-      />
       {/* 通用输入对话框(重命名/打包命名) */}
       <PromptDialog
         open={prompt !== null}

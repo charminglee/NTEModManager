@@ -483,34 +483,6 @@ input[type='checkbox'] {
   background: #24231f;
 }
 .dialog-footer-note { margin-right: auto; align-self: center; color: hsl(var(--muted-foreground)); font-size: 12px; }
-.dialog-panel .import-result-list {
-  border-color: #59544c;
-  background: #1f1e1b;
-}
-.dialog-panel .import-result-row {
-  border-color: #3c3933;
-}
-.dialog-panel .import-result-row > svg {
-  color: #d6a084;
-}
-.dialog-panel .import-result-row strong {
-  color: #f1e0c8;
-}
-.dialog-panel .import-result-row p {
-  color: #bfb5a6;
-}
-.dialog-panel .import-result-row .is-installed {
-  color: #9fc4a6;
-}
-.dialog-panel .import-result-row .is-invalid {
-  color: #f0ad62;
-}
-.dialog-panel .import-progress-track {
-  background: #514b42;
-}
-.dialog-panel .import-progress-track > span {
-  background: #ce725a;
-}
 @media (max-width: 640px) {
   .dialog-panel {
     max-height: calc(100dvh - 24px);
@@ -1949,72 +1921,12 @@ select {
   font-size: 13px;
   margin: 0;
 }
-.import-result-list {
-  max-height: 50vh;
-  overflow-y: auto;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-lg);
-}
-.import-result-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  border-bottom: 1px solid var(--rule);
-}
-.import-result-row:last-child {
-  border-bottom: 0;
-}
-.import-result-row > div {
-  flex: 1;
-  min-width: 0;
-}
-.import-result-row strong {
-  display: block;
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.import-result-row p {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 7px 0 0;
-  font-size: 11px;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-.import-result-row p svg {
-  flex-shrink: 0;
-}
-.gamebanana-progress-track,
-.import-progress-track {
+.gamebanana-progress-track {
   overflow: hidden;
   border-radius: var(--radius-sm);
 }
-.gamebanana-progress-track > span,
-.import-progress-track > span {
+.gamebanana-progress-track > span {
   border-radius: inherit;
-}
-.import-progress-track {
-  height: 4px;
-  background: var(--rule);
-}
-.import-progress-track > span {
-  display: block;
-  width: 40%;
-  height: 100%;
-  background: var(--vermilion);
-  animation: import-progress 1s ease-in-out infinite alternate;
-}
-@keyframes import-progress {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(250%);
-  }
 }
 .app-background {
   position: fixed;

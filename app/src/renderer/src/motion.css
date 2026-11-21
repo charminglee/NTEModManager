@@ -33,8 +33,7 @@
 }
 .library-empty,
 .log-empty,
-.operation-progress,
-.import-result-row {
+.operation-progress {
   animation: motion-content-in var(--motion-normal) var(--motion-out);
 }
 .settings-content > *,
