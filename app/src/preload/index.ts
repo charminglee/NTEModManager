@@ -56,6 +56,8 @@ const api = {
 
   importArchives: (archivePaths: string[]): Promise<ImportResult[]> =>
     ipcRenderer.invoke('mods:import', archivePaths),
+  finishImportedArchive: (archiveId: string, deleteArchive: boolean): Promise<OperationResult> =>
+    ipcRenderer.invoke('mods:finishImportedArchive', archiveId, deleteArchive),
   installMod: (name: string): Promise<OperationResult> => ipcRenderer.invoke('mods:install', name),
   setSubModEnabled: (name: string, childName: string, enabled: boolean): Promise<OperationResult> =>
     ipcRenderer.invoke('mods:setSubModEnabled', name, childName, enabled),

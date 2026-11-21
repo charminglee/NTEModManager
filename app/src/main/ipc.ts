@@ -3,7 +3,8 @@ import { registerWorkbenchAssets } from './workbench-assets'
 import { registerWorkbenchProjects } from './workbench-projects'
 import { registerWorkbenchSpine } from './workbench-spine'
 import { loadGameSpine } from './workbench-game-spine'
-import { existsSync, statSync } from 'node:fs'
+import { existsSync, lstatSync, statSync, type Stats } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
 import { changeInstallationForAll, installModExclusively, runBatchModAction } from './operations'
@@ -368,21 +369,63 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
     return { success: true, message: '已打开网页' }
   })
 
-  ipcMain.handle('mods:import', (_event, archivePaths: string[]) =>
+  const importedArchives = new WeakMap<Electron.WebContents, Map<string, { path: string; original: Stats }>>()
+
+  ipcMain.handle('mods:import', ({ sender }, archivePaths: string[]) =>
     runExclusive(`导入 ${archivePaths.length} 个压缩包`, async (report): Promise<ImportResult[]> => {
+      let archives = importedArchives.get(sender)
+      if (!archives) {
+        archives = new Map()
+        importedArchives.set(sender, archives)
+      }
       const results: ImportResult[] = []
       for (const archivePath of archivePaths) {
         report(`正在导入 ${basenameOf(archivePath)}...`)
-        const result = await repository.importArchive(archivePath, appDir())
+        const original = lstatSync(archivePath, { throwIfNoEntry: false })
+        const result = await repository.importArchive(archivePath, appDir(), { keepArchive: true })
+        const importedName = result.success ? parseImportedName(result.message) : undefined
+        const archiveId = importedName && original?.isFile() ? randomUUID() : undefined
+        if (archiveId && original) {
+          archives.set(archiveId, { path: archivePath, original })
+        }
         results.push({
           archive: archivePath,
           result,
-          importedName: result.success ? parseImportedName(result.message) : undefined
+          importedName,
+          archiveId
         })
       }
       return results
     })
   )
+
+  ipcMain.handle('mods:finishImportedArchive', ({ sender }, archiveId: string, deleteArchive: boolean) => {
+    const archives = importedArchives.get(sender)
+    const archive = archives?.get(archiveId)
+    if (!archive) return failure('找不到本次导入的原压缩包。')
+    archives?.delete(archiveId)
+    if (deleteArchive !== true) return { success: true, message: '' }
+
+    const name = basenameOf(archive.path)
+    return runExclusive(`删除原压缩包 ${name}`, async () => {
+      const current = lstatSync(archive.path, { throwIfNoEntry: false })
+      const { original } = archive
+      if (
+        !current?.isFile() ||
+        current.dev !== original.dev ||
+        current.ino !== original.ino ||
+        current.size !== original.size ||
+        current.mtimeMs !== original.mtimeMs ||
+        current.ctimeMs !== original.ctimeMs
+      ) {
+        const message = `原压缩包已移动或变更：${name}`
+        logger.error(message)
+        return failure(message)
+      }
+      await shell.trashItem(archive.path)
+      return { success: true, message: `已将原压缩包移到回收站：${name}` }
+    })
+  })
 
   ipcMain.handle('mods:install', (_event, name: string) =>
     runExclusive(`安装 ${name}`, async (report) => {

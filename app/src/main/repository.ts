@@ -661,11 +661,19 @@ export async function exportArchive(mod: ModInfo, archivePath: string, appDir: s
   return finalize('导出模组', success(`已导出 ${mod.name}：${archivePath}`))
 }
 
-export async function importArchive(archivePath: string, appDir: string): Promise<OperationResult> {
-  return finalize('导入压缩包', await importArchiveImpl(archivePath, appDir))
+export async function importArchive(
+  archivePath: string,
+  appDir: string,
+  options?: { keepArchive: boolean }
+): Promise<OperationResult> {
+  return finalize('导入压缩包', await importArchiveImpl(archivePath, appDir, options))
 }
 
-async function importArchiveImpl(archivePath: string, appDir: string): Promise<OperationResult> {
+async function importArchiveImpl(
+  archivePath: string,
+  appDir: string,
+  options?: { keepArchive: boolean }
+): Promise<OperationResult> {
   if (!isFile(archivePath)) {
     return failure(`找不到压缩包：${archivePath}`)
   }
@@ -698,10 +706,12 @@ async function importArchiveImpl(archivePath: string, appDir: string): Promise<O
   if (!stateSaved.success) {
     return failure(`模组已导入，但状态记录失败：${stateSaved.message}`)
   }
-  try {
-    rmSync(archivePath, { force: true })
-  } catch {
-    return failure(`模组已导入，但无法永久删除原压缩包：${basename(archivePath)}`)
+  if (!options?.keepArchive) {
+    try {
+      rmSync(archivePath, { force: true })
+    } catch {
+      return failure(`模组已导入，但无法永久删除原压缩包：${basename(archivePath)}`)
+    }
   }
   return success(`已导入 ${modName}`)
 }

@@ -11,11 +11,12 @@ interface PromptDialogProps {
   resetKey?: string
   confirmText?: string
   confirmDisabled?: boolean
-  installOption?: {
+  switchOptions?: {
     label: string
     checked: boolean
     onCheckedChange: (checked: boolean) => void
-  }
+    disabled?: boolean
+  }[]
   onConfirm: (value: string) => void
   onCancel: () => void
 }
@@ -29,7 +30,7 @@ export default function PromptDialog({
   resetKey,
   confirmText = '确定',
   confirmDisabled,
-  installOption,
+  switchOptions,
   onConfirm,
   onCancel
 }: PromptDialogProps) {
@@ -86,16 +87,17 @@ export default function PromptDialog({
           }}
         />
       </div>
-      {installOption && (
-        <div className="prompt-switch-row">
-          <strong>{installOption.label}</strong>
+      {switchOptions?.map(({ label, checked, onCheckedChange, disabled }) => (
+        <div className="prompt-switch-row" key={label}>
+          <strong>{label}</strong>
           <Switch
-            checked={installOption.checked}
-            onCheckedChange={installOption.onCheckedChange}
-            aria-label={installOption.label}
+            checked={checked}
+            onCheckedChange={onCheckedChange}
+            disabled={disabled}
+            aria-label={label}
           />
         </div>
-      )}
+      ))}
     </AppDialog>
   )
 }

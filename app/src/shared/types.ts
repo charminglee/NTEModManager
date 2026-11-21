@@ -57,6 +57,8 @@ export interface ImportResult {
   result: OperationResult
   /** 导入成功后的模组名称(用于导入后重命名提示) */
   importedName?: string
+  /** 本次导入的原压缩包操作凭据。 */
+  archiveId?: string
 }
 
 /** 模组列表批量操作类型(mods:batch) */

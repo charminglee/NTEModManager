@@ -663,6 +663,10 @@ const api: Api = {
     return archivePaths.map((archive) => ({ archive, result: unavailable('导入压缩包') }))
   },
 
+  async finishImportedArchive(_archiveId, deleteArchive) {
+    return deleteArchive ? unavailable('删除压缩包') : { success: true, message: '' }
+  },
+
   async installMod(name) {
     const mod = findMod(name)
     if (!mod) return { success: false, message: `未找到模组 ${name}` }

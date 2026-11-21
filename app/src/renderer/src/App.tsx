@@ -123,6 +123,7 @@ function pendingConfirmCopy(confirm: NonNullable<PendingConfirm>): PendingConfir
 interface RenameQueueItem {
   modName: string
   defaultName: string
+  archiveId?: string
 }
 
 const EMPTY_MODS: ModInfo[] = []
@@ -159,6 +160,7 @@ export default function App() {
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null)
   const [renameQueue, setRenameQueue] = useState<RenameQueueItem[]>([])
   const [installAfterImport, setInstallAfterImport] = useState(false)
+  const [deleteArchiveAfterImport, setDeleteArchiveAfterImport] = useState(true)
 
   const toggleChromeVisibility = useCallback(() => {
     setChromeHidden((value) => !value)
@@ -465,11 +467,15 @@ export default function App() {
       setImportArchives(null)
       if (results) {
         const imported: RenameQueueItem[] = []
-        for (const { archive, result, importedName } of results) {
+        for (const { archive, result, importedName, archiveId } of results) {
           if (!result.success) {
             toast.error(`导入失败：${archive.split(/[\\/]/).pop()}`, { description: result.message })
           } else if (importedName) {
-            imported.push({ modName: importedName, defaultName: basenameWithoutExtension(archive) })
+            imported.push({
+              modName: importedName,
+              defaultName: basenameWithoutExtension(archive),
+              archiveId
+            })
           }
         }
         setRenameQueue((previous) => [...previous, ...imported])
@@ -825,21 +831,33 @@ export default function App() {
   const dismissImportRename = () => {
     setRenameQueue((previous) => previous.slice(1))
     setInstallAfterImport(false)
+    setDeleteArchiveAfterImport(true)
   }
   const confirmImportRename = async (newName: string) => {
     if (!currentRename || busyRef.current) return
-    const { modName } = currentRename
+    const { archiveId, modName } = currentRename
     const targetName = newName || modName
     dismissImportRename()
 
+    let completed = true
     if (targetName !== modName) {
       const renamed = await runOperation(`正在重命名 ${modName}…`, () =>
         window.api.renameMod(modName, targetName)
       )
-      if (!renamed?.success) return
+      completed = renamed?.success === true
     }
-    if (installAfterImport) {
-      await runOperation(`正在安装 ${targetName}…`, () => window.api.installMod(targetName))
+    if (completed && installAfterImport) {
+      const installed = await runOperation(`正在安装 ${targetName}…`, () =>
+        window.api.installMod(targetName)
+      )
+      completed = installed?.success === true
+    }
+    if (archiveId) {
+      if (completed && deleteArchiveAfterImport) {
+        await runOperation('正在删除原压缩包…', () => window.api.finishImportedArchive(archiveId, true))
+      } else {
+        await window.api.finishImportedArchive(archiveId, false)
+      }
     }
     if (targetName !== modName || installAfterImport) {
       await refreshMods()
@@ -1318,12 +1336,25 @@ export default function App() {
         initialValue={currentRename?.defaultName ?? ''}
         resetKey={currentRename?.modName}
         confirmDisabled={busy}
-        installOption={{
-          label: '完成后安装',
-          checked: installAfterImport,
-          onCheckedChange: setInstallAfterImport
+        switchOptions={[
+          {
+            label: '完成后安装',
+            checked: installAfterImport,
+            onCheckedChange: setInstallAfterImport
+          },
+          {
+            label: '删除压缩包',
+            checked: deleteArchiveAfterImport,
+            onCheckedChange: setDeleteArchiveAfterImport,
+            disabled: !currentRename?.archiveId
+          }
+        ]}
+        onCancel={() => {
+          dismissImportRename()
+          if (currentRename?.archiveId) {
+            void window.api.finishImportedArchive(currentRename.archiveId, false)
+          }
         }}
-        onCancel={dismissImportRename}
         onConfirm={(newName) => void confirmImportRename(newName)}
       />
 
