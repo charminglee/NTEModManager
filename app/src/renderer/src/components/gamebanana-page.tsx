@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download, LoaderCircle, RefreshCw, Search, TriangleAlert } from 'lucide-react'
+import gamebananaWordmark from '@/assets/gamebanana-wordmark.png'
 import type {
   AppConfigData,
   GameBananaDownloadTask,
@@ -185,7 +186,9 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
       <div className="gamebanana-main-column">
         <header className="workspace-page-heading gamebanana-heading">
           <div>
-            <h1>GameBanana</h1>
+            <h1>
+              <img src={gamebananaWordmark} alt="GameBanana" width={318} height={32} />
+            </h1>
             <p>浏览 Neverness To Everness 社区模组。</p>
           </div>
           <div className="gamebanana-heading-actions">
