@@ -84,8 +84,8 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
 
   const toolbar = active && toolbarTarget && createPortal(
     <fieldset disabled={!!busy} className="workbench-assets-toolbar" aria-label="原生资源操作">
-      <div className="workbench-assets-search-group flex min-w-0 items-center gap-2">
-        <label className="library-search workbench-assets-search">
+      <div className="flex min-w-0 max-w-full items-center gap-2">
+        <label className="library-search workspace-search workbench-assets-search">
           <Search size={17} aria-hidden="true" />
           <Input type="search" placeholder="搜索资源" aria-label="搜索资源" value={search}
             onChange={event => {

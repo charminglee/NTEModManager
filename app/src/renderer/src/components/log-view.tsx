@@ -63,7 +63,7 @@ function LogView() {
       <header className="workspace-page-heading">
         <h1>运行日志</h1>
         <div className="logs-toolbar">
-          <label className="library-search">
+          <label className="library-search workspace-search">
             <Search size={17} />
             <Input
               aria-label="查找日志"

@@ -191,7 +191,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
             <p>浏览 Neverness To Everness 社区模组。</p>
           </div>
           <div className="gamebanana-heading-actions">
-            <div className="library-search gamebanana-search">
+            <div className="library-search workspace-search">
               <Search size={17} />
               <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索模组或作者" />
             </div>
