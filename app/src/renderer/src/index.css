@@ -384,6 +384,7 @@ input[type='checkbox'] {
   font-size: clamp(31px, 3vw, 48px);
   font-weight: 950;
   letter-spacing: -1.5px;
+  line-height: 32px;
 }
 .eyebrow {
   display: block;
