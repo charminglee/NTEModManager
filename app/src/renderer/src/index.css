@@ -1631,6 +1631,17 @@ select {
   min-height: 0;
   overflow: hidden;
 }
+.workbench-assets-tree-scroll {
+  scrollbar-width: auto;
+}
+.workbench-assets-tree-scroll::-webkit-scrollbar:horizontal {
+  display: block;
+  height: 6px;
+}
+.workbench-assets-tree-scroll::-webkit-scrollbar-thumb:horizontal {
+  border-radius: 999px;
+  background: hsl(var(--muted-foreground) / 40%);
+}
 .workbench-assets-empty {
   display: flex;
   flex: 1;

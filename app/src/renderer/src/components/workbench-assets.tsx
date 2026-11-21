@@ -174,7 +174,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
       <div className="workbench-assets-browser">
         <section className="workbench-assets-tree workbench-panel" aria-label="文件">
           <div className="group/file-tree relative min-h-0 flex-1">
-            <div className="absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
+            <div className="workbench-assets-tree-scroll absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
               {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive, onlyHtContent])}
                 query={query} onPreview={(entry, mode) => setSelection({ entry, mode })}
                 onExport={request => run('export', async () => {

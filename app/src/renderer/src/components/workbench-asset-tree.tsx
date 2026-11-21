@@ -104,7 +104,7 @@ function AssetFolder({ path, expand, ...props }: BranchProps & { path: string; e
       onKeyDown={event => props.onMenu({ folder: path }, event)}>
       <ChevronRight aria-hidden="true" className={open ? 'rotate-90' : undefined} />
       {open ? <FolderOpen aria-hidden="true" /> : <Folder aria-hidden="true" />}
-      <span className="truncate">{name}</span>
+      <span>{name}</span>
     </Button>
     {open && <AssetBranch {...props} directory={path} />}
   </li>
@@ -133,7 +133,7 @@ function AssetBranch({ query, directory = '', ...props }: BranchProps) {
   }, [query, directory])
 
   return <div aria-busy={directory ? undefined : loading}>
-    {result && result.count > 0 && <ul className={directory ? 'ml-3 border-l border-border pl-1' : 'p-1'}>
+    {result && result.count > 0 && <ul className={directory ? 'ml-3 border-l border-border pl-1' : 'w-max min-w-full p-1'}>
       {result.folders.map(path => <AssetFolder key={JSON.stringify([path, expandFolders])} path={path} expand={expandFolders}
         query={query} {...props} />)}
       {result.rows.map(row => {
@@ -162,7 +162,7 @@ function AssetBranch({ query, directory = '', ...props }: BranchProps) {
               props.onMenu({ entry: row }, event)
             }}>
             <Icon aria-hidden="true" className={Icon === PersonStanding ? modelIconScale : blueprintColor} />
-            <span className="truncate">{name}</span>
+            <span>{name}</span>
           </Button>
         </li>
       })}
