@@ -17,6 +17,15 @@ function WorkbenchTexturePreview({ src, name }: { src: string; name: string }) {
     let zoom = 1
     let x = 0
     let y = 0
+    let drag: { id: number; x: number; y: number } | undefined
+
+    function updateTransform() {
+      const limitX = Math.abs(viewport.clientWidth - image.offsetWidth * zoom) / 2
+      const limitY = Math.abs(viewport.clientHeight - image.offsetHeight * zoom) / 2
+      x = Math.max(-limitX, Math.min(limitX, x))
+      y = Math.max(-limitY, Math.min(limitY, y))
+      image.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`
+    }
 
     function onWheel(event: WheelEvent) {
       if (!image.naturalWidth || !event.deltaY) return
@@ -30,23 +39,51 @@ function WorkbenchTexturePreview({ src, name }: { src: string; name: string }) {
       } else {
         const bounds = image.getBoundingClientRect()
         const ratio = nextZoom / zoom
-        const limitX = Math.abs(viewport.clientWidth - bounds.width * ratio) / 2
-        const limitY = Math.abs(viewport.clientHeight - bounds.height * ratio) / 2
         x += (event.clientX - bounds.left - bounds.width / 2) * (1 - ratio)
         y += (event.clientY - bounds.top - bounds.height / 2) * (1 - ratio)
-        x = Math.max(-limitX, Math.min(limitX, x))
-        y = Math.max(-limitY, Math.min(limitY, y))
       }
       zoom = nextZoom
-      image.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`
+      updateTransform()
+    }
+
+    function onPointerDown(event: PointerEvent) {
+      if (event.pointerType !== 'mouse' || event.button !== 0 || !image.naturalWidth) return
+      event.preventDefault()
+      viewport.setPointerCapture(event.pointerId)
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY }
+    }
+
+    function onPointerMove(event: PointerEvent) {
+      if (drag?.id !== event.pointerId) return
+      if (!(event.buttons & 1)) {
+        viewport.releasePointerCapture(event.pointerId)
+        return
+      }
+      x += event.clientX - drag.x
+      y += event.clientY - drag.y
+      drag.x = event.clientX
+      drag.y = event.clientY
+      updateTransform()
+    }
+
+    function onLostPointerCapture(event: PointerEvent) {
+      if (drag?.id === event.pointerId) drag = undefined
     }
 
     viewport.addEventListener('wheel', onWheel, { passive: false })
-    return () => viewport.removeEventListener('wheel', onWheel)
+    viewport.addEventListener('pointerdown', onPointerDown)
+    viewport.addEventListener('pointermove', onPointerMove)
+    viewport.addEventListener('lostpointercapture', onLostPointerCapture)
+    return () => {
+      viewport.removeEventListener('wheel', onWheel)
+      viewport.removeEventListener('pointerdown', onPointerDown)
+      viewport.removeEventListener('pointermove', onPointerMove)
+      viewport.removeEventListener('lostpointercapture', onLostPointerCapture)
+    }
   }, [])
 
   return <div ref={viewportRef} className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4">
-    <img ref={imageRef} className="max-h-full max-w-full object-contain" src={src} alt={name} />
+    <img ref={imageRef} draggable={false} className="max-h-full max-w-full object-contain" src={src} alt={name} />
   </div>
 }
 
