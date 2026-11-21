@@ -114,11 +114,9 @@ button {
 button:disabled {
   cursor: default;
 }
-button:focus-visible,
-a:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--vermilion);
-  outline-offset: 3px;
+:focus,
+:root .cm-editor.cm-focused {
+  outline: none;
 }
 input[type='checkbox'] {
   width: 16px;
@@ -254,9 +252,6 @@ input[type='checkbox'] {
 .window-controls button.window-close:hover {
   background: var(--vermilion);
   color: #fff;
-}
-.window-controls button:focus-visible {
-  outline-offset: -3px;
 }
 .window-controls button:disabled {
   opacity: 0.45;
@@ -487,10 +482,6 @@ input[type='checkbox'] {
   background: #24231f;
 }
 .dialog-footer-note { margin-right: auto; align-self: center; color: hsl(var(--muted-foreground)); font-size: 12px; }
-.dialog-panel :is(button, select):focus-visible {
-  outline: 2px solid #e5b091;
-  outline-offset: 3px;
-}
 .dialog-panel .import-result-list {
   border-color: #59544c;
   background: #1f1e1b;
@@ -741,7 +732,6 @@ input[type='checkbox'] {
 .gamebanana-lightbox-actions { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 0 20px 18px; border-top: 0; background: transparent; }
 .gamebanana-lightbox-actions span { color: #c1ad8f; font-size: 12px; }
 .gamebanana-lightbox-actions button { color: #ede1d0; background: transparent; border-color: #8a765b; }
-.gamebanana-detail-dialog button:focus-visible, .gamebanana-lightbox button:focus-visible { outline: 2px solid #e5b091; outline-offset: 3px; }
 @media (max-width: 720px) {
   .gamebanana-detail-dialog.dialog-panel { max-width: calc(100vw - 32px); height: calc(100dvh - 32px); }
   .gamebanana-detail-dialog-header { column-gap: 8px; padding: 20px 18px 18px; }
@@ -1294,8 +1284,7 @@ select {
   opacity: 0;
 }
 .has-batch-actions .mod-checkbox input,
-.mod-row:hover .mod-checkbox input,
-.mod-checkbox input:focus-visible {
+.mod-row:hover .mod-checkbox input {
   opacity: 1;
 }
 .mod-row-body {
@@ -1503,10 +1492,6 @@ select {
 .bundle-panel .bundle-rename-button svg {
   width: 14px;
   height: 14px;
-}
-.bundle-panel button:focus-visible {
-  outline: 2px solid var(--paper);
-  outline-offset: 4px;
 }
 .detail-file-panel,
 .detail-metadata {
@@ -1791,17 +1776,10 @@ select {
   overflow: hidden;
   background: var(--cream);
 }
-.settings-ini-editor:focus-within {
-  outline: 2px solid hsl(var(--ring));
-  outline-offset: 1px;
-}
 .settings-ini-editor .cm-editor {
   height: clamp(220px, 48vh, 460px);
   font-size: 13px;
   line-height: 1.65;
-}
-.settings-ini-editor .cm-focused {
-  outline: none;
 }
 .settings-ini-editor .cm-scroller {
   scrollbar-width: thin;

@@ -37,7 +37,6 @@ const searchPhrases = EditorState.phrases.of({
 
 const previewTheme = EditorView.theme({
   '&': { height: '100%' },
-  '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { scrollbarWidth: 'thin' },
   '.cm-content': { paddingBlock: '12px' },
   '.cm-line': { paddingInline: '16px' },
@@ -61,8 +60,7 @@ const previewTheme = EditorView.theme({
     fontSize: 'inherit',
     backgroundColor: 'hsl(var(--card))',
     border: '1px solid hsl(var(--border))'
-  },
-  '.cm-panel.cm-search :is(input, button):focus-visible': { outline: '2px solid hsl(var(--ring))', outlineOffset: '1px' }
+  }
 })
 
 export default function WorkbenchJsonPreview({ value, code = false }: { value: string; code?: boolean }) {

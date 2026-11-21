@@ -15,7 +15,6 @@
 }
 
 .app-collapsible > summary::-webkit-details-marker { display: none; }
-.app-collapsible > summary:focus-visible { outline: 2px solid #e5b091; outline-offset: 3px; }
 
 .app-collapsible-heading,
 .app-collapsible-label,

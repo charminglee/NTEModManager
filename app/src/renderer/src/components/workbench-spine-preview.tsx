@@ -202,7 +202,6 @@ export default function SpinePreview({
             checked={!textures || overlay}
             disabled={!textures}
             onCheckedChange={setOverlay}
-            className="focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
         </label>
       </footer>

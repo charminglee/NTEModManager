@@ -26,7 +26,7 @@ const folderActions: [AssetExportKind, string][] = [
   ['animation', '导出所有动画'], ['audio', '导出所有音效']
 ]
 
-const rowClass = 'h-7 w-full justify-start gap-1.5 border-0 px-2 text-left text-xs font-normal focus-visible:outline-offset-[-2px]'
+const rowClass = 'h-7 w-full justify-start gap-1.5 border-0 px-2 text-left text-xs font-normal'
 
 const iconClasses: [LucideIcon, string[]][] = [
   [Image, [
