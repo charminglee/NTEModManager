@@ -1,6 +1,7 @@
 import type { workbenchAssetsApi } from '../../../preload/workbench-assets'
 import { assetExportKind, type AssetEntry, type AssetPreview } from '../../../shared/workbench-assets'
 import { assetResults, effectiveAssets, matchingAssets } from '../../../shared/workbench-assets-filter'
+import triangleModel from '../assets/SM_Triangle.uemodel?url&inline'
 
 const base = 'Paks/pakchunk0-Windows.utoc'
 const patch = 'PatchPaks/pakchunk0-Windows_0_P.utoc'
@@ -90,7 +91,9 @@ export const workbenchAssetsMock = {
         failures.push(entry.path + '：原始包导出需使用桌面版。')
         continue
       }
-      const file = await sample(entry, format)
+      const file = format === 'model'
+        ? { name: 'SM_Triangle.uemodel', bytes: await (await fetch(triangleModel)).arrayBuffer() }
+        : await sample(entry, format)
       const url = URL.createObjectURL(new Blob([file.bytes]))
       const link = document.createElement('a')
       link.href = url
