@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import {
-  AudioLines, Blocks, Bone, Braces, ChevronRight, Clapperboard, File, FileText, Film, Folder, FolderOpen,
+  AudioLines, Blocks, Bone, Braces, ChevronRight, Clapperboard, Download, File, FileText, Film, Folder, FolderOpen,
   Image, Map as MapIcon, Package, Palette, PanelsTopLeft, PersonStanding, Shapes, Sparkles, Table2, Type, Workflow, type LucideIcon
 } from 'lucide-react'
 import { Button } from './ui/button'
@@ -21,12 +21,16 @@ type BranchProps = {
 
 type MenuTarget = { folder: string } | { entry: AssetEntry }
 const assetKey = ({ path, archive }: AssetReference) => JSON.stringify([path, archive])
-const folderActions: [AssetExportKind, string][] = [
-  ['texture', '导出所有纹理'], ['model', '导出所有模型'], ['blueprint', '导出所有反编译蓝图'],
-  ['animation', '导出所有动画'], ['audio', '导出所有音效']
+const folderActions: [AssetExportKind, string, LucideIcon][] = [
+  ['texture', '导出所有纹理', Image],
+  ['model', '导出所有模型', PersonStanding],
+  ['blueprint', '导出所有反编译蓝图', Workflow],
+  ['animation', '导出所有动画', Clapperboard],
+  ['audio', '导出所有音效', AudioLines]
 ]
 
 const rowClass = 'h-7 w-full justify-start gap-1.5 border-0 px-2 text-left text-xs font-normal'
+const modelIconScale = 'scale-125'
 
 const iconClasses: [LucideIcon, string[]][] = [
   [Image, [
@@ -141,7 +145,7 @@ function AssetBranch({ query, directory = '', ...props }: BranchProps) {
               }
               props.onMenu({ entry: row }, event)
             }}>
-            <Icon aria-hidden="true" className={Icon === PersonStanding ? 'scale-125' : undefined} />
+            <Icon aria-hidden="true" className={Icon === PersonStanding ? modelIconScale : undefined} />
             <span className="truncate">{name}</span>
           </Button>
         </li>
@@ -202,19 +206,29 @@ export default function WorkbenchAssetTree({ query, onPreview, onExport }: Pick<
       }} />
     {target && menu.position && <ContextMenu label={'folder' in target ? '文件夹操作' : '资源操作'}
       position={menu.position} onClose={menu.close}>
-      {'folder' in target ? folderActions.map(([kind, label]) => (
+      {'folder' in target ? folderActions.map(([kind, label, Icon]) => (
         <DropdownMenuItem key={kind} onSelect={() => onExport({
           folder: { ...query, directory: target.folder, search: '' }, kind
-        })}>{label}</DropdownMenuItem>
+        })}>
+          <Icon aria-hidden="true" className={Icon === PersonStanding ? modelIconScale : undefined} />
+          {label}
+        </DropdownMenuItem>
       )) : <>
-        <DropdownMenuItem onSelect={() => onPreview(target.entry, 'json')}>查看元数据</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onPreview(target.entry, 'json')}>
+          <FileText aria-hidden="true" />
+          查看元数据
+        </DropdownMenuItem>
         {isBlueprintClass(target.entry.assetClass) && <DropdownMenuItem onSelect={() => onPreview(target.entry, 'blueprint')}>
+          <Workflow aria-hidden="true" />
           反编译蓝图
         </DropdownMenuItem>}
         <DropdownMenuItem onSelect={() => onExport({ entries: [...selected].map(key => {
           const [path, archive] = JSON.parse(key) as [string, string]
           return { path, archive }
-        }) })}>{multiExport ? `导出所选资源（${selected.size}）` : '导出'}</DropdownMenuItem>
+        }) })}>
+          <Download aria-hidden="true" />
+          {multiExport ? `导出所选资源（${selected.size}）` : '导出'}
+        </DropdownMenuItem>
       </>}
     </ContextMenu>}
   </div>
