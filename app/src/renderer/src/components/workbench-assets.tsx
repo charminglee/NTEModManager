@@ -1,13 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Filter, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
+import { ChevronDown, Filter, FolderOpen, LoaderCircle, PackageOpen } from 'lucide-react'
 import { toast } from './toast-card'
 import { Button } from './ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
   DropdownMenuItem, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from './ui/dropdown-menu'
-import { Input } from './ui/input'
+import { SearchBox } from './ui/search-box'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from './ui/select'
 import WorkbenchSelect from './workbench-select'
 import WorkbenchAssetTree from './workbench-asset-tree'
@@ -92,14 +92,11 @@ export default function WorkbenchAssets({ active, toolbarTarget, onExportingChan
   const toolbar = active && toolbarTarget && createPortal(
     <fieldset disabled={!!busy} className="workbench-assets-toolbar" aria-label="原生资源操作">
       <div className="flex min-w-0 max-w-full items-center gap-2">
-        <label className="library-search workspace-search workbench-assets-search">
-          <Search size={17} aria-hidden="true" />
-          <Input type="search" placeholder="搜索资源" aria-label="搜索资源" value={search}
-            onChange={event => {
-              setSearch(event.target.value)
-              setSelection(undefined)
-            }} />
-        </label>
+        <SearchBox layout="toolbar" type="search" placeholder="搜索资源" value={search}
+          onValueChange={value => {
+            setSearch(value)
+            setSelection(undefined)
+          }} />
         <Select value={archive} disabled={!!busy || !state.archives.length} onValueChange={nextArchive => {
           if (!state.count) return loadResources(loaded.mode, loaded.snapshot, nextArchive)
           setArchive(nextArchive)

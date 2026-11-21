@@ -1141,27 +1141,6 @@ input[type='checkbox'] {
   gap: 8px;
   align-items: center;
 }
-.library-search {
-  display: flex;
-  align-items: center;
-  position: relative;
-  flex: 1;
-  min-width: 80px;
-}
-.library-search.workspace-search {
-  flex: 0 0 auto;
-  width: min(360px, 32vw);
-  max-width: 100%;
-}
-.library-search > svg {
-  position: absolute;
-  left: 10px;
-  z-index: 1;
-  pointer-events: none;
-}
-.library-search input {
-  padding-left: 34px;
-}
 select {
   border: 1px solid var(--ink);
   background: var(--cream);
@@ -1610,9 +1589,6 @@ select {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  min-width: 0;
-}
-.workbench-assets-search {
   min-width: 0;
 }
 .workbench-assets-browser {
@@ -2128,11 +2104,6 @@ select {
   .gamebanana-heading-actions {
     width: 100%;
   }
-  .gamebanana-heading-actions .workspace-search {
-    width: auto;
-    max-width: none;
-    flex: 1;
-  }
   .gamebanana-mod-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
@@ -2196,9 +2167,6 @@ select {
   }
   .library-search-row {
     flex-wrap: wrap;
-  }
-  .library-search {
-    flex-basis: 100%;
   }
   .library-filter-row {
     align-items: flex-start;

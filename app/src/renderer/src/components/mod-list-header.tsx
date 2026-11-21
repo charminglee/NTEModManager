@@ -1,7 +1,7 @@
 import { memo } from 'react'
-import { RefreshCw, Search } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { SearchBox } from '@/components/ui/search-box'
 export type StatusFilter = 'all' | 'installed' | 'uninstalled' | 'invalid'
 interface Props {
   category: string
@@ -30,15 +30,12 @@ function ModListHeader(p: Props) {
         </div>
       </div>
       <div className="library-search-row">
-        <label className="library-search">
-          <Search size={17} />
-          <Input
-            value={p.search}
-            aria-label="搜索模组"
-            placeholder="搜索当前分类的模组"
-            onChange={(e) => p.onSearchChange(e.target.value)}
-          />
-        </label>
+        <SearchBox
+          value={p.search}
+          aria-label="搜索模组"
+          placeholder="搜索当前分类的模组"
+          onValueChange={p.onSearchChange}
+        />
         <Button variant="default" onClick={p.onInstallAll} disabled={p.busy}>
           全部安装
         </Button>

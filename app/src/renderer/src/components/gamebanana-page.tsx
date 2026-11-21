@@ -7,7 +7,7 @@ import type {
   GameBananaMod
 } from '@shared/types'
 import { Button } from './ui/button'
-import { Input } from './ui/input'
+import { SearchBox } from './ui/search-box'
 import PromptDialog from './prompt-dialog'
 import GameBananaCard from './gamebanana-card'
 import GameBananaDownloadDrawer from './gamebanana-download-drawer'
@@ -189,10 +189,7 @@ export default function GameBananaPage({ active, visible, config, onConfigChange
             <p>浏览 Neverness To Everness 社区模组。</p>
           </div>
           <div className="gamebanana-heading-actions">
-            <div className="library-search workspace-search">
-              <Search size={17} />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索模组或作者" />
-            </div>
+            <SearchBox layout="responsive-toolbar" value={search} onValueChange={setSearch} placeholder="搜索模组或作者" />
             <Button
               variant="secondary"
               size="icon"

@@ -184,8 +184,7 @@
 .app-shell select,
 .dialog-panel input,
 .dialog-panel select,
-.overlay-panel input,
-.library-search {
+.overlay-panel input {
   transition: border-color var(--motion-fast) ease-out,
     background-color var(--motion-fast) ease-out,
     box-shadow var(--motion-fast) ease-out;

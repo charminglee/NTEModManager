@@ -1,8 +1,8 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, RefreshCw, Search } from 'lucide-react'
+import { ArrowDown, RefreshCw } from 'lucide-react'
 import type { LogEntry } from '@shared/types'
 import { Button } from './ui/button'
-import { Input } from './ui/input'
+import { SearchBox } from './ui/search-box'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 const labels: Record<LogEntry['level'], string> = {
   debug: 'DEBUG',
@@ -63,15 +63,7 @@ function LogView() {
       <header className="workspace-page-heading">
         <h1>运行日志</h1>
         <div className="logs-toolbar">
-          <label className="library-search workspace-search">
-            <Search size={17} />
-            <Input
-              aria-label="查找日志"
-              placeholder="查找日志"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
+          <SearchBox layout="toolbar" placeholder="查找日志" value={query} onValueChange={setQuery} />
           <Select value={level} onValueChange={setLevel}>
             <SelectTrigger aria-label="日志级别">
               <SelectValue />

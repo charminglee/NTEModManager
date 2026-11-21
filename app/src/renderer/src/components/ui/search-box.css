@@ -1,0 +1,54 @@
+.search-box {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.search-box > svg {
+  position: absolute;
+  inset-inline-start: 10px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.search-box > input {
+  padding-inline-start: 34px;
+}
+
+.search-box--fill {
+  flex: 1;
+  min-width: 80px;
+}
+
+.search-box--toolbar,
+.search-box--responsive-toolbar {
+  flex: 0 0 auto;
+  width: min(360px, 32vw);
+}
+
+.search-box--responsive-toolbar {
+  min-width: 80px;
+}
+
+.search-box--compact {
+  flex: 1 1 10rem;
+}
+
+.search-box--compact > input {
+  height: 28px;
+  font-size: inherit;
+}
+
+@media (max-width: 760px) {
+  .search-box--fill {
+    flex-basis: 100%;
+  }
+
+  .search-box--responsive-toolbar {
+    flex: 1;
+    width: auto;
+    max-width: none;
+  }
+}

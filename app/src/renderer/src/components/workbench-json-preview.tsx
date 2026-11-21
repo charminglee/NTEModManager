@@ -8,11 +8,12 @@ import { EditorState } from '@codemirror/state'
 import { drawSelection, EditorView, keymap, runScopeHandlers } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 import { CaseSensitive, ChevronDown, ChevronUp, Regex, WholeWord, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './ui/button'
+import { SearchBox } from './ui/search-box'
 
-type PreviewSearch = { controls: HTMLDivElement; view: EditorView; query: SearchQuery }
+type PreviewSearch = { dom: HTMLDivElement; view: EditorView; query: SearchQuery }
 
 const searchOptions = [
   ['caseSensitive', '区分大小写', CaseSensitive],
@@ -84,27 +85,22 @@ const previewTheme = EditorView.theme({
     color: 'hsl(var(--card-foreground))',
     borderBottom: '1px solid var(--rule)'
   },
-  '.cm-panel.cm-search': {
+  '.cm-panel.workbench-find-panel': {
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: '6px 8px',
     padding: '8px 12px'
-  },
-  '.cm-panel.cm-search :is(input, button)': { margin: '0' },
-  '.cm-panel.cm-search .cm-textfield': {
-    flex: '1 1 10rem',
-    minWidth: '0',
-    height: '28px',
-    fontSize: 'inherit',
-    backgroundColor: 'hsl(var(--card))',
-    border: '1px solid hsl(var(--border))'
   }
 })
 
 export default function WorkbenchJsonPreview({ value, code = false }: { value: string; code?: boolean }) {
   const container = useRef<HTMLDivElement>(null)
   const [searchPanel, setSearchPanel] = useState<PreviewSearch>()
+  const focusSearchInput = useCallback((input: HTMLInputElement | null) => {
+    input?.focus()
+    input?.select()
+  }, [])
 
   useEffect(() => {
     const editor = new EditorView({
@@ -123,45 +119,29 @@ export default function WorkbenchJsonPreview({ value, code = false }: { value: s
         drawSelection(),
         search({
           createPanel(view) {
-            const document = view.dom.ownerDocument
-            const dom = document.createElement('div')
-            const input = document.createElement('input')
-            const controls = document.createElement('div')
+            const dom = view.dom.ownerDocument.createElement('div')
             let query = getSearchQuery(view.state)
-            dom.className = 'cm-search'
-            input.className = 'cm-textfield'
-            input.placeholder = view.state.phrase('Find')
-            input.setAttribute('aria-label', input.placeholder)
-            input.setAttribute('main-field', 'true')
-            input.value = query.search
-            controls.className = 'flex shrink-0 items-center gap-1'
-            input.addEventListener('input', () => {
-              view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ ...query, search: input.value })) })
-            })
+            dom.className = 'workbench-find-panel'
             dom.addEventListener('keydown', event => {
               if (runScopeHandlers(view, event, 'search-panel')) {
                 event.preventDefault()
-              } else if (event.key === 'Enter' && event.target === input && !event.isComposing) {
+              } else if (event.key === 'Enter' && !event.isComposing && event.target === dom.querySelector('[main-field]')) {
                 event.preventDefault()
                 const find = event.shiftKey ? findPrevious : findNext
                 find(view)
               }
             })
-            dom.append(input, controls)
             return {
               dom,
               top: true,
               mount() {
-                input.focus()
-                input.select()
-                setSearchPanel({ controls, view, query })
+                setSearchPanel({ dom, view, query })
               },
               update({ state }) {
                 const next = getSearchQuery(state)
                 if (next.eq(query)) return
                 query = next
-                if (input.value !== query.search) input.value = query.search
-                setSearchPanel({ controls, view, query })
+                setSearchPanel({ dom, view, query })
               },
               destroy() { setSearchPanel(undefined) }
             }
@@ -176,21 +156,35 @@ export default function WorkbenchJsonPreview({ value, code = false }: { value: s
 
   return <div className="min-h-0 min-w-0 flex-1 bg-muted/30 text-xs select-text" ref={container}>
     {searchPanel && createPortal(<>
-      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="下一处"
-        onClick={() => findNext(searchPanel.view)}><ChevronDown aria-hidden="true" /></Button>
-      <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="上一处"
-        onClick={() => findPrevious(searchPanel.view)}><ChevronUp aria-hidden="true" /></Button>
-      {searchOptions.map(([option, label, Icon]) => (
-        <Button key={option} type="button" variant="secondary" size="icon"
-          className="size-7 aria-pressed:border-primary aria-pressed:bg-accent aria-pressed:text-accent-foreground"
-          aria-label={label} aria-pressed={searchPanel.query[option]} onClick={() => {
-            const { view } = searchPanel
-            const query = getSearchQuery(view.state)
-            view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ ...query, [option]: !query[option] })) })
-          }}><Icon aria-hidden="true" /></Button>
-      ))}
-      <Button type="button" variant="ghost" size="icon" className="size-7" aria-label="关闭查找"
-        onClick={() => closeSearchPanel(searchPanel.view)}><X aria-hidden="true" /></Button>
-    </>, searchPanel.controls)}
+      <SearchBox
+        ref={focusSearchInput}
+        layout="compact"
+        main-field="true"
+        placeholder={searchPanel.view.state.phrase('Find')}
+        value={searchPanel.query.search}
+        onValueChange={value => {
+          const { view } = searchPanel
+          const query = getSearchQuery(view.state)
+          view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ ...query, search: value })) })
+        }}
+      />
+      <div className="flex shrink-0 items-center gap-1">
+        <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="下一处"
+          onClick={() => findNext(searchPanel.view)}><ChevronDown aria-hidden="true" /></Button>
+        <Button type="button" variant="secondary" size="icon" className="size-7" aria-label="上一处"
+          onClick={() => findPrevious(searchPanel.view)}><ChevronUp aria-hidden="true" /></Button>
+        {searchOptions.map(([option, label, Icon]) => (
+          <Button key={option} type="button" variant="secondary" size="icon"
+            className="size-7 aria-pressed:border-primary aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+            aria-label={label} aria-pressed={searchPanel.query[option]} onClick={() => {
+              const { view } = searchPanel
+              const query = getSearchQuery(view.state)
+              view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ ...query, [option]: !query[option] })) })
+            }}><Icon aria-hidden="true" /></Button>
+        ))}
+        <Button type="button" variant="ghost" size="icon" className="size-7" aria-label="关闭查找"
+          onClick={() => closeSearchPanel(searchPanel.view)}><X aria-hidden="true" /></Button>
+      </div>
+    </>, searchPanel.dom)}
   </div>
 }
