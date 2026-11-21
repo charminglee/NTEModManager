@@ -17,6 +17,25 @@
   padding-inline-start: 34px;
 }
 
+.search-box > input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-box:has(> .search-box-clear) > input {
+  padding-inline-end: 34px;
+}
+
+.search-box-clear {
+  position: absolute;
+  inset-inline-end: 4px;
+  border: 0;
+}
+
+.search-box-clear:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+}
+
 .search-box--fill {
   flex: 1;
   min-width: 80px;
