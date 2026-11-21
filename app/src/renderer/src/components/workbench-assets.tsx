@@ -200,7 +200,7 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
               entry={selection.entry} mode={selection.mode} />
               : <div className="workbench-assets-empty">
                 <PackageOpen size={24} aria-hidden="true" />
-                <p>双击文件以查看预览。</p>
+                <p>单击文件以查看预览。</p>
               </div>}
           </div>
         </section>

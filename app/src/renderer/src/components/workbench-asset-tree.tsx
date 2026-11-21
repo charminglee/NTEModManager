@@ -128,8 +128,10 @@ function AssetBranch({ query, directory = '', ...props }: BranchProps) {
           <Button type="button" variant="ghost"
             data-asset-key={key} aria-pressed={props.selected.has(key)}
             className={`${rowClass} pl-7 aria-pressed:bg-accent aria-pressed:text-accent-foreground`}
-            onClick={event => props.onSelect(row, event)}
-            onDoubleClick={event => { if (!event.ctrlKey && !event.shiftKey) props.onPreview(row, 'auto') }}
+            onClick={event => {
+              props.onSelect(row, event)
+              if (!event.ctrlKey && !event.shiftKey) props.onPreview(row, 'auto')
+            }}
             onContextMenu={event => props.onMenu({ entry: row }, event)}
             onKeyDown={event => {
               if (event.key === 'Enter' && !event.repeat) {
