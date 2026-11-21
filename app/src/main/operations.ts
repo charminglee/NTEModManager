@@ -5,7 +5,7 @@ import * as repository from './repository'
 import { getAppConfig } from './config'
 import { logger } from './logger'
 
-export type ProgressReporter = (message: string) => void
+export type ProgressReporter = (message: string, percent?: number) => void
 
 /**
  * 同一角色下同一二级名称分组只能安装一个模组,
@@ -19,8 +19,13 @@ export async function installModExclusively(
 ): Promise<OperationResult> {
   const categoryName = categoryForMod(mod, categories)
   const secondaryName = secondaryNameForMod(mod, categories)
+  const install = () => {
+    const message = `正在安装 ${mod.name}…`
+    reportProgress(message)
+    return repository.install(mod, (percent) => reportProgress(message, percent))
+  }
   if (secondaryName.length === 0 || exemptGroups.includes(secondaryName)) {
-    return repository.install(mod)
+    return install()
   }
 
   const installedMods = await repository.scan()
@@ -34,7 +39,7 @@ export async function installModExclusively(
       continue
     }
 
-    reportProgress(`正在卸载同组模组 ${installedMod.name}...`)
+    reportProgress(`正在卸载同组模组 ${installedMod.name}…`)
     logger.info(
       `独占安装：自动卸载同组模组 ${installedMod.name}（与 ${mod.name} 同属「${secondaryName}」组）`
     )
@@ -48,8 +53,7 @@ export async function installModExclusively(
     }
   }
 
-  reportProgress(`正在安装 ${mod.name}...`)
-  return repository.install(mod)
+  return install()
 }
 
 export interface BulkResult {
@@ -74,12 +78,12 @@ export async function changeInstallationForAll(
 
   const failures: string[] = []
   let changedCount = 0
-  let index = 0
-  for (const mod of pending) {
-    index += 1
-    reportProgress(`正在${action} ${mod.name}(${index}/${pending.length})...`)
+  for (const [index, mod] of pending.entries()) {
+    const report: ProgressReporter = (message, percent = 0) =>
+      reportProgress(message, Math.floor((index * 100 + percent) / pending.length))
+    report(`正在${action} ${mod.name}（${index + 1}／${pending.length}）…`)
     const result = install
-      ? await installModExclusively(mod, categories, exemptGroups, reportProgress)
+      ? await installModExclusively(mod, categories, exemptGroups, report)
       : await repository.uninstall(mod)
     if (result.success) {
       changedCount += 1
@@ -130,7 +134,9 @@ export async function runBatchModAction(
       failures.push(`${name}:找不到模组`)
       continue
     }
-    reportProgress(`正在${label} ${name}(${index + 1}/${names.length})...`)
+    const report: ProgressReporter = (message, percent = 0) =>
+      reportProgress(message, Math.floor((index * 100 + percent) / names.length))
+    report(`正在${label} ${name}（${index + 1}／${names.length}）…`)
     let result: OperationResult
     switch (action) {
       case 'install':
@@ -138,7 +144,7 @@ export async function runBatchModAction(
           mod,
           config.categories,
           config.exclusiveInstallExemptGroups,
-          reportProgress
+          report
         )
         break
       case 'uninstall':
@@ -150,7 +156,7 @@ export async function runBatchModAction(
       case 'markInvalid': {
         // 与单模组标记失效一致:已安装的先卸载再标记
         if (mod.installed) {
-          reportProgress(`正在卸载失效模组 ${name}...`)
+          report(`正在卸载失效模组 ${name}…`)
           const uninstalled = await repository.uninstall(mod)
           if (!uninstalled.success) {
             result = uninstalled
@@ -169,9 +175,13 @@ export async function runBatchModAction(
           failures.push(`${name}:未安装,无法重新安装`)
           continue
         }
-        reportProgress(`正在卸载 ${name}...`)
+        report(`正在卸载 ${name}…`)
         const uninstalled = await repository.uninstall(mod)
-        result = uninstalled.success ? await repository.install(mod) : uninstalled
+        result = uninstalled
+        if (uninstalled.success) {
+          const message = `正在安装 ${name}…`
+          result = await repository.install(mod, (percent) => report(message, percent))
+        }
         break
       }
       case 'repackage':

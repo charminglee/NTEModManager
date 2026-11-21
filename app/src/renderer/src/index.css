@@ -954,6 +954,47 @@ input[type='checkbox'] {
   color: var(--cream);
   box-shadow: 0 2px 0 #20201e;
 }
+.operation-progress > svg {
+  flex-shrink: 0;
+}
+.operation-progress-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.operation-progress-value {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  font-variant-numeric: tabular-nums;
+}
+.operation-progress-track {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  overflow: hidden;
+  background: color-mix(in srgb, currentColor 26%, transparent);
+}
+.operation-progress-fill {
+  height: 100%;
+  background: currentColor;
+  transition: width 140ms linear;
+}
+.operation-progress-fill.is-indeterminate {
+  width: 28%;
+  animation: operation-progress-sweep 1.4s ease-in-out infinite;
+}
+@keyframes operation-progress-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(358%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .operation-progress-fill,
+  .operation-progress-fill.is-indeterminate {
+    animation: none;
+    transition: none;
+  }
+}
 .mod-workspace {
   display: flex;
   flex: 1;

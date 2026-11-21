@@ -19,6 +19,7 @@ import type {
   ImportResult,
   LogEntry,
   ModInfo,
+  OperationProgress,
   OperationResult,
   YoudaoCredentialsInput,
   YoudaoCredentialsStatus,
@@ -138,8 +139,8 @@ const api = {
   /** 拖放的 File 对象转本地路径(Electron ≥ 32 移除了 File.path)。 */
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
 
-  onProgress: (callback: (message: string) => void): (() => void) => {
-    const listener = (_event: unknown, message: string) => callback(message)
+  onProgress: (callback: (progress: OperationProgress) => void): (() => void) => {
+    const listener = (_event: unknown, progress: OperationProgress) => callback(progress)
     ipcRenderer.on('op:progress', listener)
     return () => ipcRenderer.removeListener('op:progress', listener)
   },

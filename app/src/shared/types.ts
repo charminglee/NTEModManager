@@ -62,6 +62,11 @@ export interface ImportResult {
 }
 
 /** 模组列表批量操作类型(mods:batch) */
+export interface OperationProgress {
+  message: string
+  percent?: number
+}
+
 export type BatchModAction =
   | 'install'
   | 'uninstall'

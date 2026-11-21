@@ -170,7 +170,8 @@ async function scanDirectoryEntry(directoryPath: string): Promise<ModFileEntry> 
 async function copyDirectory(
   sourcePath: string,
   targetPath: string,
-  disabledChildren: string[] = []
+  disabledChildren: string[] = [],
+  onFileCopied?: () => void
 ): Promise<OperationResult> {
   if (!isDirectory(sourcePath)) {
     return failure(`模组源文件夹不存在：${sourcePath}`)
@@ -216,6 +217,7 @@ async function copyDirectory(
         } catch {
           return failure(`无法复制文件：${relativePath}`)
         }
+        onFileCopied?.()
       }
     }
     return success()
@@ -967,16 +969,47 @@ async function replaceFromArchiveImpl(mod: ModInfo, archivePath: string, appDir:
   return success(`已更新 ${mod.name} 的源文件`)
 }
 
-export async function install(mod: ModInfo): Promise<OperationResult> {
-  return finalize('安装模组', await installImpl(mod))
+export async function install(
+  mod: ModInfo,
+  onProgress?: (percent: number) => void
+): Promise<OperationResult> {
+  return finalize('安装模组', await installImpl(mod, onProgress))
+}
+
+function countCopyFiles(entries: ModFileEntry[]): number {
+  return entries.reduce((count, entry) => {
+    if (entry.directory) return count + countCopyFiles(entry.children)
+    return count + Number(!IGNORED_COPY_EXTENSIONS.has(extensionOf(entry.name)))
+  }, 0)
 }
 
 /** 所有安装入口共用选择过滤，更新压缩包后也按最新目录重新识别。 */
-async function copySelectedMod(mod: ModInfo, installPath: string): Promise<OperationResult> {
+async function copySelectedMod(
+  mod: ModInfo,
+  installPath: string,
+  onProgress?: (percent: number) => void
+): Promise<OperationResult> {
   const root = await scanDirectoryEntry(mod.sourcePath)
   const children = bundleChildren(root.children, loadManifest().mods[mod.name]?.disabledSubMods)
   const disabled = children.filter((child) => !child.enabled).map((child) => child.name)
-  return copyDirectory(mod.sourcePath, installPath, disabled)
+  if (!onProgress) return copyDirectory(mod.sourcePath, installPath, disabled)
+
+  const total = countCopyFiles(
+    root.children.filter((entry) => !entry.directory || !disabled.includes(entry.name))
+  )
+  if (total === 0) return copyDirectory(mod.sourcePath, installPath, disabled)
+
+  let copied = 0
+  let percent = 0
+  onProgress(percent)
+  return copyDirectory(mod.sourcePath, installPath, disabled, () => {
+    copied += 1
+    const next = Math.min(99, Math.floor(copied * 100 / total))
+    if (next !== percent) {
+      percent = next
+      onProgress(percent)
+    }
+  })
 }
 
 export async function setSubModEnabled(
@@ -1157,7 +1190,10 @@ async function renameSubModImpl(
   return success(`已将子模组 ${childName} 重命名为 ${sanitizedName}`)
 }
 
-async function installImpl(mod: ModInfo): Promise<OperationResult> {
+async function installImpl(
+  mod: ModInfo,
+  onProgress?: (percent: number) => void
+): Promise<OperationResult> {
   if (!isDirectory(mod.sourcePath)) {
     return failure(`模组源文件夹不存在：${mod.name}`)
   }
@@ -1175,7 +1211,7 @@ async function installImpl(mod: ModInfo): Promise<OperationResult> {
     return failure(`安装目录中存在同名文件，已停止以保护该文件：${mod.name}`)
   }
 
-  const copied = await copySelectedMod(mod, installPath)
+  const copied = await copySelectedMod(mod, installPath, onProgress)
   if (!copied.success) {
     return copied
   }
@@ -1183,6 +1219,7 @@ async function installImpl(mod: ModInfo): Promise<OperationResult> {
   if (!recorded.success) {
     return failure(`模组文件已复制，但状态记录失败：${recorded.message}`)
   }
+  onProgress?.(100)
   return success(`已安装 ${mod.name}`)
 }
 

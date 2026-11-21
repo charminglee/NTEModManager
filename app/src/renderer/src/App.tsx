@@ -8,6 +8,7 @@ import {
   type AppConfigData,
   type BatchModAction,
   type ModInfo,
+  type OperationProgress,
   type OperationResult
 } from '@shared/types'
 import {
@@ -146,7 +147,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [focusedName, setFocusedName] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
-  const [activity, setActivity] = useState('')
+  const [activity, setActivity] = useState<OperationProgress | null>(null)
   const [categoryImages, setCategoryImages] = useState<Map<string, string | null>>(new Map())
   const [prompt, setPrompt] = useState<{
     title: string
@@ -197,14 +198,14 @@ export default function App() {
   }, [])
 
   const withBusy = useCallback(
-    async <T,>(_activity: string, operation: () => Promise<T>): Promise<T | null> => {
+    async <T,>(message: string, operation: () => Promise<T>): Promise<T | null> => {
       if (busyRef.current) {
         toast.warning('已有操作正在进行中，请稍候')
         return null
       }
       busyRef.current = true
       setBusy(true)
-      setActivity(_activity)
+      setActivity({ message })
       try {
         return await operation()
       } catch (error) {
@@ -215,7 +216,7 @@ export default function App() {
       } finally {
         busyRef.current = false
         setBusy(false)
-        setActivity('')
+        setActivity(null)
       }
     },
     []
@@ -381,7 +382,12 @@ export default function App() {
   const handleGameBananaModsChanged = useCallback(() => {
     void refreshMods()
   }, [refreshMods])
-  useEffect(() => window.api.onProgress(setActivity), [])
+  useEffect(
+    () => window.api.onProgress((progress) => {
+      if (busyRef.current) setActivity(progress)
+    }),
+    []
+  )
 
   const groupedMods = useMemo(
     () => groupBySecondaryName(visibleMods, categories),
@@ -1111,7 +1117,7 @@ export default function App() {
         <AppHeader
           view={view}
           busy={busy}
-          activity={exportingAssets ? '正在导出资源……' : busy ? activity : ''}
+          activity={exportingAssets ? { message: '正在导出资源……' } : busy ? activity : null}
           hasGamePath={Boolean(config.gameDirectory)}
           isFullScreen={isFullScreen}
           onNavigate={requestView}

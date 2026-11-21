@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import { FileText, LoaderCircle, Package, Play, Settings, Wrench } from 'lucide-react'
+import type { OperationProgress } from '@shared/types'
 import { HeaderModActions } from './header-mod-actions'
 import NavSelectionHighlight from './nav-selection-highlight'
 import gamebananaIcon from '@/assets/gamebanana.png'
@@ -33,7 +34,7 @@ export type AppView = 'mods' | 'workbench' | 'gamebanana' | 'ayakamods' | 'logs'
 interface Props {
   view: AppView
   busy: boolean
-  activity: string
+  activity: OperationProgress | null
   hasGamePath: boolean
   isFullScreen: boolean
   onNavigate: (view: AppView) => void
@@ -52,6 +53,7 @@ export default function AppHeader({
   onImport,
   onPackageMod
 }: Props) {
+  const percent = activity?.percent
   return (
     <header className="app-header">
       {!isFullScreen && (
@@ -131,9 +133,27 @@ export default function AppHeader({
         </button>
       </div>
       {(busy || activity) && (
-        <div className="operation-progress" role="status">
-          <LoaderCircle className="animate-spin" size={15} />
-          <span>{activity || '操作进行中，请稍候…'}</span>
+        <div className="operation-progress">
+          {percent === undefined && (
+            <LoaderCircle className="motion-safe:animate-spin" size={15} aria-hidden />
+          )}
+          <span className="operation-progress-label" role="status">
+            {activity?.message || '操作进行中，请稍候…'}
+          </span>
+          {percent !== undefined && (
+            <span className="operation-progress-value" aria-hidden>{percent}%</span>
+          )}
+          <div
+            className="operation-progress-track"
+            role="progressbar"
+            aria-label="操作进度"
+            aria-valuenow={percent}
+          >
+            <div
+              className={percent === undefined ? 'operation-progress-fill is-indeterminate' : 'operation-progress-fill'}
+              style={percent === undefined ? undefined : { width: `${percent}%` }}
+            />
+          </div>
         </div>
       )}
     </header>

@@ -7,7 +7,7 @@ import { existsSync, lstatSync, statSync, type Stats } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import * as repository from './repository'
-import { changeInstallationForAll, installModExclusively, runBatchModAction } from './operations'
+import { changeInstallationForAll, installModExclusively, runBatchModAction, type ProgressReporter } from './operations'
 import {
   getAppConfig, getLastCategory, readConfigFile, saveConfigFile, setCategoryOrder, setLastCategory, updateAppConfig
 } from './config'
@@ -43,10 +43,8 @@ import {
   getYoudaoCredentialsStatus,
   saveYoudaoCredentials
 } from './youdao-translation'
-import type { ApplicationCacheKind, ApplicationCacheSizes, AppConfigPatch, BatchModAction, GameBananaTranslationRequest, ImportResult, ModInfo, OperationResult, YoudaoCredentialsInput } from '../shared/types'
+import type { ApplicationCacheKind, ApplicationCacheSizes, AppConfigPatch, BatchModAction, GameBananaTranslationRequest, ImportResult, ModInfo, OperationProgress, OperationResult, YoudaoCredentialsInput } from '../shared/types'
 import { cancelDownload, getPendingDownloads, prepareDownload } from './ayakamods'
-
-type ProgressReporter = (message: string) => void
 
 let mainWindowProvider: () => Electron.BrowserWindow | null = () => null
 
@@ -59,10 +57,11 @@ function sendGameBananaDownloadMarks(marks: Record<string, string>): void {
   if (window && !window.isDestroyed()) window.webContents.send('gamebanana:download-marks-changed', marks)
 }
 
-function sendProgress(message: string): void {
+const sendProgress: ProgressReporter = (message, percent) => {
+  const progress: OperationProgress = { message, percent }
   for (const contents of webContents.getAllWebContents()) {
     if (!contents.isDestroyed()) {
-      contents.send('op:progress', message)
+      contents.send('op:progress', progress)
     }
   }
 }
@@ -198,8 +197,10 @@ async function runBatchRepackage(
       failures.push(`${name}:找不到模组`)
       continue
     }
-    report(`正在重新打包 ${name}(${index + 1}/${names.length})...`)
-    const result = await repackageModWithSource(mod, report)
+    const reportCurrent: ProgressReporter = (message) =>
+      report(message, Math.floor(index * 100 / names.length))
+    reportCurrent(`正在重新打包 ${name}（${index + 1}／${names.length}）…`)
+    const result = await repackageModWithSource(mod, reportCurrent)
     if (result.cancelled) {
       logger.info(`批量重新打包中止：已打包 ${changedCount} 个，用户取消了源文件夹选择`)
       return { result: { success: false, message: '', cancelled: true } }
@@ -379,8 +380,11 @@ export function registerIpcHandlers(categoryImageBase: string, appIconPath: stri
         importedArchives.set(sender, archives)
       }
       const results: ImportResult[] = []
-      for (const archivePath of archivePaths) {
-        report(`正在导入 ${basenameOf(archivePath)}...`)
+      for (const [index, archivePath] of archivePaths.entries()) {
+        report(
+          `正在导入 ${basenameOf(archivePath)}…`,
+          archivePaths.length > 1 ? Math.floor(index * 100 / archivePaths.length) : undefined
+        )
         const original = lstatSync(archivePath, { throwIfNoEntry: false })
         const result = await repository.importArchive(archivePath, appDir(), { keepArchive: true })
         const importedName = result.success ? parseImportedName(result.message) : undefined
