@@ -85,7 +85,6 @@ npm run dist       # electron-builder 打包(dist/ 目录,绿色版)
 | `Preferences/mod_category_order` | 分类拖拽排序结果 |
 | `Preferences/auto_use_last_packaging_path` | 重新打包时自动复用上次的源文件夹 |
 | `Preferences/exclusive_install_exempt_groups` | 互斥安装豁免的二级名称分组 |
-| `Preferences/window_size` | 窗口尺寸(关闭时自动保存) |
 | `Debug/test_images` | 背景图改用 `F:/pictures/test`(调试);`npm run dev` 自动开启,`npm run dist` 自动关闭 |
 | `Paths/python_executable` | 视觉识别 Python 解释器;缺省 `python/.venv/Scripts/python.exe`(无 venv 时 `python/python.exe`) |
 | `Paths/visual_region_script` | `visual_region_detector.py` 路径(保持 Python 实现) |
