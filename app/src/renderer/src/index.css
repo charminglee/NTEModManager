@@ -913,6 +913,9 @@ input[type='checkbox'] {
   padding: 12px 0 2px;
   border-top: 1px solid var(--rule);
 }
+.prompt-switch-row + .prompt-switch-row {
+  border-top: 0;
+}
 .prompt-switch-row strong {
   color: var(--dialog-text);
   font-size: 14px;

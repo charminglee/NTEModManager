@@ -184,8 +184,11 @@ export default function AyakaModsPage({ active, visible, config, onConfigChange,
         description={target ? `即将下载 ${target.fileName}，请输入保存到模组库的名称：` : undefined}
         initialValue={target?.fileName.replace(/\.(zip|rar|7z)$/i, '') ?? ''}
         confirmText="开始下载"
-        installAfterDownload={config.gameBananaInstallAfterDownload}
-        onInstallAfterDownloadChange={updateInstallPreference}
+        installOption={{
+          label: '下载完成后安装',
+          checked: config.gameBananaInstallAfterDownload,
+          onCheckedChange: updateInstallPreference
+        }}
         onCancel={() => void cancelDownload()}
         onConfirm={(name) => void startDownload(name)}
       />

@@ -8,9 +8,14 @@ interface PromptDialogProps {
   title: string
   description?: string
   initialValue?: string
+  resetKey?: string
   confirmText?: string
-  installAfterDownload?: boolean
-  onInstallAfterDownloadChange?: (checked: boolean) => void
+  confirmDisabled?: boolean
+  installOption?: {
+    label: string
+    checked: boolean
+    onCheckedChange: (checked: boolean) => void
+  }
   onConfirm: (value: string) => void
   onCancel: () => void
 }
@@ -21,9 +26,10 @@ export default function PromptDialog({
   title,
   description,
   initialValue = '',
+  resetKey,
   confirmText = '确定',
-  installAfterDownload,
-  onInstallAfterDownloadChange,
+  confirmDisabled,
+  installOption,
   onConfirm,
   onCancel
 }: PromptDialogProps) {
@@ -51,10 +57,10 @@ export default function PromptDialog({
         inputRef.current?.select()
       }, 30)
     }
-  }, [open, initialValue])
+  }, [open, initialValue, resetKey])
 
   const submit = () => {
-    onConfirm(value.trim())
+    if (!confirmDisabled) onConfirm(value.trim())
   }
 
   return (
@@ -64,7 +70,7 @@ export default function PromptDialog({
       title={shown.title}
       description={shown.description}
       cancelAction={{ label: '取消' }}
-      confirmAction={{ label: shown.confirmText, onSelect: submit }}
+      confirmAction={{ label: shown.confirmText, disabled: confirmDisabled, onSelect: submit }}
     >
       <div className="grid gap-2">
         <Input
@@ -80,13 +86,13 @@ export default function PromptDialog({
           }}
         />
       </div>
-      {installAfterDownload !== undefined && onInstallAfterDownloadChange && (
+      {installOption && (
         <div className="prompt-switch-row">
-          <strong>下载完成后安装</strong>
+          <strong>{installOption.label}</strong>
           <Switch
-            checked={installAfterDownload}
-            onCheckedChange={onInstallAfterDownloadChange}
-            aria-label="下载完成后安装"
+            checked={installOption.checked}
+            onCheckedChange={installOption.onCheckedChange}
+            aria-label={installOption.label}
           />
         </div>
       )}

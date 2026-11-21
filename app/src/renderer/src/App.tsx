@@ -33,7 +33,7 @@ import BatchActionBar from '@/components/batch-action-bar'
 import LogView from '@/components/log-view'
 import FpsCounter from '@/components/fps-counter'
 import PromptDialog from '@/components/prompt-dialog'
-import ImportDialog, { type ImportSession } from '@/components/import-dialog'
+import ImportDialog from '@/components/import-dialog'
 import SettingsView from '@/components/settings-view'
 import Workbench from '@/components/workbench'
 import GameBananaPage from '@/components/gamebanana-page'
@@ -147,7 +147,7 @@ export default function App() {
   const [focusedName, setFocusedName] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [activity, setActivity] = useState('')
-  const [importSession, setImportSession] = useState<ImportSession | null>(null)
+  const [importArchives, setImportArchives] = useState<string[] | null>(null)
   const [categoryImages, setCategoryImages] = useState<Map<string, string | null>>(new Map())
   const [prompt, setPrompt] = useState<{
     title: string
@@ -158,6 +158,7 @@ export default function App() {
   } | null>(null)
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm>(null)
   const [renameQueue, setRenameQueue] = useState<RenameQueueItem[]>([])
+  const [installAfterImport, setInstallAfterImport] = useState(false)
 
   const toggleChromeVisibility = useCallback(() => {
     setChromeHidden((value) => !value)
@@ -457,60 +458,28 @@ export default function App() {
   const handleImportArchives = useCallback(
     async (archivePaths: string[]) => {
       if (!archivePaths.length || busyRef.current) return
-      setImportSession({ archives: archivePaths, results: [] })
+      setImportArchives(archivePaths)
       const results = await withBusy(`正在导入 ${archivePaths.length} 个压缩包…`, () =>
         window.api.importArchives(archivePaths)
       )
-      const completed =
-        results ??
-        archivePaths.map((archive) => ({
-          archive,
-          result: { success: false, message: '导入操作未完成，请查看运行日志。' }
-        }))
-      setImportSession({ archives: archivePaths, results: completed })
+      setImportArchives(null)
+      if (results) {
+        const imported: RenameQueueItem[] = []
+        for (const { archive, result, importedName } of results) {
+          if (!result.success) {
+            toast.error(`导入失败：${archive.split(/[\\/]/).pop()}`, { description: result.message })
+          } else if (importedName) {
+            imported.push({ modName: importedName, defaultName: basenameWithoutExtension(archive) })
+          }
+        }
+        setRenameQueue((previous) => [...previous, ...imported])
+      }
       void refreshMods().catch((error) =>
         toast.error('刷新模组列表失败', { description: String(error) })
       )
     },
     [withBusy, refreshMods]
   )
-  const closeImport = () => {
-    if (busyRef.current) return
-    setRenameQueue(
-      (importSession?.results ?? []).flatMap((item) =>
-        item.result.success && item.importedName
-          ? [{ modName: item.importedName, defaultName: basenameWithoutExtension(item.archive) }]
-          : []
-      )
-    )
-    setImportSession(null)
-  }
-  const retryImport = async (archive: string) => {
-    if (busyRef.current) return
-    setImportSession((previous) =>
-      previous
-        ? { ...previous, results: previous.results.filter((item) => item.archive !== archive) }
-        : previous
-    )
-    const results = await withBusy('正在重试导入…', () => window.api.importArchives([archive]))
-    setImportSession((previous) =>
-      previous
-        ? {
-            ...previous,
-            results: [
-              ...previous.results,
-              ...(results ?? [
-                { archive, result: { success: false, message: '导入操作未完成，请查看运行日志。' } }
-              ])
-            ]
-          }
-        : previous
-    )
-    void refreshMods().catch((error) =>
-      toast.error('刷新模组列表失败', { description: String(error) })
-    )
-  }
-
   const handleImportClick = useCallback(async () => {
     const archivePath = await window.api.pickArchive()
     if (archivePath) {
@@ -853,22 +822,45 @@ export default function App() {
 
   // ============ 导入后重命名队列 ============
   const currentRename = renameQueue.length > 0 ? renameQueue[0] : null
+  const dismissImportRename = () => {
+    setRenameQueue((previous) => previous.slice(1))
+    setInstallAfterImport(false)
+  }
+  const confirmImportRename = async (newName: string) => {
+    if (!currentRename || busyRef.current) return
+    const { modName } = currentRename
+    const targetName = newName || modName
+    dismissImportRename()
+
+    if (targetName !== modName) {
+      const renamed = await runOperation(`正在重命名 ${modName}…`, () =>
+        window.api.renameMod(modName, targetName)
+      )
+      if (!renamed?.success) return
+    }
+    if (installAfterImport) {
+      await runOperation(`正在安装 ${targetName}…`, () => window.api.installMod(targetName))
+    }
+    if (targetName !== modName || installAfterImport) {
+      await refreshMods()
+    }
+  }
 
   // 多选快捷键让位弹层:任一对话框/确认层打开时不抢 Ctrl+A / Esc
   useEffect(() => {
     modalOpenRef.current =
       view === 'settings' || view === 'workbench' ||
-      importSession !== null ||
+      importArchives !== null ||
       prompt !== null ||
       pendingConfirm !== null ||
       renameQueue.length > 0
-  }, [view, importSession, prompt, pendingConfirm, renameQueue])
+  }, [view, importArchives, prompt, pendingConfirm, renameQueue])
 
   const ayakaPageVisible =
     view === 'ayakamods' &&
     !chromeHidden &&
     currentRename === null &&
-    importSession === null &&
+    importArchives === null &&
     prompt === null &&
     pendingConfirm === null
 
@@ -1304,11 +1296,9 @@ export default function App() {
         />
       )}
       <ImportDialog
-        session={importSession}
-        busy={busy}
+        archives={importArchives}
         activity={activity}
-        onClose={closeImport}
-        onRetry={(path) => void retryImport(path)}
+        onHide={() => setImportArchives(null)}
       />
       {/* 通用输入对话框(重命名/打包命名) */}
       <PromptDialog
@@ -1326,24 +1316,15 @@ export default function App() {
         title="重命名模组"
         description="模组名称需符合「角色名-二级名称」格式才能自动归类到对应分类。"
         initialValue={currentRename?.defaultName ?? ''}
-        onCancel={() => setRenameQueue((prev) => prev.slice(1))}
-        onConfirm={(newName) => {
-          const item = currentRename
-          setRenameQueue((prev) => prev.slice(1))
-          if (!item) {
-            return
-          }
-          if (newName.length === 0 || newName === item.modName) {
-            return
-          }
-          void runOperation(`正在重命名 ${item.modName}...`, () =>
-            window.api.renameMod(item.modName, newName)
-          ).then((result) => {
-            if (result) {
-              void refreshMods()
-            }
-          })
+        resetKey={currentRename?.modName}
+        confirmDisabled={busy}
+        installOption={{
+          label: '完成后安装',
+          checked: installAfterImport,
+          onCheckedChange: setInstallAfterImport
         }}
+        onCancel={dismissImportRename}
+        onConfirm={(newName) => void confirmImportRename(newName)}
       />
 
       {/* 确认对话框 */}
