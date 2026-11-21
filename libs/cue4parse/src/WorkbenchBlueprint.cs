@@ -2,6 +2,7 @@ using System.Text;
 using CUE4Parse.UE4.Assets.Exports;
 using CUE4Parse.UE4.Kismet;
 using CUE4Parse.UE4.Objects.UObject;
+using CUE4Parse.UE4.Objects.UObject.BlueprintDecompiler;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -21,6 +22,26 @@ static class WorkbenchBlueprint
             code.Append("class ").Append(type.Name);
             if (type.SuperStruct.ResolvedObject is { } parent) code.Append(" : ").Append(parent.Name.Text);
             code.AppendLine().AppendLine("{");
+            BlueprintDecompilerUtils.Mappings = type.Owner?.Mappings;
+            var defaults = type.ClassDefaultObject.Load();
+            var renderedFields = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var property in type.Properties.Concat(defaults?.Properties ?? [])
+                         .Concat(defaults?.SerializedSparseClassData?.Properties ?? []))
+            {
+                if (!renderedFields.Add(property.Name.Text)) continue;
+                if (property.Tag is not null && BlueprintDecompilerUtils.GetPropertyTagVariable(property, out var fieldType, out var value))
+                    code.Append("    ").Append(fieldType).Append(' ').Append(property.Name.Text).Append(" = ").Append(value).AppendLine(";");
+                else
+                    code.Append("    ").Append(property.PropertyType).Append(' ').Append(property.Name.Text).AppendLine(";");
+            }
+            foreach (var property in (type.ChildProperties ?? []).OfType<FProperty>())
+            {
+                if (!renderedFields.Add(property.Name.Text)) continue;
+                var (_, fieldType) = BlueprintDecompilerUtils.GetPropertyType(property);
+                code.Append("    ").Append(string.IsNullOrWhiteSpace(fieldType) ? property.GetType().Name : fieldType)
+                    .Append(' ').Append(property.Name.Text).AppendLine(";");
+            }
+
             foreach (var function in exports.OfType<UFunction>().Where(function => function.Outer?.Name.Text == type.Name))
             {
                 code.Append("    function ").Append(function.Name).AppendLine("()");
