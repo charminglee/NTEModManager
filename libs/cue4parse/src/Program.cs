@@ -1,5 +1,6 @@
 using CUE4Parse.UE4.Objects.Engine.Animation;
 using CUE4Parse.UE4.Assets.Exports.GeometryCollection;
+using CUE4Parse.UE4.Assets.Exports.Material;
 using CUE4Parse.UE4.Assets.Exports.Animation;
 using CUE4Parse.UE4.Assets.Exports;
 using CUE4Parse.Compression;
@@ -18,6 +19,7 @@ using CUE4Parse.UE4.Versions;
 using CUE4Parse_Conversion;
 using CUE4Parse_Conversion.Options;
 using CUE4Parse_Conversion.Sounds;
+using CUE4Parse_Conversion.Writers.UEFormat.Enums;
 using Newtonsoft.Json;
 
 try
@@ -168,9 +170,13 @@ try
                 session.Add(obj);
         if (!session.HasQueuedItems) throw new InvalidDataException("资源中没有所选类型的对象。");
         var modelPreview = preview && action == "model";
-        var options = new ExportOptions(meshFormat: action == "animation" ? EMeshFormat.UEFormat : EMeshFormat.Gltf2,
-            exportMorphTargets: !preview,
-            exportMaterials: modelPreview, exportHdrTexturesAsHdr: false);
+        var options = action == "model" && !preview
+            ? new ExportOptions(meshFormat: EMeshFormat.UEFormat, naniteMeshFormat: ENaniteMeshFormat.NaniteOnly,
+                meshQuality: EMeshQuality.Highest, compressionFormat: EFileCompressionFormat.None,
+                exportMaterials: true, exportMorphTargets: true, materialDepth: EMaterialDepth.TopLayerOnly,
+                textureFormat: ETextureFormat.Png, exportHdrTexturesAsHdr: true)
+            : new ExportOptions(meshFormat: action == "animation" ? EMeshFormat.UEFormat : EMeshFormat.Gltf2,
+                exportMorphTargets: !preview, exportMaterials: modelPreview, exportHdrTexturesAsHdr: false);
         var results = await session.RunAsync(outputDirectory, options);
         foreach (var result in results)
             if (!result.Success) throw new InvalidDataException(result.ObjectPath, result.Error);
