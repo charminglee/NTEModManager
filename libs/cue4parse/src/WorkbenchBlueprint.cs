@@ -15,7 +15,7 @@ static class WorkbenchBlueprint
         var classes = exports.Where(IsBlueprint).Cast<UClass>().ToArray();
         if (classes.Length == 0) throw new InvalidDataException("资源中没有已编译的蓝图类。");
 
-        var code = new StringBuilder("// Cooked Blueprint · Kismet 伪代码\n");
+        var code = new StringBuilder();
         var serializer = JsonSerializer.CreateDefault();
         foreach (var type in classes)
         {

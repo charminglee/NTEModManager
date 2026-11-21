@@ -52,7 +52,7 @@ async function sample(entry: AssetEntry, format: AssetPreview['format']) {
     return { name: name + '.glb', bytes }
   }
   if (format === 'blueprint') return {
-    name: name + '.blueprint.txt', bytes: new TextEncoder().encode(`// 浏览器示例\nclass ${name}_C {\n    function ReceiveBeginPlay() {\n        return;\n    }\n}\n`)
+    name: name + '.blueprint.txt', bytes: new TextEncoder().encode(`class ${name}_C {\n    function ReceiveBeginPlay() {\n        return;\n    }\n}\n`)
   }
   if (format !== 'json') throw new Error('此示例没有该格式的数据。')
   return { name: name + '.json', bytes: new TextEncoder().encode(JSON.stringify({ Name: name, Path: entry.path,
