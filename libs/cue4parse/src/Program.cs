@@ -1,14 +1,23 @@
+using CUE4Parse.UE4.Objects.Engine.Animation;
+using CUE4Parse.UE4.Assets.Exports.GeometryCollection;
+using CUE4Parse.UE4.Assets.Exports.Animation;
+using CUE4Parse.UE4.Assets.Exports;
 using CUE4Parse.Compression;
 using CUE4Parse.Encryption.Aes;
 using CUE4Parse.FileProvider;
+using CUE4Parse.FileProvider.Objects;
 using CUE4Parse.MappingsProvider.Usmap;
 using CUE4Parse.UE4.Assets.Exports.Texture;
 using CUE4Parse.UE4.Assets.Exports.SkeletalMesh;
 using CUE4Parse.UE4.Assets.Exports.StaticMesh;
+using CUE4Parse.UE4.Assets.Exports.Sound;
+using CUE4Parse.UE4.Assets.Exports.Sound.Node;
+using CUE4Parse.UE4.Assets.Exports.Wwise;
 using CUE4Parse.UE4.Objects.Core.Misc;
 using CUE4Parse.UE4.Versions;
 using CUE4Parse_Conversion;
 using CUE4Parse_Conversion.Options;
+using CUE4Parse_Conversion.Sounds;
 using Newtonsoft.Json;
 
 try
@@ -58,66 +67,116 @@ try
         return 0;
     }
 
+    provider.MappingsContainer = new FileUsmapTypeMappingsProvider(request.Mapping);
+    provider.ReadScriptData = request.Action == "blueprint" || request.Items?.Any(item => item.Kind is null or "blueprint") == true;
+
     var archive = string.IsNullOrEmpty(request.Archive)
         ? archives.Where(v => v.Files.ContainsKey(request.Path)).OrderByDescending(v => v.ReadOrder)
             .ThenByDescending(v => ArchiveId(v.Path), StringComparer.OrdinalIgnoreCase).FirstOrDefault()
             ?? throw new FileNotFoundException("游戏中未找到资源：" + request.Path)
         : archives.Single(v => ArchiveId(v.Path) == request.Archive);
-    var file = archive.Files[request.Path];
-    string OutputFile(string relative)
+
+    if (request.Action == "export")
     {
-        var root = Path.GetFullPath(request.Output) + Path.DirectorySeparatorChar;
-        var path = Path.GetFullPath(Path.Combine(root, relative));
-        if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("资源路径超出导出目录。");
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        return path;
-    }
-    // 容器内原始数据连同附属数据一并导出。
-    if (request.Action == "raw")
-    {
-        if (file.IsUePackage)
-            foreach (var (path, bytes) in provider.SavePackage(file))
-                File.WriteAllBytes(OutputFile(path), bytes);
-        else File.WriteAllBytes(OutputFile(file.Path), file.Read());
+        var items = request.Items ?? throw new InvalidDataException("资源导出请求为空。");
+        var failures = new List<string>();
+        var exported = 0;
+        foreach (var item in items)
+        {
+            var stage = Path.Combine(request.Output, $".ntemm-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(stage);
+            try
+            {
+                await ConvertAsset(archive.Files[item.Path], item.Kind ?? "export-auto", stage, false);
+                if (!Directory.EnumerateFiles(stage, "*", SearchOption.AllDirectories).Any())
+                    throw new InvalidDataException("解析器未生成文件。");
+                var destination = SafeOutputPath(request.Output, item.Path.TrimStart('/'));
+                Directory.Move(stage, destination);
+                exported++;
+            }
+            catch (Exception error)
+            {
+                failures.Add($"{item.Path}：{error.GetBaseException().Message}");
+            }
+            finally
+            {
+                if (Directory.Exists(stage)) Directory.Delete(stage, true);
+            }
+        }
+        File.WriteAllText(Path.Combine(request.Output, ".ntemm-export.json"), JsonConvert.SerializeObject(new { exported, failures }));
         return 0;
     }
-    if (!file.IsUePackage)
+
+    await ConvertAsset(archive.Files[request.Path], request.Action, request.Output, request.Preview);
+
+    async Task ConvertAsset(GameFile file, string action, string outputDirectory, bool preview)
     {
-        if (request.Action is not ("json" or "auto") || !file.Extension.Equals("json", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("该文件支持原始导出。");
-        File.WriteAllBytes(OutputFile(file.Path), file.Read());
-        return 0;
+        string OutputFile(string path) => SafeOutputPath(outputDirectory, path.TrimStart('/'));
+        if (!file.IsUePackage)
+        {
+            if (action is not ("export-auto" or "audio" or "raw") &&
+                !(action is "json" or "auto" && file.Extension.Equals("json", StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidDataException("该文件支持原始导出。");
+            File.WriteAllBytes(OutputFile(file.Path), file.Read());
+            return;
+        }
+
+        var exports = provider.LoadPackage(file).GetExports().ToArray();
+        if (action is "auto" or "export-auto")
+        {
+            if (!preview && exports.Any(WorkbenchBlueprint.IsBlueprint)) action = "blueprint";
+            else if (exports.Any(obj => obj is USkeletalMesh or UStaticMesh or UGeometryCollection)) action = "model";
+            else if (exports.Any(obj => preview ? obj is UTexture2D : obj is UTexture)) action = "texture";
+            else if (action == "export-auto" && exports.Any(IsAnimation)) action = "animation";
+            else if (action == "export-auto" && exports.Any(IsAudio)) action = "audio";
+            else action = preview ? "json" : "raw";
+        }
+        if (action == "raw")
+        {
+            foreach (var (path, bytes) in provider.SavePackage(file)) File.WriteAllBytes(OutputFile(path), bytes);
+            return;
+        }
+        if (action == "json")
+        {
+            using var output = File.CreateText(OutputFile(Path.ChangeExtension(file.Path, ".json")));
+            JsonSerializer.CreateDefault(new JsonSerializerSettings { Formatting = Formatting.Indented }).Serialize(output, exports);
+            return;
+        }
+        if (action == "blueprint")
+        {
+            var code = WorkbenchBlueprint.Decompile(exports);
+            File.WriteAllText(OutputFile(Path.ChangeExtension(file.Path, ".blueprint.txt")), code);
+            return;
+        }
+        if (action == "audio")
+        {
+            foreach (var obj in exports.Where(IsAudio))
+            {
+                obj.Decode(false, out var format, out var data);
+                if (data is not { Length: > 0 }) continue;
+                if (!System.Text.RegularExpressions.Regex.IsMatch(format, "^[a-zA-Z0-9]+$")) format = "bin";
+                var path = Path.Combine(Path.GetDirectoryName(file.Path)!, Path.ChangeExtension(obj.Name, format.ToLowerInvariant()));
+                File.WriteAllBytes(OutputFile(path), data);
+            }
+            return;
+        }
+        var session = new ExportSession();
+        foreach (var obj in exports)
+            if ((action == "texture" && obj is UTexture) ||
+                (action == "model" && obj is USkeletalMesh or UStaticMesh or UGeometryCollection) ||
+                (action == "animation" && IsAnimation(obj)))
+                session.Add(obj);
+        if (!session.HasQueuedItems) throw new InvalidDataException("资源中没有所选类型的对象。");
+        var modelPreview = preview && action == "model";
+        var options = new ExportOptions(meshFormat: action == "animation" ? EMeshFormat.UEFormat : EMeshFormat.Gltf2,
+            exportMorphTargets: !preview,
+            exportMaterials: modelPreview, exportHdrTexturesAsHdr: false);
+        var results = await session.RunAsync(outputDirectory, options);
+        foreach (var result in results)
+            if (!result.Success) throw new InvalidDataException(result.ObjectPath, result.Error);
+        if (modelPreview)
+            WorkbenchModelPreview.CorrectEmissive(exports, results.SelectMany(result => result.DiskFilePaths!));
     }
-    provider.MappingsContainer = new FileUsmapTypeMappingsProvider(request.Mapping);
-    var exports = provider.LoadPackage(file).GetExports().ToArray();
-    var action = request.Action;
-    if (action == "auto")
-    {
-        action = "json";
-        if (exports.Any(obj => obj is USkeletalMesh or UStaticMesh)) action = "model";
-        else if (exports.Any(obj => obj is UTexture2D)) action = "texture";
-    }
-    if (action == "json")
-    {
-        using var output = File.CreateText(OutputFile(Path.ChangeExtension(file.Path, ".json")));
-        JsonSerializer.CreateDefault(new JsonSerializerSettings { Formatting = Formatting.Indented }).Serialize(output, exports);
-        return 0;
-    }
-    var session = new ExportSession();
-    foreach (var obj in exports)
-        if ((action == "texture" && obj is UTexture2D) ||
-            (action == "model" && obj is USkeletalMesh or UStaticMesh))
-            session.Add(obj);
-    if (!session.HasQueuedItems) throw new InvalidDataException("资源中没有所选类型的对象。");
-    var modelPreview = request.Preview && action == "model";
-    var options = new ExportOptions(meshFormat: EMeshFormat.Gltf2, exportMorphTargets: !request.Preview,
-        exportMaterials: modelPreview, exportHdrTexturesAsHdr: false);
-    var results = await session.RunAsync(request.Output, options);
-    foreach (var result in results)
-        if (!result.Success) throw new InvalidDataException(result.ObjectPath, result.Error);
-    if (modelPreview)
-        WorkbenchModelPreview.CorrectEmissive(exports, results.SelectMany(result => result.DiskFilePaths!));
     return 0;
 }
 catch (Exception error)
@@ -126,4 +185,18 @@ catch (Exception error)
     return 1;
 }
 
-record Request(string Action, string Paks, string Key, string Oodle, string Mapping, string Output, string Archive, string Path, bool Preview);
+static bool IsAnimation(UObject obj) => obj is UAnimationAsset or UPoseAsset;
+static bool IsAudio(UObject obj) => obj is USoundWave or USoundNodeWave or UAkMediaAssetData;
+
+static string SafeOutputPath(string directory, string relative)
+{
+    var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) + Path.DirectorySeparatorChar;
+    var path = Path.GetFullPath(Path.Combine(root, relative));
+    if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidDataException("资源路径超出导出目录。");
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    return path;
+}
+
+record ExportItem(string Path, string? Kind);
+record Request(string Action, string Paks, string Key, string Oodle, string Mapping, string Output, string Archive, string Path, bool Preview, ExportItem[]? Items);
