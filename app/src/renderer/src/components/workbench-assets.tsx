@@ -1,17 +1,17 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, FileOutput, Filter, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
+import { ChevronDown, Filter, FolderOpen, LoaderCircle, PackageOpen, Search } from 'lucide-react'
 import { Button } from './ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuTrigger
+  DropdownMenuItem, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from './ui/select'
 import WorkbenchSelect from './workbench-select'
 import WorkbenchAssetTree from './workbench-asset-tree'
 import WorkbenchAssetPreview from './workbench-asset-preview'
-import type { AssetEntry, AssetMode, AssetState } from '@shared/workbench-assets'
+import type { AssetEntry, AssetMode, AssetPreviewMode, AssetState } from '@shared/workbench-assets'
 
 const modes: Record<AssetMode, string> = {
   all: '全部资源', new: '新增资源', modified: '已修改资源', unpatched: '排除已被覆盖的资源'
@@ -27,11 +27,10 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
   const [loaded, setLoaded] = useState<{ mode: AssetMode; snapshot: string; revision: number }>({
     mode: 'all', snapshot: '', revision: 0
   })
-  const [selection, setSelection] = useState<AssetEntry>()
-  const [busy, setBusy] = useState<'index' | 'snapshot'>()
+  const [selection, setSelection] = useState<{ entry: AssetEntry; mode: AssetPreviewMode }>()
+  const [busy, setBusy] = useState<'index' | 'snapshot' | 'export'>()
   const [message, setMessage] = useState<{ text: string; error?: boolean }>()
   const comparing = mode === 'new' || mode === 'modified'
-  const showExport = !!selection
   const archiveLabel = archive ? archive.split('/').pop() : state.count ? '全部包体' : '选择包体'
   const archiveGroups = useMemo(() => {
     const groups = new Map<string, string[]>()
@@ -128,6 +127,13 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
                   {Object.entries(modes).map(([value, label]) =>
                     <DropdownMenuRadioItem key={value} value={value}>{label}</DropdownMenuRadioItem>)}
                 </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={!state.count} onSelect={() => run('snapshot', async () => {
+                  const value = await window.api.workbenchAssetSnapshot()
+                  setState(value)
+                  setSnapshot(value.snapshots[0])
+                  setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
+                })}>导出索引快照</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -153,18 +159,6 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
             ...state.snapshots.map(file => [file, file.replace(/\.snapshot\.json$/, '')] as const)
           ]}
           onValueChange={value => setSnapshot(value === 'none' ? '' : value)} />}
-        <div className="header-action-reveal" data-visible={showExport || undefined}>
-          <div className="header-action-reveal-content" {...(!showExport ? { inert: '' } : {})}>
-            <Button variant="secondary" size="icon" disabled={!!busy || !state.count}
-              aria-label="导出索引快照"
-              onClick={() => run('snapshot', async () => {
-                const value = await window.api.workbenchAssetSnapshot()
-                setState(value)
-                setSnapshot(value.snapshots[0])
-                setMessage({ text: '已导出索引快照，可在对比加载时选择。' })
-              })}><FileOutput aria-hidden="true" /></Button>
-          </div>
-        </div>
       </div>
     </fieldset>,
     toolbarTarget
@@ -173,16 +167,22 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
   return <>
     {toolbar}
     <fieldset disabled={!!busy} className="workbench-assets">
-      {(busy === 'snapshot' || message) && <p role={message?.error ? 'alert' : 'status'}
+      {(busy === 'snapshot' || busy === 'export' || message) && <p role={message?.error ? 'alert' : 'status'}
         className={`break-all text-sm ${message?.error ? 'text-destructive' : 'text-muted-foreground'}`}>
-        {busy === 'snapshot' ? '正在导出索引快照……' : message?.text}
+        {busy === 'snapshot' ? '正在导出索引快照……' : busy === 'export' ? '正在导出资源……' : message?.text}
       </p>}
       <div className="workbench-assets-browser">
         <section className="workbench-assets-tree workbench-panel" aria-label="文件">
           <div className="group/file-tree relative min-h-0 flex-1">
             <div className="absolute inset-0 overflow-auto aria-busy:invisible" aria-busy={busy === 'index'}>
               {state.count ? <WorkbenchAssetTree key={JSON.stringify([loaded.revision, search, archive, onlyHtContent])}
-                query={query} selected={selection} onSelect={setSelection} />
+                query={query} onPreview={(entry, mode) => setSelection({ entry, mode })}
+                onExport={request => run('export', async () => {
+                  const result = await window.api.workbenchAssetExport(request)
+                  const failures = result.failures.length ? '，失败 ' + result.failures.length + ' 项。' : '。'
+                  setMessage({ text: '已导出 ' + result.exported + ' 项' + failures + ' ' + result.directory +
+                    (result.failures.length ? ' 首项失败：' + result.failures[0] : ''), error: !!result.failures.length })
+                })} />
                 : <div className="workbench-assets-empty">
                   <FolderOpen size={24} aria-hidden="true" />
                   <p>{loaded.revision ? '没有可浏览的资源。' : '选择包体，或点击「加载」读取游戏资源。'}</p>
@@ -196,10 +196,11 @@ export default function WorkbenchAssets({ active, toolbarTarget }: { active: boo
         </section>
         <section className="workbench-assets-preview workbench-panel" aria-label="资源预览">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.path, selection.archive])} entry={selection} />
+            {selection ? <WorkbenchAssetPreview key={JSON.stringify([selection.entry.path, selection.entry.archive, selection.mode])}
+              entry={selection.entry} mode={selection.mode} />
               : <div className="workbench-assets-empty">
                 <PackageOpen size={24} aria-hidden="true" />
-                <p>选择文件以查看预览。</p>
+                <p>双击文件以查看预览。</p>
               </div>}
           </div>
         </section>

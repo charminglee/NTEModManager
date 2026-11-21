@@ -8,8 +8,9 @@ import { getAppConfig } from './config'
 import { logger } from './logger'
 import { ntemmCacheDir } from './ntemm-paths'
 import { bundledToolsDirectory } from './bundled-tools'
-import { assetResults, effectiveAssets } from '../shared/workbench-assets-filter'
-import type { AssetEntry, AssetFormat, AssetPreview, AssetQuery, AssetState } from '../shared/workbench-assets'
+import { assetResults, effectiveAssets, matchingAssets } from '../shared/workbench-assets-filter'
+import { assetExportKind, type AssetEntry, type AssetExportKind, type AssetExportRequest,
+  type AssetExportResult, type AssetPreview, type AssetPreviewMode, type AssetQuery, type AssetReference, type AssetState } from '../shared/workbench-assets'
 
 function context() {
   const config = getAppConfig()
@@ -24,7 +25,8 @@ let index: { paks: string; key: string; rows: AssetEntry[]; effective: AssetEntr
 let baseline: { file: string; entries: Map<string, AssetEntry> } | undefined
 const current = (ctx: Context) => index?.paks === ctx.paks && index.key === ctx.config.workbenchAesKey ? index : undefined
 
-async function parse(ctx: Context, action: AssetFormat | 'index' | 'auto', output: string, entry?: { path: string; archive?: string }, preview = false) {
+async function parse(ctx: Context, action: AssetPreviewMode | 'index' | 'texture' | 'export', output: string,
+  entry?: { path?: string; archive?: string }, preview = false, items?: { path: string; kind?: AssetExportKind }[]) {
   const tools = bundledToolsDirectory()
   const parser = join(tools, 'cue4parse')
   const tool = join(parser, 'win-x64', 'WorkbenchAssets.exe')
@@ -32,7 +34,7 @@ async function parse(ctx: Context, action: AssetFormat | 'index' | 'auto', outpu
   const mapping = ctx.config.workbenchMapping || join(parser, 'Mappings', 'HT-5.6.1-0+UE5-0196ef29.usmap')
   const request = {
     action, preview, paks: ctx.paks, output, key: ctx.config.workbenchAesKey, mapping,
-    oodle: join(tools, 'retoc', 'oo2core_9_win64.dll'), path: entry?.path, archive: entry?.archive
+    oodle: join(tools, 'retoc', 'oo2core_9_win64.dll'), path: entry?.path, archive: entry?.archive, items
   }
   await new Promise<void>((done, fail) => {
     const proc = spawn(tool, [], { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] })
@@ -77,31 +79,93 @@ async function state(ctx: Context): Promise<AssetState> {
   }
 }
 
-async function convert(entry: AssetEntry, action: AssetFormat | 'auto'): Promise<AssetPreview | string> {
+async function queryAssets(ctx: Context, query: AssetQuery) {
+  const cached = current(ctx)
+  if (!cached) return { rows: [] as AssetEntry[] }
+  if (query.mode !== 'new' && query.mode !== 'modified') {
+    return { rows: query.mode === 'all' ? cached.rows : cached.effective }
+  }
+  if (!/^\d{4}-[\dT.Z-]+[a-f\d]{8}\.snapshot\.json$/.test(query.snapshot)) throw new Error('请选择对比快照。')
+  const file = join(ctx.root, query.snapshot)
+  if (baseline?.file !== file) baseline = { file, entries: effectiveAssets(JSON.parse(await readFile(file, 'utf8'))) }
+  return { rows: cached.effective, previous: baseline.entries }
+}
+
+async function previewAsset(entry: AssetReference, mode: AssetPreviewMode): Promise<AssetPreview> {
+  if (!['auto', 'json', 'blueprint'].includes(mode)) throw new Error('未知的预览模式。')
   const ctx = context()
   const asset = current(ctx)?.rows.find(row => row.path === entry.path && row.archive === entry.archive)
   if (!asset) throw new Error('资源索引已失效，请重新加载。')
-  const preview = action === 'auto'
-  const root = preview ? ctx.root : ctx.config.workbenchExportDirectory
+  const stage = await mkdtemp(join(ctx.root, '.ntemm-'))
+  try {
+    await parse(ctx, mode, stage, asset, true)
+    const files = (await readdir(stage, { recursive: true, withFileTypes: true })).filter(file => file.isFile())
+    const formats = { '.glb': 'model', '.png': 'texture', '.json': 'json', '.txt': 'blueprint' } as const
+    for (const [extension, format] of Object.entries(formats)) {
+      const file = files.find(file => extname(file.name).toLowerCase() === extension)
+      if (file) return { format, name: file.name, bytes: await readFile(join(file.parentPath, file.name)) }
+    }
+    throw new Error('资源中没有可预览的对象。')
+  } finally {
+    await rm(stage, { recursive: true, force: true })
+  }
+}
+
+async function exportAssets(request: AssetExportRequest): Promise<AssetExportResult> {
+  const ctx = context()
+  const cached = current(ctx)
+  if (!cached) throw new Error('资源索引已失效，请重新加载。')
+  const root = ctx.config.workbenchExportDirectory
   if (!root) throw new Error('请先设置工作台导出目录。')
+
+  let entries: AssetEntry[]
+  if ('folder' in request) {
+    const { rows, previous } = await queryAssets(ctx, request.folder)
+    entries = [...matchingAssets(rows, request.folder, previous)].filter(entry => assetExportKind(entry) === request.kind)
+  } else {
+    const paths = new Map<string, Set<string>>()
+    for (const entry of request.entries) {
+      if (!paths.has(entry.archive)) paths.set(entry.archive, new Set())
+      paths.get(entry.archive)!.add(entry.path)
+    }
+    entries = cached.rows.filter(entry => paths.get(entry.archive)?.has(entry.path))
+    if (entries.length !== request.entries.length) throw new Error('资源索引已失效，请重新加载。')
+  }
+  if (!entries.length) throw new Error('没有符合所选类型的资源。')
+
+  const groups = new Map<string, { path: string; kind?: AssetExportKind }[]>()
+  for (const entry of entries) {
+    const items = groups.get(entry.archive) ?? []
+    if (!groups.has(entry.archive)) groups.set(entry.archive, items)
+    items.push({ path: entry.path, kind: 'folder' in request ? request.kind : assetExportKind(entry) })
+  }
+  const label = 'folder' in request ? basename(request.folder.directory) : entries.length === 1
+    ? basename(entries[0].path, extname(entries[0].path)) : '所选资源'
   await mkdir(root, { recursive: true })
   const stage = await mkdtemp(join(root, '.ntemm-'))
+  let exported = 0
+  const failures: string[] = []
+  logger.info(`正在导出资源：${label}，共 ${entries.length} 项。`)
   try {
-    await parse(ctx, action, stage, asset, preview)
-    const files = (await readdir(stage, { recursive: true, withFileTypes: true })).filter(f => f.isFile())
-    if (!files.length) throw new Error('解析器未生成文件。')
-    if (preview) {
-      const formats = { '.glb': 'model', '.png': 'texture', '.json': 'json' } as const
-      for (const [extension, detected] of Object.entries(formats)) {
-        const file = files.find(file => extname(file.name).toLowerCase() === extension)
-        if (file) return { format: detected, name: file.name, bytes: await readFile(join(file.parentPath, file.name)) }
+    for (const [archive, items] of groups) {
+      const output = groups.size === 1 ? stage : join(stage, archive)
+      await mkdir(output, { recursive: true })
+      await parse(ctx, 'export', output, { archive }, false, items)
+      const report = join(output, '.ntemm-export.json')
+      const result: Pick<AssetExportResult, 'exported' | 'failures'> = JSON.parse(await readFile(report, 'utf8'))
+      await rm(report)
+      exported += result.exported
+      for (const failure of result.failures) {
+        const detail = `${archive}／${failure}`
+        failures.push(detail)
+        logger.error(`资源导出失败：${detail}`)
       }
-      throw new Error('资源中没有可预览的对象。')
     }
-    const target = join(root, `${basename(asset.path, extname(asset.path))}-${randomUUID().slice(0, 8)}`)
-    await rename(stage, target)
-    logger.info(`资源已导出：${target}`)
-    return target
+    if (!exported) return { directory: '', exported, failures }
+    const directory = join(root, `${label}-${randomUUID().slice(0, 8)}`)
+    await rename(stage, directory)
+    logger.info(`资源已导出：${directory}，共 ${exported} 项。`)
+    return { directory, exported, failures }
   } finally {
     await rm(stage, { recursive: true, force: true })
   }
@@ -155,21 +219,9 @@ export function registerWorkbenchAssets() {
     return state(ctx)
   })
   ipcMain.handle('assets:query', async (_event, query: AssetQuery) => {
-    const ctx = context()
-    const cached = current(ctx)
-    if (!cached) return assetResults([], query)
-    let previous: Map<string, AssetEntry> | undefined
-    if (query.mode === 'new' || query.mode === 'modified') {
-      if (!/^\d{4}-[\dT.Z-]+[a-f\d]{8}\.snapshot\.json$/.test(query.snapshot)) throw new Error('请选择对比快照。')
-      const file = join(ctx.root, query.snapshot)
-      if (baseline?.file !== file) baseline = { file, entries: effectiveAssets(JSON.parse(await readFile(file, 'utf8'))) }
-      previous = baseline.entries
-    }
-    return assetResults(query.mode === 'all' ? cached.rows : cached.effective, query, previous)
+    const { rows, previous } = await queryAssets(context(), query)
+    return assetResults(rows, query, previous)
   })
-  ipcMain.handle('assets:preview', (_event, entry) => convert(entry, 'auto'))
-  ipcMain.handle('assets:export', (_event, entry, format: AssetFormat) => {
-    if (!['raw', 'texture', 'model', 'json'].includes(format)) throw new Error('未知的资源格式。')
-    return convert(entry, format)
-  })
+  ipcMain.handle('assets:preview', (_event, entry, mode) => previewAsset(entry, mode))
+  ipcMain.handle('assets:export', (_event, request) => exportAssets(request))
 }

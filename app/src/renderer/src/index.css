@@ -1627,12 +1627,6 @@ select {
   gap: 8px;
   min-width: 0;
 }
-.workbench-assets-actions > .header-action-reveal {
-  margin-inline-start: 0;
-}
-.workbench-assets-actions > .header-action-reveal[data-visible] {
-  margin-inline-start: 8px;
-}
 .workbench-assets-search {
   min-width: 0;
 }

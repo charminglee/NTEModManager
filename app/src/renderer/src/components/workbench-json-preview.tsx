@@ -65,7 +65,7 @@ const previewTheme = EditorView.theme({
   '.cm-panel.cm-search :is(input, button):focus-visible': { outline: '2px solid hsl(var(--ring))', outlineOffset: '1px' }
 })
 
-export default function WorkbenchJsonPreview({ value }: { value: string }) {
+export default function WorkbenchJsonPreview({ value, code = false }: { value: string; code?: boolean }) {
   const container = useRef<HTMLDivElement>(null)
   const [searchPanel, setSearchPanel] = useState<PreviewSearch>()
 
@@ -74,12 +74,12 @@ export default function WorkbenchJsonPreview({ value }: { value: string }) {
       doc: value,
       parent: container.current!,
       extensions: [
-        json(), highlighting, previewTheme,
+        ...(code ? [] : [json(), highlighting]), previewTheme,
         EditorState.readOnly.of(true),
         EditorView.editable.of(false),
         EditorView.contentAttributes.of({
           tabindex: '0',
-          'aria-label': '资源元数据（JSON）',
+          'aria-label': code ? '蓝图反编译代码' : '资源元数据（JSON）',
           'aria-keyshortcuts': 'Control+F'
         }),
         EditorState.allowMultipleSelections.of(true),
@@ -135,7 +135,7 @@ export default function WorkbenchJsonPreview({ value }: { value: string }) {
       ]
     })
     return () => editor.destroy()
-  }, [value])
+  }, [value, code])
 
   return <div className="min-h-0 min-w-0 flex-1 bg-muted/30 text-xs select-text" ref={container}>
     {searchPanel && createPortal(<>
