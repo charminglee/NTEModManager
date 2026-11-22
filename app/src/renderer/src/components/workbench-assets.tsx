@@ -5,7 +5,7 @@ import { toast } from './toast-card'
 import { Button } from './ui/button'
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuRadioGroup,
-  DropdownMenuItem, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger
+  DropdownMenuRadioItem, DropdownMenuTrigger
 } from './ui/dropdown-menu'
 import { SearchBox } from './ui/search-box'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from './ui/select'
@@ -33,7 +33,7 @@ export default function WorkbenchAssets({ active, toolbarTarget, onExportingChan
     mode: 'all', snapshot: '', revision: 0
   })
   const [selection, setSelection] = useState<{ entry: AssetEntry; mode: AssetPreviewMode }>()
-  const [busy, setBusy] = useState<'index' | 'snapshot' | 'export'>()
+  const [busy, setBusy] = useState<'index' | 'export'>()
   const comparing = mode === 'new' || mode === 'modified'
   const archiveLabel = archive ? archive.split('/').pop() : state.count ? '全部包体' : '选择包体'
   const archiveGroups = useMemo(() => {
@@ -71,7 +71,7 @@ export default function WorkbenchAssets({ active, toolbarTarget, onExportingChan
     try {
       await work()
     } catch (error) {
-      const title = operation === 'index' ? '加载资源失败' : operation === 'snapshot' ? '导出索引快照失败' : '导出资源失败'
+      const title = operation === 'index' ? '加载资源失败' : '导出资源失败'
       toast.error(title, { description: error instanceof Error ? error.message : String(error) })
     } finally {
       if (operation === 'export') onExportingChange(false)
@@ -132,13 +132,6 @@ export default function WorkbenchAssets({ active, toolbarTarget, onExportingChan
                   {Object.entries(modes).map(([value, label]) =>
                     <DropdownMenuRadioItem key={value} value={value}>{label}</DropdownMenuRadioItem>)}
                 </DropdownMenuRadioGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={!state.count} onSelect={() => run('snapshot', async () => {
-                  const value = await window.api.workbenchAssetSnapshot()
-                  setState(value)
-                  setSnapshot(value.snapshots[0])
-                  toast.success('已导出索引快照，可在对比加载时选择')
-                })}>导出索引快照</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
